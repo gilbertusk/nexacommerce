@@ -1,0 +1,25 @@
+{
+  "name": "nexacommerce",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NexaCommerce — Enterprise E-Commerce Microservice Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "frontend/*"
+  ],
+  "scripts": {
+    "dev:gateway": "npm run dev --workspace=apps/api-gateway",
+    "dev:auth": "npm run dev --workspace=apps/auth-service",
+    "dev:user": "npm run dev --workspace=apps/user-service",
+    "dev:product": "npm run dev --workspace=apps/product-service",
+    "dev:inventory": "npm run dev --workspace=apps/inventory-service",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "db:migrate:auth": "npm run prisma:migrate --workspace=apps/auth-service",
+    "db:migrate:product": "npm run prisma:migrate --workspace=apps/product-service"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
