@@ -125,6 +125,21 @@ export class InventoryController {
     const result = await inventoryService.getLowStock(actor);
     res.status(200).json(successResponse(result, 'Low stock levels retrieved successfully'));
   };
+
+  internalGetStock = async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    const result = await inventoryService.getStockByProductId(productId);
+    res.status(200).json(successResponse(result, 'Product stock levels retrieved successfully'));
+  };
+
+  internalBatchCheckStock = async (req: Request, res: Response) => {
+    const { productIds } = req.body;
+    if (!productIds || !Array.isArray(productIds)) {
+      return res.status(400).json({ success: false, message: 'productIds array is required' });
+    }
+    const result = await inventoryService.batchCheckStock(productIds);
+    res.status(200).json(successResponse(result, 'Batch stock levels retrieved successfully'));
+  };
 }
 
 export const inventoryController = new InventoryController();

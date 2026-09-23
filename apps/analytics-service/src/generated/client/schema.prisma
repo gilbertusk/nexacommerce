@@ -1,0 +1,129 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+model DailySalesReport {
+  id                   String   @id @default(uuid())
+  date                 DateTime @unique
+  totalOrders          Int      @default(0) @map("total_orders")
+  totalCompletedOrders Int      @default(0) @map("total_completed_orders")
+  totalCancelledOrders Int      @default(0) @map("total_cancelled_orders")
+  totalRevenue         Decimal  @default(0) @map("total_revenue") @db.Decimal(14, 2)
+  totalItemsSold       Int      @default(0) @map("total_items_sold")
+  averageOrderValue    Decimal  @default(0) @map("average_order_value") @db.Decimal(14, 2)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_sales_reports")
+}
+
+model MonthlySalesReport {
+  id                   String   @id @default(uuid())
+  year                 Int
+  month                Int
+  totalOrders          Int      @default(0) @map("total_orders")
+  totalCompletedOrders Int      @default(0) @map("total_completed_orders")
+  totalCancelledOrders Int      @default(0) @map("total_cancelled_orders")
+  totalRevenue         Decimal  @default(0) @map("total_revenue") @db.Decimal(14, 2)
+  totalItemsSold       Int      @default(0) @map("total_items_sold")
+  averageOrderValue    Decimal  @default(0) @map("average_order_value") @db.Decimal(14, 2)
+  newCustomers         Int      @default(0) @map("new_customers")
+  newSellers           Int      @default(0) @map("new_sellers")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, month])
+  @@map("monthly_sales_reports")
+}
+
+model ProductSalesReport {
+  id             String    @id @default(uuid())
+  productId      String    @map("product_id")
+  productName    String    @map("product_name")
+  sellerId       String    @map("seller_id")
+  sellerName     String    @default("") @map("seller_name")
+  categoryId     String?   @map("category_id")
+  categoryName   String?   @map("category_name")
+  totalUnitsSold Int       @default(0) @map("total_units_sold")
+  totalRevenue   Decimal   @default(0) @map("total_revenue") @db.Decimal(14, 2)
+  totalOrders    Int       @default(0) @map("total_orders")
+  averageRating  Float     @default(0) @map("average_rating")
+  periodType     String    @map("period_type") // DAILY, MONTHLY, ALL_TIME
+  periodDate     DateTime? @map("period_date")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([productId, periodType, periodDate])
+  @@map("product_sales_reports")
+}
+
+model SellerPerformanceReport {
+  id               String    @id @default(uuid())
+  sellerId         String    @map("seller_id")
+  sellerName       String    @default("") @map("seller_name")
+  totalProducts    Int       @default(0) @map("total_products")
+  totalOrders      Int       @default(0) @map("total_orders")
+  totalRevenue     Decimal   @default(0) @map("total_revenue") @db.Decimal(14, 2)
+  totalItemsSold   Int       @default(0) @map("total_items_sold")
+  totalCancelled   Int       @default(0) @map("total_cancelled")
+  averageRating    Float     @default(0) @map("average_rating")
+  totalReviews     Int       @default(0) @map("total_reviews")
+  cancellationRate Float     @default(0) @map("cancellation_rate")
+  periodType       String    @map("period_type") // MONTHLY, ALL_TIME
+  periodDate       DateTime? @map("period_date")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([sellerId, periodType, periodDate])
+  @@map("seller_performance_reports")
+}
+
+model PaymentReport {
+  id                String   @id @default(uuid())
+  date              DateTime @unique
+  totalTransactions Int      @default(0) @map("total_transactions")
+  successCount      Int      @default(0) @map("success_count")
+  failedCount       Int      @default(0) @map("failed_count")
+  expiredCount      Int      @default(0) @map("expired_count")
+  successRate       Float    @default(0) @map("success_rate")
+  totalAmount       Decimal  @default(0) @map("total_amount") @db.Decimal(14, 2)
+  averageAmount     Decimal  @default(0) @map("average_amount") @db.Decimal(14, 2)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_reports")
+}
+
+model CategoryPerformanceReport {
+  id             String    @id @default(uuid())
+  categoryId     String    @map("category_id")
+  categoryName   String    @map("category_name")
+  totalProducts  Int       @default(0) @map("total_products")
+  totalOrders    Int       @default(0) @map("total_orders")
+  totalRevenue   Decimal   @default(0) @map("total_revenue") @db.Decimal(14, 2)
+  totalUnitsSold Int       @default(0) @map("total_units_sold")
+  periodType     String    @map("period_type") // MONTHLY, ALL_TIME
+  periodDate     DateTime? @map("period_date")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([categoryId, periodType, periodDate])
+  @@map("category_performance_reports")
+}
+
+model AnalyticsEvent {
+  id          String    @id @default(uuid())
+  eventName   String    @map("event_name")
+  eventData   Json      @map("event_data")
+  processedAt DateTime? @map("processed_at")
+  isProcessed Boolean   @default(false) @map("is_processed")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("analytics_events")
+}

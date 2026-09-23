@@ -1,0 +1,127 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build packages
+        run: |
+          npm run build --workspace=packages/common --if-present
+          npm run build --workspace=packages/types --if-present
+          npm run build --workspace=packages/config --if-present
+          npm run build --workspace=packages/logger --if-present
+          npm run build --workspace=packages/validation --if-present
+          npm run build --workspace=packages/event-contracts --if-present
+      - name: Type check all services
+        run: npm run typecheck --workspaces --if-present
+      - name: Lint all services
+        run: npm run lint --workspaces --if-present
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+          POSTGRES_DB: nexacommerce_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres123@localhost:5432/nexacommerce_test_db
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-jwt-secret-ci
+      JWT_REFRESH_SECRET: test-jwt-refresh-secret-ci
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build packages
+        run: |
+          npm run build --workspace=packages/common --if-present
+          npm run build --workspace=packages/types --if-present
+          npm run build --workspace=packages/config --if-present
+          npm run build --workspace=packages/logger --if-present
+          npm run build --workspace=packages/validation --if-present
+          npm run build --workspace=packages/event-contracts --if-present
+      - name: Create test schemas
+        run: |
+          PGPASSWORD=postgres123 psql -h localhost -U postgres -d nexacommerce_test_db -c "
+            CREATE SCHEMA IF NOT EXISTS auth;
+            CREATE SCHEMA IF NOT EXISTS users;
+            CREATE SCHEMA IF NOT EXISTS products;
+            CREATE SCHEMA IF NOT EXISTS inventory;
+            CREATE SCHEMA IF NOT EXISTS orders;
+            CREATE SCHEMA IF NOT EXISTS payments;
+            CREATE SCHEMA IF NOT EXISTS vouchers;
+            CREATE SCHEMA IF NOT EXISTS shipping;
+            CREATE SCHEMA IF NOT EXISTS reviews;
+            CREATE SCHEMA IF NOT EXISTS notifications;
+            CREATE SCHEMA IF NOT EXISTS analytics;
+          "
+      - name: Run Prisma migrations (test)
+        run: |
+          for service in auth-service user-service product-service inventory-service order-service payment-service voucher-service shipping-service review-service notification-service analytics-service; do
+            schema="apps/$service/prisma/schema.prisma"
+            if [ -f "$schema" ]; then
+              npx prisma db push --schema="$schema" --skip-generate 2>/dev/null || true
+              npx prisma generate --schema="$schema" 2>/dev/null || true
+            fi
+          done
+      - name: Run unit tests
+        run: npm run test:unit --workspaces --if-present
+      - name: Run integration tests
+        run: npm run test:integration --workspaces --if-present
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Build all packages
+        run: npm run build --workspaces --if-present

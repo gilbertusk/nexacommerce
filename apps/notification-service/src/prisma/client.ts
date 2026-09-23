@@ -1,0 +1,7 @@
+import { PrismaClient } from '../generated/client';
+
+export const prisma = new PrismaClient({
+  log: ['error', 'warn'],
+});
+
+export default prisma;

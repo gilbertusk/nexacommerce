@@ -1,0 +1,78 @@
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import { ZodError } from 'zod';
+import { reviewRoutes } from './routes/review.routes';
+import { swaggerSpec } from './docs/swagger';
+import { errorResponse } from '@nexacommerce/common';
+import { createLogger } from '@nexacommerce/logger';
+
+const logger = createLogger('review-service');
+const app = express();
+
+app.use(cors({ origin: false }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
+
+// Extend Express Request
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId: string;
+        email: string;
+        role: string;
+      };
+    }
+  }
+}
+
+// Log incoming requests
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`);
+  next();
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'UP',
+    service: 'review-service',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/reviews/health', (req, res) => {
+  res.status(200).json({
+    status: 'UP',
+    service: 'review-service',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Mount Routes
+app.get('/reviews/docs/spec.json', (req, res) => res.json(swaggerSpec));
+app.use('/reviews/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/reviews', reviewRoutes);
+
+// Centralized error handling
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  logger.error(err.message || 'Error occurred', err);
+
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Internal server error';
+  let errors = err.errors || null;
+
+  if (err instanceof ZodError) {
+    statusCode = 400;
+    message = 'Validation failed';
+    errors = err.errors.map((issue) => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+    }));
+  }
+
+  res.status(statusCode).json(errorResponse(message, statusCode, errors));
+});
+
+export default app;
+export { app };

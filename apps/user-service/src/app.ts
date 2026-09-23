@@ -1,15 +1,17 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { ZodError } from 'zod';
 import { userRoutes } from './routes/user.routes';
+import { swaggerSpec } from './docs/swagger';
 import { errorResponse } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
 
 const logger = createLogger('user-service');
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({ origin: false }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
 
 // Extend express Request interface to support user context
 declare global {
@@ -26,7 +28,7 @@ declare global {
 
 // Log incoming requests
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -46,6 +48,10 @@ app.get('/users/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Swagger UI
+app.get('/users/docs/spec.json', (req, res) => res.json(swaggerSpec));
+app.use('/users/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use('/users', userRoutes);

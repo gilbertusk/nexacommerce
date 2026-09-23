@@ -23,6 +23,31 @@ export class SellerRepository {
       data,
     });
   }
+
+  async findAll(params?: { skip?: number; take?: number }) {
+    return prisma.sellerProfile.findMany({
+      skip: params?.skip,
+      take: params?.take,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async countAll() {
+    return prisma.sellerProfile.count();
+  }
+
+  async findById(id: string) {
+    return prisma.sellerProfile.findUnique({
+      where: { id },
+    });
+  }
+
+  async updateById(id: string, data: { storeName?: string; storeDescription?: string; storeLogo?: string; storeBanner?: string; storeAddress?: string; isVerified?: boolean; verifiedAt?: Date; status?: string }) {
+    return prisma.sellerProfile.update({
+      where: { id },
+      data,
+    });
+  }
 }
 
 export const sellerRepository = new SellerRepository();

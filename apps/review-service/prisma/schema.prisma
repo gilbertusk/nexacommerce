@@ -1,0 +1,77 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+model Review {
+  id                 String         @id @default(uuid())
+  productId          String         @map("product_id")
+  customerId         String         @map("customer_id")
+  customerName       String         @map("customer_name")
+  orderId            String         @map("order_id")
+  orderItemId        String         @map("order_item_id")
+  rating             Int
+  title              String?
+  content            String
+  isVerifiedPurchase Boolean        @default(true) @map("is_verified_purchase")
+  isVisible          Boolean        @default(true) @map("is_visible")
+  isEdited           Boolean        @default(false) @map("is_edited")
+  moderationStatus   String         @default("APPROVED") @map("moderation_status") // APPROVED, HIDDEN, PENDING
+  moderationNote     String?        @map("moderation_note")
+  moderatedBy        String?        @map("moderated_by")
+  moderatedAt        DateTime?      @map("moderated_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  images             ReviewImage[]
+  reports            ReviewReport[]
+
+  @@unique([customerId, orderItemId], name: "customer_order_item")
+  @@map("reviews")
+}
+
+model ReviewImage {
+  id        String   @id @default(uuid())
+  reviewId  String   @map("review_id")
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("review_images")
+}
+
+model ReviewReport {
+  id          String    @id @default(uuid())
+  reviewId    String    @map("review_id")
+  review      Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reportedBy  String    @map("reported_by") // userId
+  reason      String    // SPAM, INAPPROPRIATE, FAKE, OFFENSIVE, OTHER
+  description String?
+  status      String    @default("PENDING") // PENDING, REVIEWED, DISMISSED
+  reviewedBy  String?   @map("reviewed_by") // admin userId
+  reviewedAt  DateTime? @map("reviewed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("review_reports")
+}
+
+model ProductRatingSummary {
+  id            String   @id @default(uuid())
+  productId     String   @unique @map("product_id")
+  averageRating Float    @default(0) @map("average_rating")
+  totalReviews  Int      @default(0) @map("total_reviews")
+  rating5Count  Int      @default(0) @map("rating_5_count")
+  rating4Count  Int      @default(0) @map("rating_4_count")
+  rating3Count  Int      @default(0) @map("rating_3_count")
+  rating2Count  Int      @default(0) @map("rating_2_count")
+  rating1Count  Int      @default(0) @map("rating_1_count")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("product_rating_summaries")
+}

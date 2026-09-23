@@ -1,19 +1,24 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import { authController } from '../controllers/auth.controller';
-import { asyncHandler, parsePaginationQuery, buildPaginationResponse, successResponse } from '@nexacommerce/common';
+import { asyncHandler, parsePaginationQuery, buildPaginationResponse, successResponse, createInternalServiceGuard } from '@nexacommerce/common';
 import { userRepository } from '../repositories/user.repository';
 import { Status } from '../generated/client';
 
 const router = Router();
 
 // Internal service authentication check middleware
-const checkInternalService = (req: Request, res: Response, next: NextFunction) => {
-  const serviceHeader = req.headers['x-internal-service'];
-  if (serviceHeader !== 'user-service' && serviceHeader !== 'inventory-service') {
-    return res.status(403).json({ success: false, message: 'Forbidden: Internal service call only' });
-  }
-  next();
-};
+const checkInternalService = createInternalServiceGuard([
+    'user-service',
+    'inventory-service',
+    'order-service',
+    'cart-service',
+    'payment-service',
+    'product-service',
+    'shipping-service',
+    'review-service',
+    'notification-service',
+    'analytics-service',
+]);
 
 // Public & Standard Authentication Routes
 router.post('/register', asyncHandler(authController.register));
@@ -24,8 +29,18 @@ router.post('/forgot-password', asyncHandler(authController.forgotPassword));
 router.post('/reset-password', asyncHandler(authController.resetPassword));
 router.post('/verify-email', asyncHandler(authController.verifyEmail));
 router.get('/me', asyncHandler(authController.getMe));
+router.post('/change-password', asyncHandler(authController.changePassword));
+router.post('/resend-verification', asyncHandler(authController.resendVerification));
 
 // Internal microservice endpoints
+router.get('/internal/users/count', checkInternalService, asyncHandler(async (req: Request, res: Response) => {
+  const role = req.query.role as string | undefined;
+  const where: any = {};
+  if (role) where.role = role;
+  const count = await userRepository.countByFilter(where);
+  res.status(200).json(successResponse({ count }, 'User count retrieved'));
+}));
+
 router.get('/internal/users', checkInternalService, asyncHandler(async (req: Request, res: Response) => {
   const { page, limit, skip } = parsePaginationQuery(req.query);
   const role = req.query.role as string;

@@ -136,6 +136,49 @@ export class UserController {
     const profile = await userService.updateSellerProfile(userId, validatedData);
     res.status(200).json(successResponse(profile, 'Seller profile updated successfully'));
   };
+
+  internalGetAddress = async (req: Request, res: Response) => {
+    const { userId, addressId } = req.params;
+    const address = await userService.getAddressById(addressId);
+    if (!address) {
+      res.status(404).json({ success: false, message: 'Address not found' });
+      return;
+    }
+    if (address.userId !== userId) {
+      res.status(403).json({ success: false, message: 'Address does not belong to this user' });
+      return;
+    }
+    res.status(200).json(successResponse(address, 'Address retrieved successfully'));
+  };
+
+  setDefaultAddress = async (req: Request, res: Response) => {
+    const userId = (req.headers['x-user-id'] as string) || req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'User ID header is missing' });
+      return;
+    }
+    const { id } = req.params;
+    const address = await userService.setDefaultAddress(userId, id);
+    res.status(200).json(successResponse(address, 'Default address updated successfully'));
+  };
+
+  listSellerProfiles = async (req: Request, res: Response) => {
+    const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const result = await userService.listSellerProfiles({ page, limit });
+    res.status(200).json(successResponse(result, 'Seller profiles retrieved successfully'));
+  };
+
+  updateSellerProfileStatus = async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!status) {
+      res.status(400).json({ success: false, message: 'Status is required' });
+      return;
+    }
+    const result = await userService.updateSellerProfileStatus(id, status);
+    res.status(200).json(successResponse(result, 'Seller profile status updated successfully'));
+  };
 }
 
 export const userController = new UserController();

@@ -1,52 +1,415 @@
-version: '3.8'
-
 services:
+  # ─── Infrastructure (Selalu Aktif) ───
+
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: nexacommerce-postgres
-    ports:
-      - "5445:5432"
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB: nexacommerce_db
+    ports:
+      - "5445:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d nexacommerce_db"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - nexacommerce-network
 
   redis:
     image: redis:7-alpine
     container_name: nexacommerce-redis
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: nexacommerce-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    networks:
+      - nexacommerce-network
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: nexacommerce-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?RABBITMQ_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - nexacommerce-network
+
+  # ─── Backend Services (Production Profile) ───
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    container_name: nexacommerce-gateway
+    profiles: ["production"]
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - USER_SERVICE_URL=http://user-service:3002
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - CART_SERVICE_URL=http://cart-service:3004
+      - ORDER_SERVICE_URL=http://order-service:3005
+      - PAYMENT_SERVICE_URL=http://payment-service:3006
+      - INVENTORY_SERVICE_URL=http://inventory-service:3007
+      - VOUCHER_SERVICE_URL=http://voucher-service:3008
+      - SHIPPING_SERVICE_URL=http://shipping-service:3009
+      - REVIEW_SERVICE_URL=http://review-service:3010
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3011
+      - ANALYTICS_SERVICE_URL=http://analytics-service:3012
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - CORS_ORIGINS=${CORS_ORIGINS:?CORS_ORIGINS is required}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: nexacommerce-auth
+    profiles: ["production"]
+    expose:
+      - "3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=auth
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - COOKIE_SECURE=${COOKIE_SECURE:-true}
+      - COOKIE_SAME_SITE=${COOKIE_SAME_SITE:-lax}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3011
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: apps/user-service/Dockerfile
+    container_name: nexacommerce-user
+    profiles: ["production"]
+    expose:
+      - "3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=users
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  product-service:
+    build:
+      context: .
+      dockerfile: apps/product-service/Dockerfile
+    container_name: nexacommerce-product
+    profiles: ["production"]
+    expose:
+      - "3003"
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=products
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - REVIEW_SERVICE_URL=http://review-service:3010
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  cart-service:
+    build:
+      context: .
+      dockerfile: apps/cart-service/Dockerfile
+    container_name: nexacommerce-cart
+    profiles: ["production"]
+    expose:
+      - "3004"
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - INVENTORY_SERVICE_URL=http://inventory-service:3007
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  order-service:
+    build:
+      context: .
+      dockerfile: apps/order-service/Dockerfile
+    container_name: nexacommerce-order
+    profiles: ["production"]
+    expose:
+      - "3005"
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=orders
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - CART_SERVICE_URL=http://cart-service:3004
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - INVENTORY_SERVICE_URL=http://inventory-service:3007
+      - USER_SERVICE_URL=http://user-service:3002
+      - VOUCHER_SERVICE_URL=http://voucher-service:3008
+      - PAYMENT_SERVICE_URL=http://payment-service:3006
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: apps/payment-service/Dockerfile
+    container_name: nexacommerce-payment
+    profiles: ["production"]
+    expose:
+      - "3006"
+    environment:
+      - NODE_ENV=production
+      - PORT=3006
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=payments
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - MIDTRANS_SERVER_KEY=${MIDTRANS_SERVER_KEY:?MIDTRANS_SERVER_KEY is required}
+      - MIDTRANS_CLIENT_KEY=${MIDTRANS_CLIENT_KEY:?MIDTRANS_CLIENT_KEY is required}
+      - MIDTRANS_MERCHANT_ID=${MIDTRANS_MERCHANT_ID:?MIDTRANS_MERCHANT_ID is required}
+      - MIDTRANS_IS_PRODUCTION=${MIDTRANS_IS_PRODUCTION:-false}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: apps/inventory-service/Dockerfile
+    container_name: nexacommerce-inventory
+    profiles: ["production"]
+    expose:
+      - "3007"
+    environment:
+      - NODE_ENV=production
+      - PORT=3007
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=inventory
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  voucher-service:
+    build:
+      context: .
+      dockerfile: apps/voucher-service/Dockerfile
+    container_name: nexacommerce-voucher
+    profiles: ["production"]
+    expose:
+      - "3008"
+    environment:
+      - NODE_ENV=production
+      - PORT=3008
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=vouchers
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  shipping-service:
+    build:
+      context: .
+      dockerfile: apps/shipping-service/Dockerfile
+    container_name: nexacommerce-shipping
+    profiles: ["production"]
+    expose:
+      - "3009"
+    environment:
+      - NODE_ENV=production
+      - PORT=3009
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=shipping
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - ORDER_SERVICE_URL=http://order-service:3005
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  review-service:
+    build:
+      context: .
+      dockerfile: apps/review-service/Dockerfile
+    container_name: nexacommerce-review
+    profiles: ["production"]
+    expose:
+      - "3010"
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=reviews
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - ORDER_SERVICE_URL=http://order-service:3005
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: apps/notification-service/Dockerfile
+    container_name: nexacommerce-notification
+    profiles: ["production"]
+    expose:
+      - "3011"
+    environment:
+      - NODE_ENV=production
+      - PORT=3011
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=notifications
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - USER_SERVICE_URL=http://user-service:3002
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - SMTP_HOST=${SMTP_HOST:?SMTP_HOST is required}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:?SMTP_USER is required}
+      - SMTP_PASS=${SMTP_PASS:?SMTP_PASS is required}
+      - SMTP_FROM=${SMTP_FROM:?SMTP_FROM is required}
+      - CUSTOMER_WEB_URL=${CUSTOMER_WEB_URL:?CUSTOMER_WEB_URL is required}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: apps/analytics-service/Dockerfile
+    container_name: nexacommerce-analytics
+    profiles: ["production"]
+    expose:
+      - "3012"
+    environment:
+      - NODE_ENV=production
+      - PORT=3012
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/nexacommerce_db?schema=analytics
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - nexacommerce-network
+    restart: unless-stopped
+
+networks:
+  nexacommerce-network:
+    name: nexacommerce-network
+    driver: bridge
 
 volumes:
   postgres_data:

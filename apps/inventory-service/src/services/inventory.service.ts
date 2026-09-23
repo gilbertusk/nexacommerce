@@ -1,7 +1,7 @@
 import { inventoryRepository } from '../repositories/inventory.repository';
 import { prisma } from '../prisma/client';
 import { config } from '../config';
-import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from '@nexacommerce/common';
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError, buildInternalServiceHeaders } from '@nexacommerce/common';
 
 export class InventoryService {
   // --- Product Service Internal Calls ---
@@ -9,7 +9,7 @@ export class InventoryService {
     const url = `${config.productServiceUrl}${path}`;
     const headers = {
       'Content-Type': 'application/json',
-      'X-Internal-Service': 'inventory-service',
+      ...buildInternalServiceHeaders('inventory-service'),
     };
 
     try {
@@ -109,6 +109,32 @@ export class InventoryService {
       reservedStock: inv.reservedStock,
       availableStock: inv.availableStock,
     };
+  }
+
+  async getInventoryByProductId(productId: string) {
+    const inv = await inventoryRepository.findByProductId(productId);
+    if (!inv) {
+      throw new NotFoundError('Inventory not found');
+    }
+    return inv;
+  }
+
+  async batchCheckStock(productIds: string[]) {
+    const inventories = await prisma.inventory.findMany({
+      where: {
+        productId: { in: productIds },
+      },
+    });
+
+    return productIds.map((productId) => {
+      const inv = inventories.find((i) => i.productId === productId);
+      return {
+        productId,
+        currentStock: inv ? inv.currentStock : 0,
+        reservedStock: inv ? inv.reservedStock : 0,
+        availableStock: inv ? inv.availableStock : 0,
+      };
+    });
   }
 
   async initializeInventory(
@@ -417,6 +443,75 @@ export class InventoryService {
         orderBy: { availableStock: 'asc' },
       });
     }
+  }
+
+  async getProductDetails(productId: string) {
+    try {
+      return await this.makeProductRequest(`/internal/products/${productId}`, 'GET');
+    } catch {
+      return null;
+    }
+  }
+
+  async confirmOrderStock(orderId: string) {
+    const reservations = await prisma.stockReservation.findMany({
+      where: { orderId, status: 'RESERVED' },
+      include: { inventory: true },
+    });
+
+    const confirmedReservations = [];
+    const lowStockAlerts = [];
+
+    for (const res of reservations) {
+      await this.confirmStock({ userId: 'SYSTEM', role: 'ADMIN' }, {
+        productId: res.inventory.productId,
+        orderId,
+      });
+
+      confirmedReservations.push({
+        reservationId: res.id,
+        productId: res.inventory.productId,
+        quantity: res.quantity,
+      });
+
+      const updatedInv = await prisma.inventory.findUnique({
+        where: { id: res.inventoryId },
+      });
+
+      if (updatedInv && updatedInv.availableStock <= updatedInv.lowStockThreshold) {
+        lowStockAlerts.push({
+          productId: res.inventory.productId,
+          currentStock: updatedInv.availableStock,
+          threshold: updatedInv.lowStockThreshold,
+        });
+      }
+    }
+
+    return { confirmedReservations, lowStockAlerts };
+  }
+
+  async releaseOrderStock(orderId: string) {
+    const reservations = await prisma.stockReservation.findMany({
+      where: { orderId, status: 'RESERVED' },
+      include: { inventory: true },
+    });
+
+    const releasedReservations = [];
+
+    for (const res of reservations) {
+      await this.releaseStock({ userId: 'SYSTEM', role: 'ADMIN' }, {
+        productId: res.inventory.productId,
+        orderId,
+      });
+
+      releasedReservations.push({
+        reservationId: res.id,
+        productId: res.inventory.productId,
+        quantity: res.quantity,
+      });
+    }
+
+    return releasedReservations;
   }
 }
 

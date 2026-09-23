@@ -8,6 +8,52 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
 } from '@nexacommerce/validation';
+import { config } from '../config';
+
+const ACCESS_COOKIE = 'nexa_access_token';
+const REFRESH_COOKIE = 'nexa_refresh_token';
+
+function readCookie(req: Request, name: string): string | undefined {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return undefined;
+
+  for (const part of cookieHeader.split(';')) {
+    const [key, ...valueParts] = part.trim().split('=');
+    if (key === name) return decodeURIComponent(valueParts.join('='));
+  }
+  return undefined;
+}
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
+  const sharedOptions = {
+    httpOnly: true,
+    secure: config.cookieSecure,
+    sameSite: config.cookieSameSite,
+    domain: config.cookieDomain,
+  } as const;
+
+  res.cookie(ACCESS_COOKIE, accessToken, {
+    ...sharedOptions,
+    path: '/',
+    maxAge: 15 * 60 * 1000,
+  });
+  res.cookie(REFRESH_COOKIE, refreshToken, {
+    ...sharedOptions,
+    path: '/api/v1/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+}
+
+function clearAuthCookies(res: Response): void {
+  const sharedOptions = {
+    httpOnly: true,
+    secure: config.cookieSecure,
+    sameSite: config.cookieSameSite,
+    domain: config.cookieDomain,
+  } as const;
+  res.clearCookie(ACCESS_COOKIE, { ...sharedOptions, path: '/' });
+  res.clearCookie(REFRESH_COOKIE, { ...sharedOptions, path: '/api/v1/auth' });
+}
 
 export class AuthController {
   register = async (req: Request, res: Response) => {
@@ -23,26 +69,32 @@ export class AuthController {
       userAgent: req.headers['user-agent'],
     };
     const result = await authService.login(validatedData, context);
-    res.status(200).json(successResponse(result, 'Login successful'));
+    setAuthCookies(res, result.accessToken, result.refreshToken);
+    res.status(200).json(successResponse({ user: result.user }, 'Login successful'));
   };
 
   logout = async (req: Request, res: Response) => {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
-    await authService.logout(refreshToken);
+    const refreshToken = readCookie(req, REFRESH_COOKIE) ?? req.body?.refreshToken;
+    try {
+      if (refreshToken) await authService.logout(refreshToken);
+    } finally {
+      clearAuthCookies(res);
+    }
     res.status(200).json(successResponse(null, 'Logout successful'));
   };
 
   refreshToken = async (req: Request, res: Response) => {
-    const { refreshToken } = refreshTokenSchema.parse(req.body);
+    const refreshToken = readCookie(req, REFRESH_COOKIE) ?? refreshTokenSchema.parse(req.body).refreshToken;
     const result = await authService.refreshToken(refreshToken);
-    res.status(200).json(successResponse(result, 'Tokens refreshed successfully'));
+    setAuthCookies(res, result.accessToken, result.refreshToken);
+    res.status(200).json(successResponse({ refreshed: true }, 'Session refreshed successfully'));
   };
 
   forgotPassword = async (req: Request, res: Response) => {
     const { email } = forgotPasswordSchema.parse(req.body);
     const result = await authService.forgotPassword(email);
     // Even if user not found, return status success for security
-    res.status(200).json(successResponse(result, 'If the email exists, a password reset token was generated'));
+    res.status(200).json(successResponse(result, 'If the email exists, password reset instructions will be sent'));
   };
 
   resetPassword = async (req: Request, res: Response) => {
@@ -52,7 +104,7 @@ export class AuthController {
   };
 
   verifyEmail = async (req: Request, res: Response) => {
-    const token = req.query.token as string || req.body.token;
+    const token = req.body?.token;
     if (!token || typeof token !== 'string') {
       res.status(400).json({ success: false, message: 'Verification token is required' });
       return;
@@ -70,6 +122,27 @@ export class AuthController {
     }
     const user = await authService.getMe(userId);
     res.status(200).json(successResponse(user, 'User profile retrieved'));
+  };
+
+  changePassword = async (req: Request, res: Response) => {
+    const userId = req.headers['x-user-id'] as string || (req.user?.userId);
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Authentication required' });
+      return;
+    }
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ success: false, message: 'currentPassword and newPassword are required' });
+      return;
+    }
+    await authService.changePassword(userId, currentPassword, newPassword);
+    res.status(200).json(successResponse(null, 'Password changed successfully'));
+  };
+
+  resendVerification = async (req: Request, res: Response) => {
+    const { email } = forgotPasswordSchema.parse(req.body);
+    const result = await authService.resendVerification(email);
+    res.status(200).json(successResponse(result, 'If the email exists and is unverified, verification instructions will be sent'));
   };
 }
 

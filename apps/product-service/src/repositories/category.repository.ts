@@ -31,6 +31,13 @@ export class CategoryRepository {
       where: { id },
     });
   }
+
+  async update(id: string, data: Prisma.CategoryUpdateInput) {
+    return prisma.category.update({
+      where: { id },
+      data,
+    });
+  }
 }
 
 export const categoryRepository = new CategoryRepository();

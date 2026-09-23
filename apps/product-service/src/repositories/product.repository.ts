@@ -107,6 +107,21 @@ export class ProductRepository {
     });
   }
 
+  async findManyByIds(ids: string[]) {
+    return prisma.product.findMany({
+      where: {
+        id: { in: ids },
+      },
+      include: {
+        category: true,
+        brand: true,
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    });
+  }
+
   async findBySlug(slug: string) {
     return prisma.product.findUnique({
       where: { slug },
@@ -147,6 +162,31 @@ export class ProductRepository {
     return prisma.product.delete({
       where: { id },
     });
+  }
+
+  async updateRating(productId: string, averageRating: number, totalReviews: number) {
+    return prisma.product.update({
+      where: { id: productId },
+      data: {
+        rating: new Prisma.Decimal(averageRating),
+        totalReviews,
+      },
+    });
+  }
+
+  async countProducts(where: Prisma.ProductWhereInput) {
+    return prisma.product.count({ where });
+  }
+
+  async findIdsBySellerId(sellerId: string): Promise<string[]> {
+    const products = await prisma.product.findMany({
+      where: {
+        sellerId,
+        status: { not: ProductStatus.ARCHIVED },
+      },
+      select: { id: true },
+    });
+    return products.map((p) => p.id);
   }
 
   // --- Product Image Methods ---
@@ -202,6 +242,33 @@ export class ProductRepository {
       where: { productId },
       orderBy: { sortOrder: 'asc' },
     });
+  }
+
+  async findBySellerId(sellerId: string, params: { page: number; limit: number }) {
+    const skip = (params.page - 1) * params.limit;
+    const where = {
+      sellerId,
+      status: { not: ProductStatus.ARCHIVED },
+    };
+
+    const [products, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        skip,
+        take: params.limit,
+        include: {
+          category: true,
+          brand: true,
+          images: {
+            orderBy: { sortOrder: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return { products, total };
   }
 }
 

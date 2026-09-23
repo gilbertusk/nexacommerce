@@ -2,7 +2,7 @@ import { profileRepository } from '../repositories/profile.repository';
 import { sellerRepository } from '../repositories/seller.repository';
 import { addressRepository } from '../repositories/address.repository';
 import { config } from '../config';
-import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '@nexacommerce/common';
+import { NotFoundError, ValidationError, ConflictError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
 
 export class UserService {
   // --- Profile ---
@@ -31,7 +31,7 @@ export class UserService {
     const url = `${config.authServiceUrl}${path}`;
     const headers = {
       'Content-Type': 'application/json',
-      'X-Internal-Service': 'user-service',
+      ...buildInternalServiceHeaders('user-service'),
     };
 
     try {
@@ -175,6 +175,59 @@ export class UserService {
       throw new NotFoundError('Seller profile not found');
     }
     return sellerRepository.update(userId, data);
+  }
+
+  async getAddressById(addressId: string) {
+    return addressRepository.findById(addressId);
+  }
+
+  async setDefaultAddress(userId: string, addressId: string) {
+    const address = await addressRepository.findById(addressId);
+    if (!address) {
+      throw new NotFoundError('Address not found');
+    }
+    if (address.userId !== userId) {
+      throw new ForbiddenError('You do not own this address');
+    }
+
+    await addressRepository.unsetDefaults(userId);
+    return addressRepository.update(addressId, { isDefault: true });
+  }
+
+  async listSellerProfiles(query: { page?: number; limit?: number }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      sellerRepository.findAll({ skip, take: limit }),
+      sellerRepository.countAll(),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async updateSellerProfileStatus(id: string, status: string) {
+    const profile = await sellerRepository.findById(id);
+    if (!profile) {
+      throw new NotFoundError('Seller profile not found');
+    }
+
+    const updateData: any = { status };
+    if (status === 'ACTIVE') {
+      updateData.isVerified = true;
+      updateData.verifiedAt = new Date();
+    } else if (status === 'SUSPENDED') {
+      updateData.isVerified = false;
+    }
+
+    return sellerRepository.updateById(id, updateData);
   }
 }
 

@@ -1,5 +1,8 @@
 import { prisma } from '../prisma/client';
 import { Prisma, Status } from '../generated/client';
+import crypto from 'crypto';
+
+const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
 export class UserRepository {
   async findByEmail(email: string) {
@@ -34,6 +37,10 @@ export class UserRepository {
     });
   }
 
+  async countByFilter(where: Prisma.UserWhereInput) {
+    return prisma.user.count({ where });
+  }
+
   async findAndCountAll(params: { skip: number; take: number; role?: string; status?: string }) {
     const where: Prisma.UserWhereInput = {};
     if (params.role) where.role = params.role as any;
@@ -56,7 +63,7 @@ export class UserRepository {
   async saveRefreshToken(token: string, userId: string, expiresAt: Date) {
     return prisma.refreshToken.create({
       data: {
-        token,
+        token: hashToken(token),
         userId,
         expiresAt,
       },
@@ -65,13 +72,13 @@ export class UserRepository {
 
   async findRefreshToken(token: string) {
     return prisma.refreshToken.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
     });
   }
 
   async revokeRefreshToken(token: string) {
     return prisma.refreshToken.update({
-      where: { token },
+      where: { token: hashToken(token) },
       data: {
         isRevoked: true,
         revokedAt: new Date(),
@@ -83,7 +90,7 @@ export class UserRepository {
   async createPasswordResetToken(token: string, userId: string, expiresAt: Date) {
     return prisma.passwordResetToken.create({
       data: {
-        token,
+        token: hashToken(token),
         userId,
         expiresAt,
       },
@@ -92,13 +99,13 @@ export class UserRepository {
 
   async findPasswordResetToken(token: string) {
     return prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
     });
   }
 
   async usePasswordResetToken(token: string) {
     return prisma.passwordResetToken.update({
-      where: { token },
+      where: { token: hashToken(token) },
       data: { isUsed: true },
     });
   }
@@ -107,7 +114,7 @@ export class UserRepository {
   async createEmailVerificationToken(token: string, userId: string, expiresAt: Date) {
     return prisma.emailVerificationToken.create({
       data: {
-        token,
+        token: hashToken(token),
         userId,
         expiresAt,
       },
@@ -116,13 +123,13 @@ export class UserRepository {
 
   async findEmailVerificationToken(token: string) {
     return prisma.emailVerificationToken.findUnique({
-      where: { token },
+      where: { token: hashToken(token) },
     });
   }
 
   async useEmailVerificationToken(token: string) {
     return prisma.emailVerificationToken.update({
-      where: { token },
+      where: { token: hashToken(token) },
       data: { isUsed: true },
     });
   }

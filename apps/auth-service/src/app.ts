@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { authRoutes } from './routes/auth.routes';
+import { swaggerSpec } from './docs/swagger';
 import { errorResponse } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
+import { ZodError } from 'zod';
 
 // Extend express Request interface to support user context
 declare global {
@@ -20,12 +23,12 @@ declare global {
 const logger = createLogger('auth-service');
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({ origin: false }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
 
 // Log incoming requests
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -46,6 +49,10 @@ app.get('/auth/health', (req, res) => {
   });
 });
 
+// Swagger UI
+app.get('/auth/docs/spec.json', (req, res) => res.json(swaggerSpec));
+app.use('/auth/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Routes
 app.use('/auth', authRoutes);
 
@@ -53,9 +60,9 @@ app.use('/auth', authRoutes);
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error(err.message, err);
 
-  const statusCode = err.statusCode || 500;
+  const statusCode = err instanceof ZodError ? 400 : (err.statusCode || 500);
   const message = err.message || 'Internal server error';
-  const errors = err.errors || null;
+  const errors = err instanceof ZodError ? err.issues : (err.errors || null);
 
   res.status(statusCode).json(errorResponse(message, statusCode, errors));
 });

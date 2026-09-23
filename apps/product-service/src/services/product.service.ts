@@ -18,6 +18,30 @@ export class ProductService {
     return categoryRepository.create(data);
   }
 
+  async updateCategory(id: string, data: { name?: string; slug?: string }) {
+    const category = await categoryRepository.findById(id);
+    if (!category) {
+      throw new NotFoundError('Category not found');
+    }
+
+    if (data.slug && data.slug !== category.slug) {
+      const existing = await categoryRepository.findBySlug(data.slug);
+      if (existing) {
+        throw new ConflictError('Category slug already exists');
+      }
+    }
+
+    return categoryRepository.update(id, data);
+  }
+
+  async deleteCategory(id: string) {
+    const category = await categoryRepository.findById(id);
+    if (!category) {
+      throw new NotFoundError('Category not found');
+    }
+    return categoryRepository.delete(id);
+  }
+
   // --- Brand ---
   async getBrands() {
     return brandRepository.findAll();
@@ -93,6 +117,10 @@ export class ProductService {
       throw new NotFoundError('Product not found');
     }
     return product;
+  }
+
+  async getProductsByIds(ids: string[]) {
+    return productRepository.findManyByIds(ids);
   }
 
   async createProduct(data: {
@@ -198,6 +226,38 @@ export class ProductService {
     }
 
     return productRepository.update(id, data);
+  }
+
+  async updateProductRating(productId: string, averageRating: number, totalReviews: number) {
+    const product = await productRepository.findById(productId);
+    if (!product) return;
+    await productRepository.updateRating(productId, averageRating, totalReviews);
+  }
+
+  async getProductsBySellerId(sellerId: string): Promise<string[]> {
+    return productRepository.findIdsBySellerId(sellerId);
+  }
+
+  async getSellerProducts(sellerId: string, params: { page?: number; limit?: number }) {
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+
+    const { products, total } = await productRepository.findBySellerId(sellerId, { page, limit });
+
+    return {
+      items: products,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async countProducts(params: { sellerId?: string; status?: string }): Promise<number> {
+    const where: any = {};
+    if (params.sellerId) where.sellerId = params.sellerId;
+    if (params.status) where.status = params.status;
+    return productRepository.countProducts(where);
   }
 
   async deleteProduct(id: string, actor: { userId: string; role: string }) {

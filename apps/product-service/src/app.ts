@@ -1,19 +1,21 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { ZodError } from 'zod';
 import { productRoutes } from './routes/product.routes';
+import { swaggerSpec } from './docs/swagger';
 import { errorResponse } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
 
 const logger = createLogger('product-service');
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({ origin: false }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
 
 // Log incoming requests
 app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.path}`);
   next();
 });
 
@@ -34,8 +36,16 @@ app.get('/products/health', (req, res) => {
   });
 });
 
+// Swagger UI
+app.get('/products/docs/spec.json', (req, res) => res.json(swaggerSpec));
+app.use('/products/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+import { productController } from './controllers/product.controller';
+import { asyncHandler } from '@nexacommerce/common';
+
 // Mount Routes
 app.use('/', productRoutes);
+app.get('/', asyncHandler((req: Request, res: Response) => productController.getProducts(req, res)));
 
 // Centralized error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

@@ -1,6 +1,8 @@
 import app from './app';
 import { config } from './config/index';
+import { initRabbitMQ } from './messaging/rabbitmq';
 
-app.listen(config.port, () => {
+app.listen(config.port, async () => {
   console.log(`[Inventory Service] running on port ${config.port}`);
+  await initRabbitMQ();
 });

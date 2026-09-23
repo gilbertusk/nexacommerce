@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #ad3300;
+  --color-primary-hover: #8f2a00;
+  --color-paper: #F5F2EB;
+  --color-surface: #FAF8F5;
+  --color-ink-primary: #1C1917;
+  --color-ink-secondary: #78716C;
+  --color-hairline: #E7E3DC;
+  --color-outline-variant: #D6D3D1;
+
+  --font-serif: var(--font-instrument-serif), serif;
+  --font-sans: var(--font-hanken-grotesk), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* Custom Base Styles */
+:root {
+  --background: #FAF8F5;
+  --foreground: #1C1917;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Material Symbols Outlined Setup */
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+}
+
+/* Hairline borders matching Referensi A/B styling */
+.hairline {
+  border: 1px solid #E7E3DC;
+}
+.hairline-t {
+  border-top: 1px solid #E7E3DC;
+}
+.hairline-b {
+  border-bottom: 1px solid #E7E3DC;
+}
+.hairline-l {
+  border-left: 1px solid #E7E3DC;
+}
+.hairline-r {
+  border-right: 1px solid #E7E3DC;
+}
+.hairline-x {
+  border-left: 1px solid #E7E3DC;
+  border-right: 1px solid #E7E3DC;
+}
+.hairline-y {
+  border-top: 1px solid #E7E3DC;
+  border-bottom: 1px solid #E7E3DC;
+}
+
+/* Tabular numbers for price listings and digits */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Editorial styling scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF8F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #E7E3DC;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D6D3D1;
+}
+
+/* Hide scrollbar while keeping scroll behavior */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f3f0ea 25%, #e7e3dc 50%, #f3f0ea 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

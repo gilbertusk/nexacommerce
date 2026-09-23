@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'my-super-secret-local-key';
+process.env.DATABASE_URL = 'postgresql://postgres:postgres123@localhost:5445/nexacommerce_db?schema=auth_test';
+process.env.PORT = '3001';
+process.env.SMTP_HOST = 'smtp.mailtrap.io';
+process.env.SMTP_PORT = '2525';
+process.env.SMTP_USER = 'test';
+process.env.SMTP_PASS = 'test';
+process.env.SMTP_FROM = 'test@test.com';
+process.env.RABBITMQ_URL = 'amqp://guest:guest@localhost:5672';

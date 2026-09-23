@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { userController } from '../controllers/user.controller';
-import { asyncHandler, ForbiddenError, UnauthorizedError } from '@nexacommerce/common';
+import { asyncHandler, createInternalServiceGuard } from '@nexacommerce/common';
 
 const router = Router();
 
@@ -15,6 +15,9 @@ const populateUserContext = (req: Request, res: Response, next: NextFunction) =>
   }
   next();
 };
+
+// Middleware to check if internal service
+const checkInternalService = createInternalServiceGuard(['order-service', 'cart-service', 'product-service']);
 
 // Middleware to enforce roles
 const restrictTo = (...roles: string[]) => {
@@ -41,6 +44,7 @@ router.get('/me/addresses', asyncHandler(userController.getAddresses));
 router.post('/me/addresses', asyncHandler(userController.createAddress));
 router.patch('/me/addresses/:id', asyncHandler(userController.updateAddress));
 router.delete('/me/addresses/:id', asyncHandler(userController.deleteAddress));
+router.patch('/me/addresses/:id/set-default', asyncHandler(userController.setDefaultAddress));
 
 // --- Seller Profile Endpoints ---
 router.post('/seller-profile', asyncHandler(userController.createSellerProfile));
@@ -49,8 +53,13 @@ router.patch('/seller-profile/me', asyncHandler(userController.updateSellerProfi
 
 // --- Admin Endpoints (ADMIN only) ---
 router.get('/', restrictTo('ADMIN'), asyncHandler(userController.listUsers));
+router.get('/seller-profiles', restrictTo('ADMIN'), asyncHandler(userController.listSellerProfiles));
+router.patch('/seller-profiles/:id/status', restrictTo('ADMIN'), asyncHandler(userController.updateSellerProfileStatus));
 router.get('/:id', restrictTo('ADMIN'), asyncHandler(userController.getUserById));
 router.patch('/:id/status', restrictTo('ADMIN'), asyncHandler(userController.updateUserStatus));
+
+// --- Internal microservice endpoints ---
+router.get('/internal/users/:userId/addresses/:addressId', checkInternalService, asyncHandler(userController.internalGetAddress));
 
 export default router;
 export { router as userRoutes };

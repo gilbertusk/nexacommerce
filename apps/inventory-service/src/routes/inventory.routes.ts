@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { inventoryController } from '../controllers/inventory.controller';
-import { asyncHandler, ForbiddenError } from '@nexacommerce/common';
+import { asyncHandler, createInternalServiceGuard } from '@nexacommerce/common';
 
 const router = Router();
 
@@ -30,10 +30,9 @@ const restrictTo = (...roles: string[]) => {
   };
 };
 
-router.use(populateUserContext);
+const checkInternalService = createInternalServiceGuard(['order-service', 'cart-service', 'product-service']);
 
-// --- Public Endpoints ---
-router.get('/:productId', asyncHandler(inventoryController.getStockByProductId));
+router.use(populateUserContext);
 
 // --- Authenticated Endpoints (Roles check) ---
 router.get('/', restrictTo('SELLER', 'ADMIN'), asyncHandler(inventoryController.getInventory));
@@ -41,14 +40,21 @@ router.post('/initialize', restrictTo('SELLER', 'ADMIN'), asyncHandler(inventory
 router.post('/stock-in', restrictTo('SELLER', 'ADMIN'), asyncHandler(inventoryController.stockIn));
 router.post('/stock-out', restrictTo('SELLER', 'ADMIN'), asyncHandler(inventoryController.stockOut));
 
-// --- Reservation flow (triggered by Customer checkout or Admin/Seller) ---
-router.post('/reserve', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(inventoryController.reserveStock));
-router.post('/confirm', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(inventoryController.confirmStock));
-router.post('/release', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(inventoryController.releaseStock));
+// --- Reservation flow (only the authoritative order workflow may mutate it) ---
+router.post('/reserve', checkInternalService, asyncHandler(inventoryController.reserveStock));
+router.post('/confirm', checkInternalService, asyncHandler(inventoryController.confirmStock));
+router.post('/release', checkInternalService, asyncHandler(inventoryController.releaseStock));
 
 // --- Audit & Reports ---
 router.get('/:productId/movements', restrictTo('SELLER', 'ADMIN'), asyncHandler(inventoryController.getMovements));
 router.get('/low-stock', restrictTo('SELLER', 'ADMIN'), asyncHandler(inventoryController.getLowStock));
+
+// --- Internal microservice endpoints ---
+router.get('/internal/inventory/:productId', checkInternalService, asyncHandler(inventoryController.internalGetStock));
+router.post('/internal/inventory/batch-check', checkInternalService, asyncHandler(inventoryController.internalBatchCheckStock));
+
+// --- Public endpoint (keep dynamic route after every named route) ---
+router.get('/:productId', asyncHandler(inventoryController.getStockByProductId));
 
 export default router;
 export { router as inventoryRoutes };

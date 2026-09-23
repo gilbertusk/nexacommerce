@@ -3,26 +3,57 @@ import jwt from 'jsonwebtoken';
 import { userRepository } from '../repositories/user.repository';
 import { config } from '../config/index';
 import { Role, Status } from '../generated/client';
-import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '@nexacommerce/common';
+import {
+  UnauthorizedError,
+  ValidationError,
+  NotFoundError,
+  buildInternalServiceHeaders,
+} from '@nexacommerce/common';
+import { createLogger } from '@nexacommerce/logger';
 import crypto from 'crypto';
 
+const logger = createLogger('auth-service');
+
+type AuthEmailType = 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
+
 export class AuthService {
-  async register(data: { name: string; email: string; password: string; role?: string }) {
+  private dispatchAuthEmail(options: {
+    type: AuthEmailType;
+    email: string;
+    name: string;
+    token: string;
+  }): void {
+    void fetch(`${config.notificationServiceUrl}/notifications/internal/auth-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...buildInternalServiceHeaders('auth-service'),
+      },
+      body: JSON.stringify(options),
+      signal: AbortSignal.timeout(5000),
+    }).then((response) => {
+      if (!response.ok) {
+        logger.error(`Notification service rejected ${options.type} delivery with status ${response.status}`);
+      }
+    }).catch(() => {
+      // Public auth responses stay generic and do not leak account existence.
+      // Durable retry/outbox delivery is introduced in Phase 3.
+      logger.error(`Notification service unavailable while dispatching ${options.type}`);
+    });
+  }
+
+  async register(data: { name: string; email: string; password: string }) {
     const existingUser = await userRepository.findByEmail(data.email);
     if (existingUser) {
       throw new ValidationError('Email already registered');
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
-    const assignedRole = (data.role && Object.values(Role).includes(data.role as any)) 
-      ? (data.role as Role) 
-      : Role.CUSTOMER;
-
     const user = await userRepository.create({
       name: data.name,
       email: data.email,
       passwordHash,
-      role: assignedRole,
+      role: Role.CUSTOMER,
       status: Status.ACTIVE,
     });
 
@@ -32,6 +63,12 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 1); // 24 hours
 
     await userRepository.createEmailVerificationToken(token, user.id, expiresAt);
+    this.dispatchAuthEmail({
+      type: 'EMAIL_VERIFICATION',
+      email: user.email,
+      name: user.name,
+      token,
+    });
 
     return {
       id: user.id,
@@ -40,7 +77,6 @@ export class AuthService {
       role: user.role,
       status: user.status,
       emailVerified: user.emailVerified,
-      emailVerificationToken: token,
       createdAt: user.createdAt,
     };
   }
@@ -161,7 +197,7 @@ export class AuthService {
     const user = await userRepository.findByEmail(email);
     // For security reasons, don't expose if the user exists
     if (!user) {
-      return { resetToken: crypto.randomUUID() }; // return dummy uuid
+      return { accepted: true };
     }
 
     const token = crypto.randomUUID();
@@ -169,8 +205,14 @@ export class AuthService {
     expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour
 
     await userRepository.createPasswordResetToken(token, user.id, expiresAt);
+    this.dispatchAuthEmail({
+      type: 'PASSWORD_RESET',
+      email: user.email,
+      name: user.name,
+      token,
+    });
 
-    return { resetToken: token };
+    return { accepted: true };
   }
 
   async resetPassword(token: string, newPassword: string) {
@@ -225,6 +267,43 @@ export class AuthService {
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
     };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await userRepository.update(userId, { passwordHash });
+  }
+
+  async resendVerification(email: string) {
+    const user = await userRepository.findByEmail(email);
+    // Keep one response shape for missing, verified, and unverified accounts.
+    if (!user || user.emailVerified) {
+      return { accepted: true };
+    }
+
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 1); // 24 hours
+
+    await userRepository.createEmailVerificationToken(token, user.id, expiresAt);
+    this.dispatchAuthEmail({
+      type: 'EMAIL_VERIFICATION',
+      email: user.email,
+      name: user.name,
+      token,
+    });
+
+    return { accepted: true };
   }
 }
 

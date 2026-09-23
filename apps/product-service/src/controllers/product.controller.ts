@@ -22,6 +22,19 @@ export class ProductController {
     res.status(201).json(successResponse(category, 'Category created successfully'));
   }
 
+  async updateCategory(req: Request, res: Response) {
+    const { id } = req.params;
+    const validatedData = createCategorySchema.partial().parse(req.body);
+    const category = await productService.updateCategory(id, validatedData);
+    res.status(200).json(successResponse(category, 'Category updated successfully'));
+  }
+
+  async deleteCategory(req: Request, res: Response) {
+    const { id } = req.params;
+    await productService.deleteCategory(id);
+    res.status(200).json(successResponse(null, 'Category deleted successfully'));
+  }
+
   // --- Brand ---
   async getBrands(req: Request, res: Response) {
     const brands = await productService.getBrands();
@@ -59,11 +72,42 @@ export class ProductController {
     res.status(200).json(successResponse(product, 'Product retrieved successfully'));
   }
 
+  async getProductsBatch(req: Request, res: Response) {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ success: false, message: 'Invalid or missing product IDs' });
+    }
+    const products = await productService.getProductsByIds(ids);
+    res.status(200).json(successResponse(products, 'Products retrieved successfully'));
+  }
+
+  async getSellerProductIds(req: Request, res: Response) {
+    const { sellerId } = req.params;
+    const ids = await productService.getProductsBySellerId(sellerId);
+    res.status(200).json(successResponse(ids, 'Seller product IDs retrieved successfully'));
+  }
+
+  async getSellerProducts(req: Request, res: Response) {
+    const { sellerId } = req.params;
+    const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const result = await productService.getSellerProducts(sellerId, { page, limit });
+    res.status(200).json(successResponse(result, 'Seller products retrieved successfully'));
+  }
+
+  async countProducts(req: Request, res: Response) {
+    const sellerId = req.query.sellerId as string | undefined;
+    const status = req.query.status as string | undefined;
+    const count = await productService.countProducts({ sellerId, status });
+    res.status(200).json(successResponse({ count }, 'Product count retrieved'));
+  }
+
   async createProduct(req: Request, res: Response) {
     const userId = req.headers['x-user-id'] as string;
+    const userRole = req.headers['x-user-role'] as string;
     const data = {
       ...req.body,
-      sellerId: req.body.sellerId || userId,
+      sellerId: userRole === 'ADMIN' ? req.body.sellerId : userId,
     };
     const validatedData = createProductSchema.parse(data);
     const product = await productService.createProduct(validatedData);
