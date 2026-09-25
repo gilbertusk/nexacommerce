@@ -1,9 +1,18 @@
 import prisma from '../prisma/client';
 import { Prisma } from '../generated/client';
 
+/**
+ * Either the ambient client or a transaction client, so a caller can make a
+ * notification commit together with the work that produced it.
+ */
+export type NotificationWriteClient = Prisma.TransactionClient | typeof prisma;
+
 export class NotificationRepository {
-  async createNotification(data: Prisma.NotificationCreateInput) {
-    return prisma.notification.create({ data });
+  async createNotification(
+    data: Prisma.NotificationCreateInput,
+    client: NotificationWriteClient = prisma,
+  ) {
+    return client.notification.create({ data });
   }
 
   async findBySourceEventId(sourceEventId: string) {

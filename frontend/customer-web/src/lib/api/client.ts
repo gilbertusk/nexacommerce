@@ -4,10 +4,34 @@ interface ApiErrorResponse {
   success: false;
   message?: string;
   error?: string;
+  /** Machine-readable cause, when the endpoint supplies one. */
+  reason?: string;
+  details?: unknown;
 }
 
 function extractErrorMessage(body: ApiErrorResponse): string {
   return body.message ?? body.error ?? "Terjadi kesalahan pada server.";
+}
+
+/**
+ * An error carrying the server's machine-readable `reason`.
+ *
+ * Some endpoints refuse a request for a specific, actionable cause — a shipping
+ * quote blocked because a seller has no verified origin, for example. Throwing a
+ * bare Error would discard that and leave the UI with only prose to match on.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly reason?: string;
+  readonly details?: unknown;
+
+  constructor(message: string, status: number, reason?: string, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.reason = reason;
+    this.details = details;
+  }
 }
 
 async function request<T>(
@@ -40,7 +64,13 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    throw new Error(extractErrorMessage(body as ApiErrorResponse));
+    const errorBody = body as ApiErrorResponse;
+    throw new ApiError(
+      extractErrorMessage(errorBody),
+      response.status,
+      errorBody.reason,
+      errorBody.details,
+    );
   }
 
   return body as T;

@@ -98,3 +98,40 @@ model OutboxEvent {
   @@index([aggregateType, aggregateId])
   @@map("outbox_events")
 }
+
+/// A server-issued shipping price that checkout can trust.
+///
+/// The browser never supplies a shipping cost. It asks for a quote, receives an
+/// opaque id, and passes that id to checkout; the Order Service resolves the id
+/// back to this row. The snapshot columns record exactly what the price was
+/// computed from, so revalidation at checkout can detect a changed cart,
+/// address, or rate table rather than silently honouring a stale price.
+model ShippingQuote {
+  id          String    @id @default(uuid())
+  customerId  String    @map("customer_id")
+  /// Destination snapshot: { addressId, city, province, postalCode }.
+  destination Json
+  /// Per-seller shipment snapshot. Each entry carries sellerId, originCity,
+  /// originProvince, courierCode, serviceCode, weightGrams, cost, and the
+  /// productIds and quantities the weight was derived from.
+  shipments   Json
+  /// Sum of the per-seller costs. This is the only figure checkout may charge.
+  totalCost   Decimal   @map("total_cost") @db.Decimal(12, 2)
+  /// Fingerprint of the cart the quote was computed for. Checkout recomputes it
+  /// and refuses the quote when it no longer matches.
+  cartHash    String    @map("cart_hash")
+  status      String    @default("ACTIVE")
+  expiresAt   DateTime  @map("expires_at")
+  consumedAt  DateTime? @map("consumed_at")
+  consumedBy  String?   @map("consumed_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // `consumedBy` additionally carries a partial unique index
+  // (`shipping_quotes_consumed_by_key ... WHERE consumed_by IS NOT NULL`),
+  // created in SQL because Prisma cannot express a partial index. It is what
+  // makes "one quote prices at most one order" a database guarantee rather than
+  // an application convention; do not drop it.
+  @@index([customerId, status])
+  @@index([expiresAt])
+  @@map("shipping_quotes")
+}

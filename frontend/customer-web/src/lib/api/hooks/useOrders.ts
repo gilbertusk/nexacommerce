@@ -68,11 +68,17 @@ export interface SingleOrderResponse {
   };
 }
 
+/**
+ * Checkout input.
+ *
+ * There is no shipping cost here on purpose. The browser requests a quote from
+ * Shipping Service and passes back only its opaque id; the server resolves the
+ * price from its own record. The backend rejects unknown fields, so re-adding a
+ * client-side cost would fail the request rather than be ignored.
+ */
 export interface CreateOrderPayload {
   shippingAddressId: string;
-  courierName?: string;
-  courierService?: string;
-  shippingCost?: number;
+  shippingQuoteId: string;
   voucherCode?: string;
   notes?: string;
 }

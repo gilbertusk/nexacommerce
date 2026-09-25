@@ -94,11 +94,92 @@ Resetting an existing production group in place requires an approved rollback wi
 | Container CI smoke test | Added | CI waits for bridge readiness, publishes a synthetic RabbitMQ fact, and asserts the matching Kafka record |
 | Root typecheck/lint | Pass | 24 workspaces typecheck; lint has 0 errors and 6 pre-existing Google-font warnings |
 
+## Analytics Kafka projection (2026-09-25)
+
+The first real projection now exists, closing the largest Phase 4 gap.
+
+### Boundary
+
+The event path is unchanged and remains one-way:
+
+```
+domain outbox -> RabbitMQ -> event-stream-service -> Kafka -> analytics projection
+```
+
+No domain service publishes to both RabbitMQ and Kafka. The projection is a
+read-side consumer only: it writes to `daily_sales_projections` and
+`kafka_projection_progress` and to nothing else. It never calls RabbitMQ and
+never mutates order, payment, inventory, or shipping state, so replaying a
+topic from any offset cannot re-run a business workflow.
+
+### Double-counting and cutover
+
+The same domain fact reaches Analytics twice: once over RabbitMQ into
+`daily_sales_report`, and once over Kafka into the new
+`daily_sales_projections`. Writing both consumers into one table would count
+every order and every payment twice.
+
+The two are therefore kept in separate tables, with separate inbox consumer
+names (`analytics.rabbitmq` and `analytics.kafka`) so each path may apply an
+event exactly once to its own table. Read queries still serve
+`daily_sales_report`; nothing reads the Kafka projection yet.
+
+Cutover sequence, when the projection is trusted:
+
+1. Rebuild `daily_sales_projections` from the topic using a fresh consumer
+   group, with the RabbitMQ consumer still running.
+2. Compare the two tables over a shared window and require exact agreement on
+   orders, revenue, items sold, cancelled, and completed.
+3. Repoint the read queries to the projection.
+4. Only then retire the RabbitMQ analytics consumer.
+
+Running both write paths into one table at any point in that sequence is the
+failure this design exists to prevent.
+
+### Guarantees and how each is enforced
+
+| Guarantee | Mechanism |
+|---|---|
+| Exactly-once application | `(event_id, consumer)` unique key; projection write and consumed marker share one transaction |
+| Offset only after commit | `autoCommit: false`; a `FAILED` projection throws before `commitOffsets`, so the partition is re-read |
+| Per-partition ordering | `partitionsConsumedConcurrently: 1`; aggregate key set by the bridge |
+| Unsupported schema rejected | `checkEnvelope` accepts only `schemaVersion` 1; others are recorded and stepped over |
+| Poison message does not stall a partition | Malformed or unsupported messages advance the offset and increment a counter rather than retrying forever |
+| Replay safety | Projection tables only; no workflow calls, no authoritative state |
+| Observability | `/analytics/readiness` reports connected state, projected/duplicate/rejected/failure counts, last event time, and per-partition lag |
+
+A rejected message advancing the offset is a deliberate trade. Blocking the
+partition until a human intervenes would stall every well-formed event behind
+one bad record. The rejection counter is the signal an alert should watch.
+
+### Validation record
+
+Live Kafka 4.3.1 plus live PostgreSQL 16, `tests/integration/kafka-projection.test.ts`,
+**12/12 pass**. The suite fails rather than skips when either dependency is
+unreachable.
+
+| Case | Result |
+|---|---|
+| Unsupported `schemaVersion` rejected, nothing projected | Pass |
+| Non-JSON body rejected | Pass |
+| Envelope missing `eventId` rejected | Pass |
+| Order projected and partition progress recorded in one transaction | Pass |
+| Replayed event not counted twice | Pass |
+| 8 concurrent deliveries of one event produce exactly 1 projection | Pass |
+| `OrderPaid` not projected, so `PaymentSuccess` revenue is not doubled | Pass |
+| Transaction failure returns `FAILED` and projects nothing | Pass |
+| Redelivery after an uncommitted offset applies exactly once | Pass |
+| Event remains projectable after a transient failure | Pass |
+| Per-key ordering preserved through a partitioned topic (live broker) | Pass |
+| Fresh consumer group replays the log from the beginning (live broker) | Pass |
+
+Not covered: multi-broker failover, rebalance under load, and sustained lag
+behaviour. Those need a real cluster, not a single-node KRaft container.
+
 ## Remaining exit gates
 
-- Implement at least one real Kafka projection with a database-backed atomic inbox; Analytics is the preferred first candidate.
-- Run the database-backed Kafka projection through duplicate delivery, offset replay, consumer restart, and projection-write crash windows; bridge-level duplicate/order/replay/restart and local broker outage behavior are already proven above.
-- Define production Kafka cluster size, replication factor, `min.insync.replicas`, storage sizing, monitoring, TLS/SASL, ACLs, backup/export, and disaster recovery.
+- Execute the cutover comparison above and repoint Analytics reads, then retire the RabbitMQ analytics consumer.
+- Production cluster requirements are now written down in [kafka-production-requirements.md](kafka-production-requirements.md): 3 brokers, RF 3, `min.insync.replicas` 2, `unclean.leader.election.enable=false`, TLS plus SASL with per-service ACLs, storage sizing, monitoring and alert thresholds, export, and DR. **Marked external acceptance: no production cluster has been provided, so none of it is verified.**
 - Decide retention/privacy deletion requirements with business/legal owners before public production.
 - Replace the single-node plaintext Compose validation topology with the intended secured multi-node environment for production acceptance.
 

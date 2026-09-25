@@ -74,6 +74,9 @@ NexaCommerce is an e-commerce microservices engine built using **Node.js, Expres
 - **Operational broker:** RabbitMQ routes workflow events through durable named queues with confirmation, retry, and DLQ behavior.
 - **Replay stream:** Event Stream Service consumes a dedicated RabbitMQ fact queue and publishes keyed, versioned records to Kafka. Kafka is downstream-only and cannot block or drive checkout correctness.
 - **No independent dual publish:** Domain services do not separately publish the same mutation to both brokers.
+- **Transactional outbox (producer side):** A domain event is written to the producer's own `outbox_events` table in the same transaction as the state change it describes, then published by a dispatcher. The event cannot be lost because the broker was unavailable at commit time, and it cannot be published for a change that rolled back.
+- **Database-backed inbox (consumer side):** A consumer claims an event, applies its mutation, and marks the event consumed in **one** transaction. The deduplication key is `(event_id, consumer)`, so one event is applied once per consumer — which is what lets the RabbitMQ consumer and the Kafka projection each process the same fact into their own tables. See `docs/event-flow.md`.
+- **Side effects that cannot be rolled back get a safety copy.** Outbound email is not sent during consumption; a job row is written in the consuming transaction and delivered later by a dispatcher with bounded retries.
 
 ---
 
@@ -86,4 +89,5 @@ NexaCommerce is an e-commerce microservices engine built using **Node.js, Expres
 
 ## 5. Error Handling & Logging Strategy
 - **Standardized Errors:** The `@nexacommerce/common` package provides wrapper classes (e.g., `BadRequestError`, `UnauthorizedError`) mapping to HTTP status codes.
-- **Centralized Logger:** `@nexacommerce/logger` wraps Winston, outputting structured JSON logs to stdout in production, and colorized formatting in development.
+- **Centralized Logger:** `@nexacommerce/logger` is a small in-house logger writing timestamped, level-tagged lines to stdout. It is not Winston; an earlier revision of this document said so incorrectly.
+- **Request correlation:** every log line carries the request's `x-request-id` when one is in scope. The id is minted or adopted at the gateway, forwarded to proxied services and to internal calls, and established from the event id in broker consumers. See [observability.md](observability.md).

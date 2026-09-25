@@ -104,3 +104,49 @@ server {
 * **Cause:** The Prisma client was not generated inside the container during build or failed to copy to the dist output directory.
 * **Solution:** Rebuild the containers using the `--no-cache` flag:
   `docker compose --profile production build --no-cache`
+
+## Database backup and restore drill
+
+A backup nobody has restored is a hope, not a backup. `scripts/backup-restore-drill.sh` takes a
+logical dump of the running database, restores it into a **new, separate** scratch database, and
+compares per-table row counts between source and restored copy. It fails if any count differs, if
+the dump is implausibly small, or if `RESTORE_DB` is not distinct from `SOURCE_DB`. It never writes
+to the source.
+
+```bash
+npm run db:backup-drill                # writes to ./backups
+npm run db:backup-drill -- /srv/backups
+```
+
+Environment overrides: `PGCONTAINER`, `PGUSER`, `SOURCE_DB`, `RESTORE_DB`.
+
+Local verification, 2026-09-25, PostgreSQL 16 in `nexacommerce-postgres`:
+
+| Step | Result |
+|---|---|
+| `pg_dump -Fc` of `nexacommerce_db` | 276,569 bytes |
+| Restore into a freshly created scratch database | Succeeded |
+| Per-table row-count comparison | **143/143 tables match exactly** |
+
+The dump uses custom format (`-Fc`), so a restore can be parallelised with `pg_restore -j` and
+individual tables can be replayed selectively during an incident.
+
+### What this drill does and does not prove
+
+It proves that a logical dump of this schema restores completely and that no table silently loses
+rows in the round trip.
+
+It does **not** cover, and these remain open for production acceptance:
+
+- **Point-in-time recovery.** PITR needs WAL archiving (`archive_mode`, `archive_command`, or a
+  managed equivalent) plus a base backup, neither of which exists in the local single-node
+  container. A logical dump can only restore to the instant it was taken.
+- **Recovery time and recovery point objectives.** No RTO/RPO has been agreed, and the restore
+  duration measured against a near-empty local database says nothing about production volume.
+- **Off-host retention.** The dump is written to local disk. Production needs offsite, encrypted,
+  access-controlled, retention-managed storage.
+- **Restore into a different major version**, and restore of roles and grants, which `--no-owner
+  --no-acl` deliberately skips.
+- **Scheduling, monitoring, and alerting** on backup age and failure.
+
+Treat this as local evidence that the backup mechanism works, not as disaster-recovery acceptance.

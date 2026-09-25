@@ -1,9 +1,16 @@
 import request from 'supertest';
 import app from '../../src/app';
+import { prisma } from '../../src/prisma/client';
 
 const customerHeaders = { 'x-user-id': 'user-1', 'x-user-role': 'CUSTOMER', 'x-user-email': 'user@test.com' };
 
 describe('Notification Routes (integration)', () => {
+  // Importing the app opens a Prisma connection pool. Closing it is what lets
+  // Jest exit on its own instead of hanging or needing --forceExit.
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
   describe('Internal route security', () => {
     it('rejects auth email requests without an internal credential', async () => {
       const res = await request(app)

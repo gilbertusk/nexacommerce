@@ -1,9 +1,10 @@
+import { ZodError } from 'zod';
 import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { orderRoutes } from './routes/order.routes';
 import { swaggerSpec } from './docs/swagger';
-import { errorResponse } from '@nexacommerce/common';
+import { errorResponse, requestIdMiddleware } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
 import { orderService } from './services/order.service';
 
@@ -21,6 +22,10 @@ declare global {
 
 const logger = createLogger('order-service');
 const app = express();
+
+// Establish the request correlation id before anything else runs, so every
+// log line and every outbound internal call in this request carries it.
+app.use(requestIdMiddleware);
 
 app.use(cors({ origin: false }));
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
@@ -81,9 +86,18 @@ if (process.env.NODE_ENV !== 'test') {
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error(err.message, err);
 
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal server error';
-  const errors = err.errors || null;
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Internal server error';
+  let errors = err.errors || null;
+
+  // A schema violation is the caller's fault, not a server fault. Without this
+  // branch a malformed checkout body surfaced as 500, which both misreports the
+  // cause and leaks internal detail to the client.
+  if (err instanceof ZodError) {
+    statusCode = 400;
+    message = 'Validation failed';
+    errors = err.errors.map((issue: any) => ({ field: issue.path.join('.'), message: issue.message }));
+  }
 
   res.status(statusCode).json(errorResponse(message, statusCode, errors));
 });

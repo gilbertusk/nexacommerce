@@ -7,14 +7,15 @@ export const swaggerSpec = {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
     schemas: {
       CheckoutBody: {
-        type: 'object', required: ['shippingAddressId'],
+        type: 'object', required: ['shippingAddressId', 'shippingQuoteId'], additionalProperties: false,
         properties: {
-          shippingAddressId: { type: 'string', description: 'Address ID from User Service' },
-          courierName: { type: 'string', example: 'JNE' },
-          courierService: { type: 'string', example: 'REG' },
-          shippingCost: { type: 'number', deprecated: true, description: 'Untrusted client value; ignored. Checkout is disabled until a server-issued quote can be validated.' },
+          shippingAddressId: { type: 'string', format: 'uuid', description: 'Address ID from User Service' },
+          shippingQuoteId: {
+            type: 'string', format: 'uuid',
+            description: 'Opaque quote id from POST /shipping/quotes. The shipping price is read from the stored quote; no client-supplied cost is accepted.',
+          },
           voucherCode: { type: 'string', nullable: true },
-          notes: { type: 'string', nullable: true },
+          notes: { type: 'string', nullable: true, maxLength: 1000 },
         },
       },
       OrderItem: {
@@ -49,7 +50,8 @@ export const swaggerSpec = {
         tags: ['Orders'], summary: 'Checkout cart and create order (CUSTOMER)', security: [{ bearerAuth: [] }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckoutBody' } } } },
         responses: {
-          400: { description: 'Checkout is unavailable until a trusted server-issued shipping quote is implemented' },
+          201: { description: 'Order created', content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckoutResponse' } } } },
+          400: { description: 'Invalid body, expired or already-used shipping quote, or a cart that changed after the quote was issued' },
           403: { description: 'CUSTOMER only' },
         },
       },

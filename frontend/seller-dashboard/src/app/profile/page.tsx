@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useSellerStore } from '@/lib/store/useSellerStore';
 import { apiGet, apiPatch } from '@/lib/api/client';
+import DispatchOriginSection from './DispatchOriginSection';
 
 interface SellerProfile {
   id: string;
@@ -482,6 +483,8 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      <DispatchOriginSection token={token} />
 
       {/* Account Info (read-only) */}
       <div className="bg-white hairline rounded-sm">

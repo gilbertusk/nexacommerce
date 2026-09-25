@@ -48,6 +48,31 @@ export type CategoryPerformanceReport = $Result.DefaultSelection<Prisma.$Categor
  * 
  */
 export type AnalyticsEvent = $Result.DefaultSelection<Prisma.$AnalyticsEventPayload>
+/**
+ * Model InboxEvent
+ * Consumption record for one broker event as seen by one named consumer.
+ * A row reaches PROCESSED in the same transaction as the report mutations it
+ * caused, so a redelivery can be skipped without replaying those mutations.
+ */
+export type InboxEvent = $Result.DefaultSelection<Prisma.$InboxEventPayload>
+/**
+ * Model DailySalesProjection
+ * Daily sales figures projected from the Kafka stream.
+ * 
+ * Deliberately separate from `daily_sales_report`, which the RabbitMQ
+ * consumer owns. Running both consumers against one table would count every
+ * business fact twice, because the same domain event reaches this service
+ * over both paths. Keeping two tables lets the Kafka projection be rebuilt
+ * and compared against the RabbitMQ-fed reports before any cutover.
+ */
+export type DailySalesProjection = $Result.DefaultSelection<Prisma.$DailySalesProjectionPayload>
+/**
+ * Model KafkaProjectionProgress
+ * Per-partition progress of the Kafka projection, used for lag reporting and
+ * operational visibility. Kafka remains the authority for offsets; this table
+ * is observability only and is never used to decide what to consume.
+ */
+export type KafkaProjectionProgress = $Result.DefaultSelection<Prisma.$KafkaProjectionProgressPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -241,6 +266,36 @@ export class PrismaClient<
     * ```
     */
   get analyticsEvent(): Prisma.AnalyticsEventDelegate<ExtArgs>;
+
+  /**
+   * `prisma.inboxEvent`: Exposes CRUD operations for the **InboxEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more InboxEvents
+    * const inboxEvents = await prisma.inboxEvent.findMany()
+    * ```
+    */
+  get inboxEvent(): Prisma.InboxEventDelegate<ExtArgs>;
+
+  /**
+   * `prisma.dailySalesProjection`: Exposes CRUD operations for the **DailySalesProjection** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DailySalesProjections
+    * const dailySalesProjections = await prisma.dailySalesProjection.findMany()
+    * ```
+    */
+  get dailySalesProjection(): Prisma.DailySalesProjectionDelegate<ExtArgs>;
+
+  /**
+   * `prisma.kafkaProjectionProgress`: Exposes CRUD operations for the **KafkaProjectionProgress** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more KafkaProjectionProgresses
+    * const kafkaProjectionProgresses = await prisma.kafkaProjectionProgress.findMany()
+    * ```
+    */
+  get kafkaProjectionProgress(): Prisma.KafkaProjectionProgressDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -688,7 +743,10 @@ export namespace Prisma {
     SellerPerformanceReport: 'SellerPerformanceReport',
     PaymentReport: 'PaymentReport',
     CategoryPerformanceReport: 'CategoryPerformanceReport',
-    AnalyticsEvent: 'AnalyticsEvent'
+    AnalyticsEvent: 'AnalyticsEvent',
+    InboxEvent: 'InboxEvent',
+    DailySalesProjection: 'DailySalesProjection',
+    KafkaProjectionProgress: 'KafkaProjectionProgress'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -704,7 +762,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "dailySalesReport" | "monthlySalesReport" | "productSalesReport" | "sellerPerformanceReport" | "paymentReport" | "categoryPerformanceReport" | "analyticsEvent"
+      modelProps: "dailySalesReport" | "monthlySalesReport" | "productSalesReport" | "sellerPerformanceReport" | "paymentReport" | "categoryPerformanceReport" | "analyticsEvent" | "inboxEvent" | "dailySalesProjection" | "kafkaProjectionProgress"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1195,6 +1253,216 @@ export namespace Prisma {
           count: {
             args: Prisma.AnalyticsEventCountArgs<ExtArgs>
             result: $Utils.Optional<AnalyticsEventCountAggregateOutputType> | number
+          }
+        }
+      }
+      InboxEvent: {
+        payload: Prisma.$InboxEventPayload<ExtArgs>
+        fields: Prisma.InboxEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.InboxEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.InboxEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          findFirst: {
+            args: Prisma.InboxEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.InboxEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          findMany: {
+            args: Prisma.InboxEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>[]
+          }
+          create: {
+            args: Prisma.InboxEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          createMany: {
+            args: Prisma.InboxEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.InboxEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>[]
+          }
+          delete: {
+            args: Prisma.InboxEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          update: {
+            args: Prisma.InboxEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.InboxEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.InboxEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.InboxEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          aggregate: {
+            args: Prisma.InboxEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateInboxEvent>
+          }
+          groupBy: {
+            args: Prisma.InboxEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<InboxEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.InboxEventCountArgs<ExtArgs>
+            result: $Utils.Optional<InboxEventCountAggregateOutputType> | number
+          }
+        }
+      }
+      DailySalesProjection: {
+        payload: Prisma.$DailySalesProjectionPayload<ExtArgs>
+        fields: Prisma.DailySalesProjectionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DailySalesProjectionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DailySalesProjectionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>
+          }
+          findFirst: {
+            args: Prisma.DailySalesProjectionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DailySalesProjectionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>
+          }
+          findMany: {
+            args: Prisma.DailySalesProjectionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>[]
+          }
+          create: {
+            args: Prisma.DailySalesProjectionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>
+          }
+          createMany: {
+            args: Prisma.DailySalesProjectionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DailySalesProjectionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>[]
+          }
+          delete: {
+            args: Prisma.DailySalesProjectionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>
+          }
+          update: {
+            args: Prisma.DailySalesProjectionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>
+          }
+          deleteMany: {
+            args: Prisma.DailySalesProjectionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DailySalesProjectionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.DailySalesProjectionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DailySalesProjectionPayload>
+          }
+          aggregate: {
+            args: Prisma.DailySalesProjectionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDailySalesProjection>
+          }
+          groupBy: {
+            args: Prisma.DailySalesProjectionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DailySalesProjectionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DailySalesProjectionCountArgs<ExtArgs>
+            result: $Utils.Optional<DailySalesProjectionCountAggregateOutputType> | number
+          }
+        }
+      }
+      KafkaProjectionProgress: {
+        payload: Prisma.$KafkaProjectionProgressPayload<ExtArgs>
+        fields: Prisma.KafkaProjectionProgressFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.KafkaProjectionProgressFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.KafkaProjectionProgressFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>
+          }
+          findFirst: {
+            args: Prisma.KafkaProjectionProgressFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.KafkaProjectionProgressFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>
+          }
+          findMany: {
+            args: Prisma.KafkaProjectionProgressFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>[]
+          }
+          create: {
+            args: Prisma.KafkaProjectionProgressCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>
+          }
+          createMany: {
+            args: Prisma.KafkaProjectionProgressCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.KafkaProjectionProgressCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>[]
+          }
+          delete: {
+            args: Prisma.KafkaProjectionProgressDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>
+          }
+          update: {
+            args: Prisma.KafkaProjectionProgressUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>
+          }
+          deleteMany: {
+            args: Prisma.KafkaProjectionProgressDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.KafkaProjectionProgressUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.KafkaProjectionProgressUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$KafkaProjectionProgressPayload>
+          }
+          aggregate: {
+            args: Prisma.KafkaProjectionProgressAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateKafkaProjectionProgress>
+          }
+          groupBy: {
+            args: Prisma.KafkaProjectionProgressGroupByArgs<ExtArgs>
+            result: $Utils.Optional<KafkaProjectionProgressGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.KafkaProjectionProgressCountArgs<ExtArgs>
+            result: $Utils.Optional<KafkaProjectionProgressCountAggregateOutputType> | number
           }
         }
       }
@@ -8402,6 +8670,2890 @@ export namespace Prisma {
 
 
   /**
+   * Model InboxEvent
+   */
+
+  export type AggregateInboxEvent = {
+    _count: InboxEventCountAggregateOutputType | null
+    _avg: InboxEventAvgAggregateOutputType | null
+    _sum: InboxEventSumAggregateOutputType | null
+    _min: InboxEventMinAggregateOutputType | null
+    _max: InboxEventMaxAggregateOutputType | null
+  }
+
+  export type InboxEventAvgAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type InboxEventSumAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type InboxEventMinAggregateOutputType = {
+    id: string | null
+    eventId: string | null
+    consumer: string | null
+    eventName: string | null
+    status: string | null
+    attempts: number | null
+    lastError: string | null
+    processedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type InboxEventMaxAggregateOutputType = {
+    id: string | null
+    eventId: string | null
+    consumer: string | null
+    eventName: string | null
+    status: string | null
+    attempts: number | null
+    lastError: string | null
+    processedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type InboxEventCountAggregateOutputType = {
+    id: number
+    eventId: number
+    consumer: number
+    eventName: number
+    payload: number
+    status: number
+    attempts: number
+    lastError: number
+    processedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type InboxEventAvgAggregateInputType = {
+    attempts?: true
+  }
+
+  export type InboxEventSumAggregateInputType = {
+    attempts?: true
+  }
+
+  export type InboxEventMinAggregateInputType = {
+    id?: true
+    eventId?: true
+    consumer?: true
+    eventName?: true
+    status?: true
+    attempts?: true
+    lastError?: true
+    processedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type InboxEventMaxAggregateInputType = {
+    id?: true
+    eventId?: true
+    consumer?: true
+    eventName?: true
+    status?: true
+    attempts?: true
+    lastError?: true
+    processedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type InboxEventCountAggregateInputType = {
+    id?: true
+    eventId?: true
+    consumer?: true
+    eventName?: true
+    payload?: true
+    status?: true
+    attempts?: true
+    lastError?: true
+    processedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type InboxEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which InboxEvent to aggregate.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned InboxEvents
+    **/
+    _count?: true | InboxEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: InboxEventAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: InboxEventSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: InboxEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: InboxEventMaxAggregateInputType
+  }
+
+  export type GetInboxEventAggregateType<T extends InboxEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateInboxEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateInboxEvent[P]>
+      : GetScalarType<T[P], AggregateInboxEvent[P]>
+  }
+
+
+
+
+  export type InboxEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: InboxEventWhereInput
+    orderBy?: InboxEventOrderByWithAggregationInput | InboxEventOrderByWithAggregationInput[]
+    by: InboxEventScalarFieldEnum[] | InboxEventScalarFieldEnum
+    having?: InboxEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: InboxEventCountAggregateInputType | true
+    _avg?: InboxEventAvgAggregateInputType
+    _sum?: InboxEventSumAggregateInputType
+    _min?: InboxEventMinAggregateInputType
+    _max?: InboxEventMaxAggregateInputType
+  }
+
+  export type InboxEventGroupByOutputType = {
+    id: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonValue
+    status: string
+    attempts: number
+    lastError: string | null
+    processedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: InboxEventCountAggregateOutputType | null
+    _avg: InboxEventAvgAggregateOutputType | null
+    _sum: InboxEventSumAggregateOutputType | null
+    _min: InboxEventMinAggregateOutputType | null
+    _max: InboxEventMaxAggregateOutputType | null
+  }
+
+  type GetInboxEventGroupByPayload<T extends InboxEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<InboxEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof InboxEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], InboxEventGroupByOutputType[P]>
+            : GetScalarType<T[P], InboxEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type InboxEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    consumer?: boolean
+    eventName?: boolean
+    payload?: boolean
+    status?: boolean
+    attempts?: boolean
+    lastError?: boolean
+    processedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["inboxEvent"]>
+
+  export type InboxEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    consumer?: boolean
+    eventName?: boolean
+    payload?: boolean
+    status?: boolean
+    attempts?: boolean
+    lastError?: boolean
+    processedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["inboxEvent"]>
+
+  export type InboxEventSelectScalar = {
+    id?: boolean
+    eventId?: boolean
+    consumer?: boolean
+    eventName?: boolean
+    payload?: boolean
+    status?: boolean
+    attempts?: boolean
+    lastError?: boolean
+    processedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $InboxEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "InboxEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      eventId: string
+      consumer: string
+      eventName: string
+      payload: Prisma.JsonValue
+      status: string
+      attempts: number
+      lastError: string | null
+      processedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["inboxEvent"]>
+    composites: {}
+  }
+
+  type InboxEventGetPayload<S extends boolean | null | undefined | InboxEventDefaultArgs> = $Result.GetResult<Prisma.$InboxEventPayload, S>
+
+  type InboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<InboxEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: InboxEventCountAggregateInputType | true
+    }
+
+  export interface InboxEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['InboxEvent'], meta: { name: 'InboxEvent' } }
+    /**
+     * Find zero or one InboxEvent that matches the filter.
+     * @param {InboxEventFindUniqueArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends InboxEventFindUniqueArgs>(args: SelectSubset<T, InboxEventFindUniqueArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one InboxEvent that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {InboxEventFindUniqueOrThrowArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends InboxEventFindUniqueOrThrowArgs>(args: SelectSubset<T, InboxEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first InboxEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventFindFirstArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends InboxEventFindFirstArgs>(args?: SelectSubset<T, InboxEventFindFirstArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first InboxEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventFindFirstOrThrowArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends InboxEventFindFirstOrThrowArgs>(args?: SelectSubset<T, InboxEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more InboxEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all InboxEvents
+     * const inboxEvents = await prisma.inboxEvent.findMany()
+     * 
+     * // Get first 10 InboxEvents
+     * const inboxEvents = await prisma.inboxEvent.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const inboxEventWithIdOnly = await prisma.inboxEvent.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends InboxEventFindManyArgs>(args?: SelectSubset<T, InboxEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a InboxEvent.
+     * @param {InboxEventCreateArgs} args - Arguments to create a InboxEvent.
+     * @example
+     * // Create one InboxEvent
+     * const InboxEvent = await prisma.inboxEvent.create({
+     *   data: {
+     *     // ... data to create a InboxEvent
+     *   }
+     * })
+     * 
+     */
+    create<T extends InboxEventCreateArgs>(args: SelectSubset<T, InboxEventCreateArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many InboxEvents.
+     * @param {InboxEventCreateManyArgs} args - Arguments to create many InboxEvents.
+     * @example
+     * // Create many InboxEvents
+     * const inboxEvent = await prisma.inboxEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends InboxEventCreateManyArgs>(args?: SelectSubset<T, InboxEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many InboxEvents and returns the data saved in the database.
+     * @param {InboxEventCreateManyAndReturnArgs} args - Arguments to create many InboxEvents.
+     * @example
+     * // Create many InboxEvents
+     * const inboxEvent = await prisma.inboxEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many InboxEvents and only return the `id`
+     * const inboxEventWithIdOnly = await prisma.inboxEvent.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends InboxEventCreateManyAndReturnArgs>(args?: SelectSubset<T, InboxEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a InboxEvent.
+     * @param {InboxEventDeleteArgs} args - Arguments to delete one InboxEvent.
+     * @example
+     * // Delete one InboxEvent
+     * const InboxEvent = await prisma.inboxEvent.delete({
+     *   where: {
+     *     // ... filter to delete one InboxEvent
+     *   }
+     * })
+     * 
+     */
+    delete<T extends InboxEventDeleteArgs>(args: SelectSubset<T, InboxEventDeleteArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one InboxEvent.
+     * @param {InboxEventUpdateArgs} args - Arguments to update one InboxEvent.
+     * @example
+     * // Update one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends InboxEventUpdateArgs>(args: SelectSubset<T, InboxEventUpdateArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more InboxEvents.
+     * @param {InboxEventDeleteManyArgs} args - Arguments to filter InboxEvents to delete.
+     * @example
+     * // Delete a few InboxEvents
+     * const { count } = await prisma.inboxEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends InboxEventDeleteManyArgs>(args?: SelectSubset<T, InboxEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more InboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many InboxEvents
+     * const inboxEvent = await prisma.inboxEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends InboxEventUpdateManyArgs>(args: SelectSubset<T, InboxEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one InboxEvent.
+     * @param {InboxEventUpsertArgs} args - Arguments to update or create a InboxEvent.
+     * @example
+     * // Update or create a InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.upsert({
+     *   create: {
+     *     // ... data to create a InboxEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the InboxEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends InboxEventUpsertArgs>(args: SelectSubset<T, InboxEventUpsertArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of InboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventCountArgs} args - Arguments to filter InboxEvents to count.
+     * @example
+     * // Count the number of InboxEvents
+     * const count = await prisma.inboxEvent.count({
+     *   where: {
+     *     // ... the filter for the InboxEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends InboxEventCountArgs>(
+      args?: Subset<T, InboxEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], InboxEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a InboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends InboxEventAggregateArgs>(args: Subset<T, InboxEventAggregateArgs>): Prisma.PrismaPromise<GetInboxEventAggregateType<T>>
+
+    /**
+     * Group by InboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends InboxEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: InboxEventGroupByArgs['orderBy'] }
+        : { orderBy?: InboxEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, InboxEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetInboxEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the InboxEvent model
+   */
+  readonly fields: InboxEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for InboxEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__InboxEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the InboxEvent model
+   */ 
+  interface InboxEventFieldRefs {
+    readonly id: FieldRef<"InboxEvent", 'String'>
+    readonly eventId: FieldRef<"InboxEvent", 'String'>
+    readonly consumer: FieldRef<"InboxEvent", 'String'>
+    readonly eventName: FieldRef<"InboxEvent", 'String'>
+    readonly payload: FieldRef<"InboxEvent", 'Json'>
+    readonly status: FieldRef<"InboxEvent", 'String'>
+    readonly attempts: FieldRef<"InboxEvent", 'Int'>
+    readonly lastError: FieldRef<"InboxEvent", 'String'>
+    readonly processedAt: FieldRef<"InboxEvent", 'DateTime'>
+    readonly createdAt: FieldRef<"InboxEvent", 'DateTime'>
+    readonly updatedAt: FieldRef<"InboxEvent", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * InboxEvent findUnique
+   */
+  export type InboxEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent findUniqueOrThrow
+   */
+  export type InboxEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent findFirst
+   */
+  export type InboxEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for InboxEvents.
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of InboxEvents.
+     */
+    distinct?: InboxEventScalarFieldEnum | InboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * InboxEvent findFirstOrThrow
+   */
+  export type InboxEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for InboxEvents.
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of InboxEvents.
+     */
+    distinct?: InboxEventScalarFieldEnum | InboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * InboxEvent findMany
+   */
+  export type InboxEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvents to fetch.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing InboxEvents.
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    distinct?: InboxEventScalarFieldEnum | InboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * InboxEvent create
+   */
+  export type InboxEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to create a InboxEvent.
+     */
+    data: XOR<InboxEventCreateInput, InboxEventUncheckedCreateInput>
+  }
+
+  /**
+   * InboxEvent createMany
+   */
+  export type InboxEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many InboxEvents.
+     */
+    data: InboxEventCreateManyInput | InboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * InboxEvent createManyAndReturn
+   */
+  export type InboxEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many InboxEvents.
+     */
+    data: InboxEventCreateManyInput | InboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * InboxEvent update
+   */
+  export type InboxEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to update a InboxEvent.
+     */
+    data: XOR<InboxEventUpdateInput, InboxEventUncheckedUpdateInput>
+    /**
+     * Choose, which InboxEvent to update.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent updateMany
+   */
+  export type InboxEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update InboxEvents.
+     */
+    data: XOR<InboxEventUpdateManyMutationInput, InboxEventUncheckedUpdateManyInput>
+    /**
+     * Filter which InboxEvents to update
+     */
+    where?: InboxEventWhereInput
+  }
+
+  /**
+   * InboxEvent upsert
+   */
+  export type InboxEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * The filter to search for the InboxEvent to update in case it exists.
+     */
+    where: InboxEventWhereUniqueInput
+    /**
+     * In case the InboxEvent found by the `where` argument doesn't exist, create a new InboxEvent with this data.
+     */
+    create: XOR<InboxEventCreateInput, InboxEventUncheckedCreateInput>
+    /**
+     * In case the InboxEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<InboxEventUpdateInput, InboxEventUncheckedUpdateInput>
+  }
+
+  /**
+   * InboxEvent delete
+   */
+  export type InboxEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter which InboxEvent to delete.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent deleteMany
+   */
+  export type InboxEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which InboxEvents to delete
+     */
+    where?: InboxEventWhereInput
+  }
+
+  /**
+   * InboxEvent without action
+   */
+  export type InboxEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DailySalesProjection
+   */
+
+  export type AggregateDailySalesProjection = {
+    _count: DailySalesProjectionCountAggregateOutputType | null
+    _avg: DailySalesProjectionAvgAggregateOutputType | null
+    _sum: DailySalesProjectionSumAggregateOutputType | null
+    _min: DailySalesProjectionMinAggregateOutputType | null
+    _max: DailySalesProjectionMaxAggregateOutputType | null
+  }
+
+  export type DailySalesProjectionAvgAggregateOutputType = {
+    totalOrders: number | null
+    totalCompletedOrders: number | null
+    totalCancelledOrders: number | null
+    totalRevenue: Decimal | null
+    totalItemsSold: number | null
+  }
+
+  export type DailySalesProjectionSumAggregateOutputType = {
+    totalOrders: number | null
+    totalCompletedOrders: number | null
+    totalCancelledOrders: number | null
+    totalRevenue: Decimal | null
+    totalItemsSold: number | null
+  }
+
+  export type DailySalesProjectionMinAggregateOutputType = {
+    id: string | null
+    date: Date | null
+    totalOrders: number | null
+    totalCompletedOrders: number | null
+    totalCancelledOrders: number | null
+    totalRevenue: Decimal | null
+    totalItemsSold: number | null
+    updatedAt: Date | null
+  }
+
+  export type DailySalesProjectionMaxAggregateOutputType = {
+    id: string | null
+    date: Date | null
+    totalOrders: number | null
+    totalCompletedOrders: number | null
+    totalCancelledOrders: number | null
+    totalRevenue: Decimal | null
+    totalItemsSold: number | null
+    updatedAt: Date | null
+  }
+
+  export type DailySalesProjectionCountAggregateOutputType = {
+    id: number
+    date: number
+    totalOrders: number
+    totalCompletedOrders: number
+    totalCancelledOrders: number
+    totalRevenue: number
+    totalItemsSold: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DailySalesProjectionAvgAggregateInputType = {
+    totalOrders?: true
+    totalCompletedOrders?: true
+    totalCancelledOrders?: true
+    totalRevenue?: true
+    totalItemsSold?: true
+  }
+
+  export type DailySalesProjectionSumAggregateInputType = {
+    totalOrders?: true
+    totalCompletedOrders?: true
+    totalCancelledOrders?: true
+    totalRevenue?: true
+    totalItemsSold?: true
+  }
+
+  export type DailySalesProjectionMinAggregateInputType = {
+    id?: true
+    date?: true
+    totalOrders?: true
+    totalCompletedOrders?: true
+    totalCancelledOrders?: true
+    totalRevenue?: true
+    totalItemsSold?: true
+    updatedAt?: true
+  }
+
+  export type DailySalesProjectionMaxAggregateInputType = {
+    id?: true
+    date?: true
+    totalOrders?: true
+    totalCompletedOrders?: true
+    totalCancelledOrders?: true
+    totalRevenue?: true
+    totalItemsSold?: true
+    updatedAt?: true
+  }
+
+  export type DailySalesProjectionCountAggregateInputType = {
+    id?: true
+    date?: true
+    totalOrders?: true
+    totalCompletedOrders?: true
+    totalCancelledOrders?: true
+    totalRevenue?: true
+    totalItemsSold?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DailySalesProjectionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DailySalesProjection to aggregate.
+     */
+    where?: DailySalesProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DailySalesProjections to fetch.
+     */
+    orderBy?: DailySalesProjectionOrderByWithRelationInput | DailySalesProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DailySalesProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DailySalesProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DailySalesProjections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DailySalesProjections
+    **/
+    _count?: true | DailySalesProjectionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: DailySalesProjectionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: DailySalesProjectionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DailySalesProjectionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DailySalesProjectionMaxAggregateInputType
+  }
+
+  export type GetDailySalesProjectionAggregateType<T extends DailySalesProjectionAggregateArgs> = {
+        [P in keyof T & keyof AggregateDailySalesProjection]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDailySalesProjection[P]>
+      : GetScalarType<T[P], AggregateDailySalesProjection[P]>
+  }
+
+
+
+
+  export type DailySalesProjectionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DailySalesProjectionWhereInput
+    orderBy?: DailySalesProjectionOrderByWithAggregationInput | DailySalesProjectionOrderByWithAggregationInput[]
+    by: DailySalesProjectionScalarFieldEnum[] | DailySalesProjectionScalarFieldEnum
+    having?: DailySalesProjectionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DailySalesProjectionCountAggregateInputType | true
+    _avg?: DailySalesProjectionAvgAggregateInputType
+    _sum?: DailySalesProjectionSumAggregateInputType
+    _min?: DailySalesProjectionMinAggregateInputType
+    _max?: DailySalesProjectionMaxAggregateInputType
+  }
+
+  export type DailySalesProjectionGroupByOutputType = {
+    id: string
+    date: Date
+    totalOrders: number
+    totalCompletedOrders: number
+    totalCancelledOrders: number
+    totalRevenue: Decimal
+    totalItemsSold: number
+    updatedAt: Date
+    _count: DailySalesProjectionCountAggregateOutputType | null
+    _avg: DailySalesProjectionAvgAggregateOutputType | null
+    _sum: DailySalesProjectionSumAggregateOutputType | null
+    _min: DailySalesProjectionMinAggregateOutputType | null
+    _max: DailySalesProjectionMaxAggregateOutputType | null
+  }
+
+  type GetDailySalesProjectionGroupByPayload<T extends DailySalesProjectionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DailySalesProjectionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DailySalesProjectionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DailySalesProjectionGroupByOutputType[P]>
+            : GetScalarType<T[P], DailySalesProjectionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DailySalesProjectionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    date?: boolean
+    totalOrders?: boolean
+    totalCompletedOrders?: boolean
+    totalCancelledOrders?: boolean
+    totalRevenue?: boolean
+    totalItemsSold?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["dailySalesProjection"]>
+
+  export type DailySalesProjectionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    date?: boolean
+    totalOrders?: boolean
+    totalCompletedOrders?: boolean
+    totalCancelledOrders?: boolean
+    totalRevenue?: boolean
+    totalItemsSold?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["dailySalesProjection"]>
+
+  export type DailySalesProjectionSelectScalar = {
+    id?: boolean
+    date?: boolean
+    totalOrders?: boolean
+    totalCompletedOrders?: boolean
+    totalCancelledOrders?: boolean
+    totalRevenue?: boolean
+    totalItemsSold?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $DailySalesProjectionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DailySalesProjection"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      date: Date
+      totalOrders: number
+      totalCompletedOrders: number
+      totalCancelledOrders: number
+      totalRevenue: Prisma.Decimal
+      totalItemsSold: number
+      updatedAt: Date
+    }, ExtArgs["result"]["dailySalesProjection"]>
+    composites: {}
+  }
+
+  type DailySalesProjectionGetPayload<S extends boolean | null | undefined | DailySalesProjectionDefaultArgs> = $Result.GetResult<Prisma.$DailySalesProjectionPayload, S>
+
+  type DailySalesProjectionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<DailySalesProjectionFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: DailySalesProjectionCountAggregateInputType | true
+    }
+
+  export interface DailySalesProjectionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DailySalesProjection'], meta: { name: 'DailySalesProjection' } }
+    /**
+     * Find zero or one DailySalesProjection that matches the filter.
+     * @param {DailySalesProjectionFindUniqueArgs} args - Arguments to find a DailySalesProjection
+     * @example
+     * // Get one DailySalesProjection
+     * const dailySalesProjection = await prisma.dailySalesProjection.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DailySalesProjectionFindUniqueArgs>(args: SelectSubset<T, DailySalesProjectionFindUniqueArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one DailySalesProjection that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {DailySalesProjectionFindUniqueOrThrowArgs} args - Arguments to find a DailySalesProjection
+     * @example
+     * // Get one DailySalesProjection
+     * const dailySalesProjection = await prisma.dailySalesProjection.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DailySalesProjectionFindUniqueOrThrowArgs>(args: SelectSubset<T, DailySalesProjectionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first DailySalesProjection that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionFindFirstArgs} args - Arguments to find a DailySalesProjection
+     * @example
+     * // Get one DailySalesProjection
+     * const dailySalesProjection = await prisma.dailySalesProjection.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DailySalesProjectionFindFirstArgs>(args?: SelectSubset<T, DailySalesProjectionFindFirstArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first DailySalesProjection that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionFindFirstOrThrowArgs} args - Arguments to find a DailySalesProjection
+     * @example
+     * // Get one DailySalesProjection
+     * const dailySalesProjection = await prisma.dailySalesProjection.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DailySalesProjectionFindFirstOrThrowArgs>(args?: SelectSubset<T, DailySalesProjectionFindFirstOrThrowArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more DailySalesProjections that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DailySalesProjections
+     * const dailySalesProjections = await prisma.dailySalesProjection.findMany()
+     * 
+     * // Get first 10 DailySalesProjections
+     * const dailySalesProjections = await prisma.dailySalesProjection.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const dailySalesProjectionWithIdOnly = await prisma.dailySalesProjection.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DailySalesProjectionFindManyArgs>(args?: SelectSubset<T, DailySalesProjectionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a DailySalesProjection.
+     * @param {DailySalesProjectionCreateArgs} args - Arguments to create a DailySalesProjection.
+     * @example
+     * // Create one DailySalesProjection
+     * const DailySalesProjection = await prisma.dailySalesProjection.create({
+     *   data: {
+     *     // ... data to create a DailySalesProjection
+     *   }
+     * })
+     * 
+     */
+    create<T extends DailySalesProjectionCreateArgs>(args: SelectSubset<T, DailySalesProjectionCreateArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many DailySalesProjections.
+     * @param {DailySalesProjectionCreateManyArgs} args - Arguments to create many DailySalesProjections.
+     * @example
+     * // Create many DailySalesProjections
+     * const dailySalesProjection = await prisma.dailySalesProjection.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DailySalesProjectionCreateManyArgs>(args?: SelectSubset<T, DailySalesProjectionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DailySalesProjections and returns the data saved in the database.
+     * @param {DailySalesProjectionCreateManyAndReturnArgs} args - Arguments to create many DailySalesProjections.
+     * @example
+     * // Create many DailySalesProjections
+     * const dailySalesProjection = await prisma.dailySalesProjection.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DailySalesProjections and only return the `id`
+     * const dailySalesProjectionWithIdOnly = await prisma.dailySalesProjection.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DailySalesProjectionCreateManyAndReturnArgs>(args?: SelectSubset<T, DailySalesProjectionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a DailySalesProjection.
+     * @param {DailySalesProjectionDeleteArgs} args - Arguments to delete one DailySalesProjection.
+     * @example
+     * // Delete one DailySalesProjection
+     * const DailySalesProjection = await prisma.dailySalesProjection.delete({
+     *   where: {
+     *     // ... filter to delete one DailySalesProjection
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DailySalesProjectionDeleteArgs>(args: SelectSubset<T, DailySalesProjectionDeleteArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one DailySalesProjection.
+     * @param {DailySalesProjectionUpdateArgs} args - Arguments to update one DailySalesProjection.
+     * @example
+     * // Update one DailySalesProjection
+     * const dailySalesProjection = await prisma.dailySalesProjection.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DailySalesProjectionUpdateArgs>(args: SelectSubset<T, DailySalesProjectionUpdateArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more DailySalesProjections.
+     * @param {DailySalesProjectionDeleteManyArgs} args - Arguments to filter DailySalesProjections to delete.
+     * @example
+     * // Delete a few DailySalesProjections
+     * const { count } = await prisma.dailySalesProjection.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DailySalesProjectionDeleteManyArgs>(args?: SelectSubset<T, DailySalesProjectionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DailySalesProjections.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DailySalesProjections
+     * const dailySalesProjection = await prisma.dailySalesProjection.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DailySalesProjectionUpdateManyArgs>(args: SelectSubset<T, DailySalesProjectionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one DailySalesProjection.
+     * @param {DailySalesProjectionUpsertArgs} args - Arguments to update or create a DailySalesProjection.
+     * @example
+     * // Update or create a DailySalesProjection
+     * const dailySalesProjection = await prisma.dailySalesProjection.upsert({
+     *   create: {
+     *     // ... data to create a DailySalesProjection
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DailySalesProjection we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DailySalesProjectionUpsertArgs>(args: SelectSubset<T, DailySalesProjectionUpsertArgs<ExtArgs>>): Prisma__DailySalesProjectionClient<$Result.GetResult<Prisma.$DailySalesProjectionPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of DailySalesProjections.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionCountArgs} args - Arguments to filter DailySalesProjections to count.
+     * @example
+     * // Count the number of DailySalesProjections
+     * const count = await prisma.dailySalesProjection.count({
+     *   where: {
+     *     // ... the filter for the DailySalesProjections we want to count
+     *   }
+     * })
+    **/
+    count<T extends DailySalesProjectionCountArgs>(
+      args?: Subset<T, DailySalesProjectionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DailySalesProjectionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DailySalesProjection.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DailySalesProjectionAggregateArgs>(args: Subset<T, DailySalesProjectionAggregateArgs>): Prisma.PrismaPromise<GetDailySalesProjectionAggregateType<T>>
+
+    /**
+     * Group by DailySalesProjection.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DailySalesProjectionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DailySalesProjectionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DailySalesProjectionGroupByArgs['orderBy'] }
+        : { orderBy?: DailySalesProjectionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DailySalesProjectionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDailySalesProjectionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DailySalesProjection model
+   */
+  readonly fields: DailySalesProjectionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DailySalesProjection.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DailySalesProjectionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DailySalesProjection model
+   */ 
+  interface DailySalesProjectionFieldRefs {
+    readonly id: FieldRef<"DailySalesProjection", 'String'>
+    readonly date: FieldRef<"DailySalesProjection", 'DateTime'>
+    readonly totalOrders: FieldRef<"DailySalesProjection", 'Int'>
+    readonly totalCompletedOrders: FieldRef<"DailySalesProjection", 'Int'>
+    readonly totalCancelledOrders: FieldRef<"DailySalesProjection", 'Int'>
+    readonly totalRevenue: FieldRef<"DailySalesProjection", 'Decimal'>
+    readonly totalItemsSold: FieldRef<"DailySalesProjection", 'Int'>
+    readonly updatedAt: FieldRef<"DailySalesProjection", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DailySalesProjection findUnique
+   */
+  export type DailySalesProjectionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * Filter, which DailySalesProjection to fetch.
+     */
+    where: DailySalesProjectionWhereUniqueInput
+  }
+
+  /**
+   * DailySalesProjection findUniqueOrThrow
+   */
+  export type DailySalesProjectionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * Filter, which DailySalesProjection to fetch.
+     */
+    where: DailySalesProjectionWhereUniqueInput
+  }
+
+  /**
+   * DailySalesProjection findFirst
+   */
+  export type DailySalesProjectionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * Filter, which DailySalesProjection to fetch.
+     */
+    where?: DailySalesProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DailySalesProjections to fetch.
+     */
+    orderBy?: DailySalesProjectionOrderByWithRelationInput | DailySalesProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DailySalesProjections.
+     */
+    cursor?: DailySalesProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DailySalesProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DailySalesProjections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DailySalesProjections.
+     */
+    distinct?: DailySalesProjectionScalarFieldEnum | DailySalesProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * DailySalesProjection findFirstOrThrow
+   */
+  export type DailySalesProjectionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * Filter, which DailySalesProjection to fetch.
+     */
+    where?: DailySalesProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DailySalesProjections to fetch.
+     */
+    orderBy?: DailySalesProjectionOrderByWithRelationInput | DailySalesProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DailySalesProjections.
+     */
+    cursor?: DailySalesProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DailySalesProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DailySalesProjections.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DailySalesProjections.
+     */
+    distinct?: DailySalesProjectionScalarFieldEnum | DailySalesProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * DailySalesProjection findMany
+   */
+  export type DailySalesProjectionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * Filter, which DailySalesProjections to fetch.
+     */
+    where?: DailySalesProjectionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DailySalesProjections to fetch.
+     */
+    orderBy?: DailySalesProjectionOrderByWithRelationInput | DailySalesProjectionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DailySalesProjections.
+     */
+    cursor?: DailySalesProjectionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DailySalesProjections from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DailySalesProjections.
+     */
+    skip?: number
+    distinct?: DailySalesProjectionScalarFieldEnum | DailySalesProjectionScalarFieldEnum[]
+  }
+
+  /**
+   * DailySalesProjection create
+   */
+  export type DailySalesProjectionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * The data needed to create a DailySalesProjection.
+     */
+    data: XOR<DailySalesProjectionCreateInput, DailySalesProjectionUncheckedCreateInput>
+  }
+
+  /**
+   * DailySalesProjection createMany
+   */
+  export type DailySalesProjectionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DailySalesProjections.
+     */
+    data: DailySalesProjectionCreateManyInput | DailySalesProjectionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DailySalesProjection createManyAndReturn
+   */
+  export type DailySalesProjectionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many DailySalesProjections.
+     */
+    data: DailySalesProjectionCreateManyInput | DailySalesProjectionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DailySalesProjection update
+   */
+  export type DailySalesProjectionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * The data needed to update a DailySalesProjection.
+     */
+    data: XOR<DailySalesProjectionUpdateInput, DailySalesProjectionUncheckedUpdateInput>
+    /**
+     * Choose, which DailySalesProjection to update.
+     */
+    where: DailySalesProjectionWhereUniqueInput
+  }
+
+  /**
+   * DailySalesProjection updateMany
+   */
+  export type DailySalesProjectionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DailySalesProjections.
+     */
+    data: XOR<DailySalesProjectionUpdateManyMutationInput, DailySalesProjectionUncheckedUpdateManyInput>
+    /**
+     * Filter which DailySalesProjections to update
+     */
+    where?: DailySalesProjectionWhereInput
+  }
+
+  /**
+   * DailySalesProjection upsert
+   */
+  export type DailySalesProjectionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * The filter to search for the DailySalesProjection to update in case it exists.
+     */
+    where: DailySalesProjectionWhereUniqueInput
+    /**
+     * In case the DailySalesProjection found by the `where` argument doesn't exist, create a new DailySalesProjection with this data.
+     */
+    create: XOR<DailySalesProjectionCreateInput, DailySalesProjectionUncheckedCreateInput>
+    /**
+     * In case the DailySalesProjection was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DailySalesProjectionUpdateInput, DailySalesProjectionUncheckedUpdateInput>
+  }
+
+  /**
+   * DailySalesProjection delete
+   */
+  export type DailySalesProjectionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+    /**
+     * Filter which DailySalesProjection to delete.
+     */
+    where: DailySalesProjectionWhereUniqueInput
+  }
+
+  /**
+   * DailySalesProjection deleteMany
+   */
+  export type DailySalesProjectionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DailySalesProjections to delete
+     */
+    where?: DailySalesProjectionWhereInput
+  }
+
+  /**
+   * DailySalesProjection without action
+   */
+  export type DailySalesProjectionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DailySalesProjection
+     */
+    select?: DailySalesProjectionSelect<ExtArgs> | null
+  }
+
+
+  /**
+   * Model KafkaProjectionProgress
+   */
+
+  export type AggregateKafkaProjectionProgress = {
+    _count: KafkaProjectionProgressCountAggregateOutputType | null
+    _avg: KafkaProjectionProgressAvgAggregateOutputType | null
+    _sum: KafkaProjectionProgressSumAggregateOutputType | null
+    _min: KafkaProjectionProgressMinAggregateOutputType | null
+    _max: KafkaProjectionProgressMaxAggregateOutputType | null
+  }
+
+  export type KafkaProjectionProgressAvgAggregateOutputType = {
+    partition: number | null
+    lastOffset: number | null
+  }
+
+  export type KafkaProjectionProgressSumAggregateOutputType = {
+    partition: number | null
+    lastOffset: bigint | null
+  }
+
+  export type KafkaProjectionProgressMinAggregateOutputType = {
+    id: string | null
+    consumerGroup: string | null
+    topic: string | null
+    partition: number | null
+    lastOffset: bigint | null
+    lastEventAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type KafkaProjectionProgressMaxAggregateOutputType = {
+    id: string | null
+    consumerGroup: string | null
+    topic: string | null
+    partition: number | null
+    lastOffset: bigint | null
+    lastEventAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type KafkaProjectionProgressCountAggregateOutputType = {
+    id: number
+    consumerGroup: number
+    topic: number
+    partition: number
+    lastOffset: number
+    lastEventAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type KafkaProjectionProgressAvgAggregateInputType = {
+    partition?: true
+    lastOffset?: true
+  }
+
+  export type KafkaProjectionProgressSumAggregateInputType = {
+    partition?: true
+    lastOffset?: true
+  }
+
+  export type KafkaProjectionProgressMinAggregateInputType = {
+    id?: true
+    consumerGroup?: true
+    topic?: true
+    partition?: true
+    lastOffset?: true
+    lastEventAt?: true
+    updatedAt?: true
+  }
+
+  export type KafkaProjectionProgressMaxAggregateInputType = {
+    id?: true
+    consumerGroup?: true
+    topic?: true
+    partition?: true
+    lastOffset?: true
+    lastEventAt?: true
+    updatedAt?: true
+  }
+
+  export type KafkaProjectionProgressCountAggregateInputType = {
+    id?: true
+    consumerGroup?: true
+    topic?: true
+    partition?: true
+    lastOffset?: true
+    lastEventAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type KafkaProjectionProgressAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which KafkaProjectionProgress to aggregate.
+     */
+    where?: KafkaProjectionProgressWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KafkaProjectionProgresses to fetch.
+     */
+    orderBy?: KafkaProjectionProgressOrderByWithRelationInput | KafkaProjectionProgressOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: KafkaProjectionProgressWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KafkaProjectionProgresses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KafkaProjectionProgresses.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned KafkaProjectionProgresses
+    **/
+    _count?: true | KafkaProjectionProgressCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: KafkaProjectionProgressAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: KafkaProjectionProgressSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: KafkaProjectionProgressMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: KafkaProjectionProgressMaxAggregateInputType
+  }
+
+  export type GetKafkaProjectionProgressAggregateType<T extends KafkaProjectionProgressAggregateArgs> = {
+        [P in keyof T & keyof AggregateKafkaProjectionProgress]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateKafkaProjectionProgress[P]>
+      : GetScalarType<T[P], AggregateKafkaProjectionProgress[P]>
+  }
+
+
+
+
+  export type KafkaProjectionProgressGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: KafkaProjectionProgressWhereInput
+    orderBy?: KafkaProjectionProgressOrderByWithAggregationInput | KafkaProjectionProgressOrderByWithAggregationInput[]
+    by: KafkaProjectionProgressScalarFieldEnum[] | KafkaProjectionProgressScalarFieldEnum
+    having?: KafkaProjectionProgressScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: KafkaProjectionProgressCountAggregateInputType | true
+    _avg?: KafkaProjectionProgressAvgAggregateInputType
+    _sum?: KafkaProjectionProgressSumAggregateInputType
+    _min?: KafkaProjectionProgressMinAggregateInputType
+    _max?: KafkaProjectionProgressMaxAggregateInputType
+  }
+
+  export type KafkaProjectionProgressGroupByOutputType = {
+    id: string
+    consumerGroup: string
+    topic: string
+    partition: number
+    lastOffset: bigint
+    lastEventAt: Date
+    updatedAt: Date
+    _count: KafkaProjectionProgressCountAggregateOutputType | null
+    _avg: KafkaProjectionProgressAvgAggregateOutputType | null
+    _sum: KafkaProjectionProgressSumAggregateOutputType | null
+    _min: KafkaProjectionProgressMinAggregateOutputType | null
+    _max: KafkaProjectionProgressMaxAggregateOutputType | null
+  }
+
+  type GetKafkaProjectionProgressGroupByPayload<T extends KafkaProjectionProgressGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<KafkaProjectionProgressGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof KafkaProjectionProgressGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], KafkaProjectionProgressGroupByOutputType[P]>
+            : GetScalarType<T[P], KafkaProjectionProgressGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type KafkaProjectionProgressSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    consumerGroup?: boolean
+    topic?: boolean
+    partition?: boolean
+    lastOffset?: boolean
+    lastEventAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["kafkaProjectionProgress"]>
+
+  export type KafkaProjectionProgressSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    consumerGroup?: boolean
+    topic?: boolean
+    partition?: boolean
+    lastOffset?: boolean
+    lastEventAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["kafkaProjectionProgress"]>
+
+  export type KafkaProjectionProgressSelectScalar = {
+    id?: boolean
+    consumerGroup?: boolean
+    topic?: boolean
+    partition?: boolean
+    lastOffset?: boolean
+    lastEventAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $KafkaProjectionProgressPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "KafkaProjectionProgress"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      consumerGroup: string
+      topic: string
+      partition: number
+      lastOffset: bigint
+      lastEventAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["kafkaProjectionProgress"]>
+    composites: {}
+  }
+
+  type KafkaProjectionProgressGetPayload<S extends boolean | null | undefined | KafkaProjectionProgressDefaultArgs> = $Result.GetResult<Prisma.$KafkaProjectionProgressPayload, S>
+
+  type KafkaProjectionProgressCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<KafkaProjectionProgressFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: KafkaProjectionProgressCountAggregateInputType | true
+    }
+
+  export interface KafkaProjectionProgressDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['KafkaProjectionProgress'], meta: { name: 'KafkaProjectionProgress' } }
+    /**
+     * Find zero or one KafkaProjectionProgress that matches the filter.
+     * @param {KafkaProjectionProgressFindUniqueArgs} args - Arguments to find a KafkaProjectionProgress
+     * @example
+     * // Get one KafkaProjectionProgress
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends KafkaProjectionProgressFindUniqueArgs>(args: SelectSubset<T, KafkaProjectionProgressFindUniqueArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one KafkaProjectionProgress that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {KafkaProjectionProgressFindUniqueOrThrowArgs} args - Arguments to find a KafkaProjectionProgress
+     * @example
+     * // Get one KafkaProjectionProgress
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends KafkaProjectionProgressFindUniqueOrThrowArgs>(args: SelectSubset<T, KafkaProjectionProgressFindUniqueOrThrowArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first KafkaProjectionProgress that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressFindFirstArgs} args - Arguments to find a KafkaProjectionProgress
+     * @example
+     * // Get one KafkaProjectionProgress
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends KafkaProjectionProgressFindFirstArgs>(args?: SelectSubset<T, KafkaProjectionProgressFindFirstArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first KafkaProjectionProgress that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressFindFirstOrThrowArgs} args - Arguments to find a KafkaProjectionProgress
+     * @example
+     * // Get one KafkaProjectionProgress
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends KafkaProjectionProgressFindFirstOrThrowArgs>(args?: SelectSubset<T, KafkaProjectionProgressFindFirstOrThrowArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more KafkaProjectionProgresses that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all KafkaProjectionProgresses
+     * const kafkaProjectionProgresses = await prisma.kafkaProjectionProgress.findMany()
+     * 
+     * // Get first 10 KafkaProjectionProgresses
+     * const kafkaProjectionProgresses = await prisma.kafkaProjectionProgress.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const kafkaProjectionProgressWithIdOnly = await prisma.kafkaProjectionProgress.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends KafkaProjectionProgressFindManyArgs>(args?: SelectSubset<T, KafkaProjectionProgressFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a KafkaProjectionProgress.
+     * @param {KafkaProjectionProgressCreateArgs} args - Arguments to create a KafkaProjectionProgress.
+     * @example
+     * // Create one KafkaProjectionProgress
+     * const KafkaProjectionProgress = await prisma.kafkaProjectionProgress.create({
+     *   data: {
+     *     // ... data to create a KafkaProjectionProgress
+     *   }
+     * })
+     * 
+     */
+    create<T extends KafkaProjectionProgressCreateArgs>(args: SelectSubset<T, KafkaProjectionProgressCreateArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many KafkaProjectionProgresses.
+     * @param {KafkaProjectionProgressCreateManyArgs} args - Arguments to create many KafkaProjectionProgresses.
+     * @example
+     * // Create many KafkaProjectionProgresses
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends KafkaProjectionProgressCreateManyArgs>(args?: SelectSubset<T, KafkaProjectionProgressCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many KafkaProjectionProgresses and returns the data saved in the database.
+     * @param {KafkaProjectionProgressCreateManyAndReturnArgs} args - Arguments to create many KafkaProjectionProgresses.
+     * @example
+     * // Create many KafkaProjectionProgresses
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many KafkaProjectionProgresses and only return the `id`
+     * const kafkaProjectionProgressWithIdOnly = await prisma.kafkaProjectionProgress.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends KafkaProjectionProgressCreateManyAndReturnArgs>(args?: SelectSubset<T, KafkaProjectionProgressCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a KafkaProjectionProgress.
+     * @param {KafkaProjectionProgressDeleteArgs} args - Arguments to delete one KafkaProjectionProgress.
+     * @example
+     * // Delete one KafkaProjectionProgress
+     * const KafkaProjectionProgress = await prisma.kafkaProjectionProgress.delete({
+     *   where: {
+     *     // ... filter to delete one KafkaProjectionProgress
+     *   }
+     * })
+     * 
+     */
+    delete<T extends KafkaProjectionProgressDeleteArgs>(args: SelectSubset<T, KafkaProjectionProgressDeleteArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one KafkaProjectionProgress.
+     * @param {KafkaProjectionProgressUpdateArgs} args - Arguments to update one KafkaProjectionProgress.
+     * @example
+     * // Update one KafkaProjectionProgress
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends KafkaProjectionProgressUpdateArgs>(args: SelectSubset<T, KafkaProjectionProgressUpdateArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more KafkaProjectionProgresses.
+     * @param {KafkaProjectionProgressDeleteManyArgs} args - Arguments to filter KafkaProjectionProgresses to delete.
+     * @example
+     * // Delete a few KafkaProjectionProgresses
+     * const { count } = await prisma.kafkaProjectionProgress.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends KafkaProjectionProgressDeleteManyArgs>(args?: SelectSubset<T, KafkaProjectionProgressDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more KafkaProjectionProgresses.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many KafkaProjectionProgresses
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends KafkaProjectionProgressUpdateManyArgs>(args: SelectSubset<T, KafkaProjectionProgressUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one KafkaProjectionProgress.
+     * @param {KafkaProjectionProgressUpsertArgs} args - Arguments to update or create a KafkaProjectionProgress.
+     * @example
+     * // Update or create a KafkaProjectionProgress
+     * const kafkaProjectionProgress = await prisma.kafkaProjectionProgress.upsert({
+     *   create: {
+     *     // ... data to create a KafkaProjectionProgress
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the KafkaProjectionProgress we want to update
+     *   }
+     * })
+     */
+    upsert<T extends KafkaProjectionProgressUpsertArgs>(args: SelectSubset<T, KafkaProjectionProgressUpsertArgs<ExtArgs>>): Prisma__KafkaProjectionProgressClient<$Result.GetResult<Prisma.$KafkaProjectionProgressPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of KafkaProjectionProgresses.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressCountArgs} args - Arguments to filter KafkaProjectionProgresses to count.
+     * @example
+     * // Count the number of KafkaProjectionProgresses
+     * const count = await prisma.kafkaProjectionProgress.count({
+     *   where: {
+     *     // ... the filter for the KafkaProjectionProgresses we want to count
+     *   }
+     * })
+    **/
+    count<T extends KafkaProjectionProgressCountArgs>(
+      args?: Subset<T, KafkaProjectionProgressCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], KafkaProjectionProgressCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a KafkaProjectionProgress.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends KafkaProjectionProgressAggregateArgs>(args: Subset<T, KafkaProjectionProgressAggregateArgs>): Prisma.PrismaPromise<GetKafkaProjectionProgressAggregateType<T>>
+
+    /**
+     * Group by KafkaProjectionProgress.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {KafkaProjectionProgressGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends KafkaProjectionProgressGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: KafkaProjectionProgressGroupByArgs['orderBy'] }
+        : { orderBy?: KafkaProjectionProgressGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, KafkaProjectionProgressGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetKafkaProjectionProgressGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the KafkaProjectionProgress model
+   */
+  readonly fields: KafkaProjectionProgressFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for KafkaProjectionProgress.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__KafkaProjectionProgressClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the KafkaProjectionProgress model
+   */ 
+  interface KafkaProjectionProgressFieldRefs {
+    readonly id: FieldRef<"KafkaProjectionProgress", 'String'>
+    readonly consumerGroup: FieldRef<"KafkaProjectionProgress", 'String'>
+    readonly topic: FieldRef<"KafkaProjectionProgress", 'String'>
+    readonly partition: FieldRef<"KafkaProjectionProgress", 'Int'>
+    readonly lastOffset: FieldRef<"KafkaProjectionProgress", 'BigInt'>
+    readonly lastEventAt: FieldRef<"KafkaProjectionProgress", 'DateTime'>
+    readonly updatedAt: FieldRef<"KafkaProjectionProgress", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * KafkaProjectionProgress findUnique
+   */
+  export type KafkaProjectionProgressFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * Filter, which KafkaProjectionProgress to fetch.
+     */
+    where: KafkaProjectionProgressWhereUniqueInput
+  }
+
+  /**
+   * KafkaProjectionProgress findUniqueOrThrow
+   */
+  export type KafkaProjectionProgressFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * Filter, which KafkaProjectionProgress to fetch.
+     */
+    where: KafkaProjectionProgressWhereUniqueInput
+  }
+
+  /**
+   * KafkaProjectionProgress findFirst
+   */
+  export type KafkaProjectionProgressFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * Filter, which KafkaProjectionProgress to fetch.
+     */
+    where?: KafkaProjectionProgressWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KafkaProjectionProgresses to fetch.
+     */
+    orderBy?: KafkaProjectionProgressOrderByWithRelationInput | KafkaProjectionProgressOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for KafkaProjectionProgresses.
+     */
+    cursor?: KafkaProjectionProgressWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KafkaProjectionProgresses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KafkaProjectionProgresses.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of KafkaProjectionProgresses.
+     */
+    distinct?: KafkaProjectionProgressScalarFieldEnum | KafkaProjectionProgressScalarFieldEnum[]
+  }
+
+  /**
+   * KafkaProjectionProgress findFirstOrThrow
+   */
+  export type KafkaProjectionProgressFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * Filter, which KafkaProjectionProgress to fetch.
+     */
+    where?: KafkaProjectionProgressWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KafkaProjectionProgresses to fetch.
+     */
+    orderBy?: KafkaProjectionProgressOrderByWithRelationInput | KafkaProjectionProgressOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for KafkaProjectionProgresses.
+     */
+    cursor?: KafkaProjectionProgressWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KafkaProjectionProgresses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KafkaProjectionProgresses.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of KafkaProjectionProgresses.
+     */
+    distinct?: KafkaProjectionProgressScalarFieldEnum | KafkaProjectionProgressScalarFieldEnum[]
+  }
+
+  /**
+   * KafkaProjectionProgress findMany
+   */
+  export type KafkaProjectionProgressFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * Filter, which KafkaProjectionProgresses to fetch.
+     */
+    where?: KafkaProjectionProgressWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of KafkaProjectionProgresses to fetch.
+     */
+    orderBy?: KafkaProjectionProgressOrderByWithRelationInput | KafkaProjectionProgressOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing KafkaProjectionProgresses.
+     */
+    cursor?: KafkaProjectionProgressWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` KafkaProjectionProgresses from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` KafkaProjectionProgresses.
+     */
+    skip?: number
+    distinct?: KafkaProjectionProgressScalarFieldEnum | KafkaProjectionProgressScalarFieldEnum[]
+  }
+
+  /**
+   * KafkaProjectionProgress create
+   */
+  export type KafkaProjectionProgressCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * The data needed to create a KafkaProjectionProgress.
+     */
+    data: XOR<KafkaProjectionProgressCreateInput, KafkaProjectionProgressUncheckedCreateInput>
+  }
+
+  /**
+   * KafkaProjectionProgress createMany
+   */
+  export type KafkaProjectionProgressCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many KafkaProjectionProgresses.
+     */
+    data: KafkaProjectionProgressCreateManyInput | KafkaProjectionProgressCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * KafkaProjectionProgress createManyAndReturn
+   */
+  export type KafkaProjectionProgressCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many KafkaProjectionProgresses.
+     */
+    data: KafkaProjectionProgressCreateManyInput | KafkaProjectionProgressCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * KafkaProjectionProgress update
+   */
+  export type KafkaProjectionProgressUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * The data needed to update a KafkaProjectionProgress.
+     */
+    data: XOR<KafkaProjectionProgressUpdateInput, KafkaProjectionProgressUncheckedUpdateInput>
+    /**
+     * Choose, which KafkaProjectionProgress to update.
+     */
+    where: KafkaProjectionProgressWhereUniqueInput
+  }
+
+  /**
+   * KafkaProjectionProgress updateMany
+   */
+  export type KafkaProjectionProgressUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update KafkaProjectionProgresses.
+     */
+    data: XOR<KafkaProjectionProgressUpdateManyMutationInput, KafkaProjectionProgressUncheckedUpdateManyInput>
+    /**
+     * Filter which KafkaProjectionProgresses to update
+     */
+    where?: KafkaProjectionProgressWhereInput
+  }
+
+  /**
+   * KafkaProjectionProgress upsert
+   */
+  export type KafkaProjectionProgressUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * The filter to search for the KafkaProjectionProgress to update in case it exists.
+     */
+    where: KafkaProjectionProgressWhereUniqueInput
+    /**
+     * In case the KafkaProjectionProgress found by the `where` argument doesn't exist, create a new KafkaProjectionProgress with this data.
+     */
+    create: XOR<KafkaProjectionProgressCreateInput, KafkaProjectionProgressUncheckedCreateInput>
+    /**
+     * In case the KafkaProjectionProgress was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<KafkaProjectionProgressUpdateInput, KafkaProjectionProgressUncheckedUpdateInput>
+  }
+
+  /**
+   * KafkaProjectionProgress delete
+   */
+  export type KafkaProjectionProgressDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+    /**
+     * Filter which KafkaProjectionProgress to delete.
+     */
+    where: KafkaProjectionProgressWhereUniqueInput
+  }
+
+  /**
+   * KafkaProjectionProgress deleteMany
+   */
+  export type KafkaProjectionProgressDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which KafkaProjectionProgresses to delete
+     */
+    where?: KafkaProjectionProgressWhereInput
+  }
+
+  /**
+   * KafkaProjectionProgress without action
+   */
+  export type KafkaProjectionProgressDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the KafkaProjectionProgress
+     */
+    select?: KafkaProjectionProgressSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -8539,6 +11691,50 @@ export namespace Prisma {
   export type AnalyticsEventScalarFieldEnum = (typeof AnalyticsEventScalarFieldEnum)[keyof typeof AnalyticsEventScalarFieldEnum]
 
 
+  export const InboxEventScalarFieldEnum: {
+    id: 'id',
+    eventId: 'eventId',
+    consumer: 'consumer',
+    eventName: 'eventName',
+    payload: 'payload',
+    status: 'status',
+    attempts: 'attempts',
+    lastError: 'lastError',
+    processedAt: 'processedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type InboxEventScalarFieldEnum = (typeof InboxEventScalarFieldEnum)[keyof typeof InboxEventScalarFieldEnum]
+
+
+  export const DailySalesProjectionScalarFieldEnum: {
+    id: 'id',
+    date: 'date',
+    totalOrders: 'totalOrders',
+    totalCompletedOrders: 'totalCompletedOrders',
+    totalCancelledOrders: 'totalCancelledOrders',
+    totalRevenue: 'totalRevenue',
+    totalItemsSold: 'totalItemsSold',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DailySalesProjectionScalarFieldEnum = (typeof DailySalesProjectionScalarFieldEnum)[keyof typeof DailySalesProjectionScalarFieldEnum]
+
+
+  export const KafkaProjectionProgressScalarFieldEnum: {
+    id: 'id',
+    consumerGroup: 'consumerGroup',
+    topic: 'topic',
+    partition: 'partition',
+    lastOffset: 'lastOffset',
+    lastEventAt: 'lastEventAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type KafkaProjectionProgressScalarFieldEnum = (typeof KafkaProjectionProgressScalarFieldEnum)[keyof typeof KafkaProjectionProgressScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -8665,6 +11861,20 @@ export namespace Prisma {
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+  /**
+   * Reference to a field of type 'BigInt'
+   */
+  export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
+    
+
+
+  /**
+   * Reference to a field of type 'BigInt[]'
+   */
+  export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
     
   /**
    * Deep Input Types
@@ -9284,6 +12494,225 @@ export namespace Prisma {
     processedAt?: DateTimeNullableWithAggregatesFilter<"AnalyticsEvent"> | Date | string | null
     isProcessed?: BoolWithAggregatesFilter<"AnalyticsEvent"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"AnalyticsEvent"> | Date | string
+  }
+
+  export type InboxEventWhereInput = {
+    AND?: InboxEventWhereInput | InboxEventWhereInput[]
+    OR?: InboxEventWhereInput[]
+    NOT?: InboxEventWhereInput | InboxEventWhereInput[]
+    id?: StringFilter<"InboxEvent"> | string
+    eventId?: StringFilter<"InboxEvent"> | string
+    consumer?: StringFilter<"InboxEvent"> | string
+    eventName?: StringFilter<"InboxEvent"> | string
+    payload?: JsonFilter<"InboxEvent">
+    status?: StringFilter<"InboxEvent"> | string
+    attempts?: IntFilter<"InboxEvent"> | number
+    lastError?: StringNullableFilter<"InboxEvent"> | string | null
+    processedAt?: DateTimeNullableFilter<"InboxEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"InboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"InboxEvent"> | Date | string
+  }
+
+  export type InboxEventOrderByWithRelationInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    payload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrderInput | SortOrder
+    processedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    eventId_consumer?: InboxEventEventIdConsumerCompoundUniqueInput
+    AND?: InboxEventWhereInput | InboxEventWhereInput[]
+    OR?: InboxEventWhereInput[]
+    NOT?: InboxEventWhereInput | InboxEventWhereInput[]
+    eventId?: StringFilter<"InboxEvent"> | string
+    consumer?: StringFilter<"InboxEvent"> | string
+    eventName?: StringFilter<"InboxEvent"> | string
+    payload?: JsonFilter<"InboxEvent">
+    status?: StringFilter<"InboxEvent"> | string
+    attempts?: IntFilter<"InboxEvent"> | number
+    lastError?: StringNullableFilter<"InboxEvent"> | string | null
+    processedAt?: DateTimeNullableFilter<"InboxEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"InboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"InboxEvent"> | Date | string
+  }, "id" | "eventId_consumer">
+
+  export type InboxEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    payload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrderInput | SortOrder
+    processedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: InboxEventCountOrderByAggregateInput
+    _avg?: InboxEventAvgOrderByAggregateInput
+    _max?: InboxEventMaxOrderByAggregateInput
+    _min?: InboxEventMinOrderByAggregateInput
+    _sum?: InboxEventSumOrderByAggregateInput
+  }
+
+  export type InboxEventScalarWhereWithAggregatesInput = {
+    AND?: InboxEventScalarWhereWithAggregatesInput | InboxEventScalarWhereWithAggregatesInput[]
+    OR?: InboxEventScalarWhereWithAggregatesInput[]
+    NOT?: InboxEventScalarWhereWithAggregatesInput | InboxEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"InboxEvent"> | string
+    eventId?: StringWithAggregatesFilter<"InboxEvent"> | string
+    consumer?: StringWithAggregatesFilter<"InboxEvent"> | string
+    eventName?: StringWithAggregatesFilter<"InboxEvent"> | string
+    payload?: JsonWithAggregatesFilter<"InboxEvent">
+    status?: StringWithAggregatesFilter<"InboxEvent"> | string
+    attempts?: IntWithAggregatesFilter<"InboxEvent"> | number
+    lastError?: StringNullableWithAggregatesFilter<"InboxEvent"> | string | null
+    processedAt?: DateTimeNullableWithAggregatesFilter<"InboxEvent"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"InboxEvent"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"InboxEvent"> | Date | string
+  }
+
+  export type DailySalesProjectionWhereInput = {
+    AND?: DailySalesProjectionWhereInput | DailySalesProjectionWhereInput[]
+    OR?: DailySalesProjectionWhereInput[]
+    NOT?: DailySalesProjectionWhereInput | DailySalesProjectionWhereInput[]
+    id?: StringFilter<"DailySalesProjection"> | string
+    date?: DateTimeFilter<"DailySalesProjection"> | Date | string
+    totalOrders?: IntFilter<"DailySalesProjection"> | number
+    totalCompletedOrders?: IntFilter<"DailySalesProjection"> | number
+    totalCancelledOrders?: IntFilter<"DailySalesProjection"> | number
+    totalRevenue?: DecimalFilter<"DailySalesProjection"> | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntFilter<"DailySalesProjection"> | number
+    updatedAt?: DateTimeFilter<"DailySalesProjection"> | Date | string
+  }
+
+  export type DailySalesProjectionOrderByWithRelationInput = {
+    id?: SortOrder
+    date?: SortOrder
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DailySalesProjectionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    date?: Date | string
+    AND?: DailySalesProjectionWhereInput | DailySalesProjectionWhereInput[]
+    OR?: DailySalesProjectionWhereInput[]
+    NOT?: DailySalesProjectionWhereInput | DailySalesProjectionWhereInput[]
+    totalOrders?: IntFilter<"DailySalesProjection"> | number
+    totalCompletedOrders?: IntFilter<"DailySalesProjection"> | number
+    totalCancelledOrders?: IntFilter<"DailySalesProjection"> | number
+    totalRevenue?: DecimalFilter<"DailySalesProjection"> | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntFilter<"DailySalesProjection"> | number
+    updatedAt?: DateTimeFilter<"DailySalesProjection"> | Date | string
+  }, "id" | "date">
+
+  export type DailySalesProjectionOrderByWithAggregationInput = {
+    id?: SortOrder
+    date?: SortOrder
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DailySalesProjectionCountOrderByAggregateInput
+    _avg?: DailySalesProjectionAvgOrderByAggregateInput
+    _max?: DailySalesProjectionMaxOrderByAggregateInput
+    _min?: DailySalesProjectionMinOrderByAggregateInput
+    _sum?: DailySalesProjectionSumOrderByAggregateInput
+  }
+
+  export type DailySalesProjectionScalarWhereWithAggregatesInput = {
+    AND?: DailySalesProjectionScalarWhereWithAggregatesInput | DailySalesProjectionScalarWhereWithAggregatesInput[]
+    OR?: DailySalesProjectionScalarWhereWithAggregatesInput[]
+    NOT?: DailySalesProjectionScalarWhereWithAggregatesInput | DailySalesProjectionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DailySalesProjection"> | string
+    date?: DateTimeWithAggregatesFilter<"DailySalesProjection"> | Date | string
+    totalOrders?: IntWithAggregatesFilter<"DailySalesProjection"> | number
+    totalCompletedOrders?: IntWithAggregatesFilter<"DailySalesProjection"> | number
+    totalCancelledOrders?: IntWithAggregatesFilter<"DailySalesProjection"> | number
+    totalRevenue?: DecimalWithAggregatesFilter<"DailySalesProjection"> | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntWithAggregatesFilter<"DailySalesProjection"> | number
+    updatedAt?: DateTimeWithAggregatesFilter<"DailySalesProjection"> | Date | string
+  }
+
+  export type KafkaProjectionProgressWhereInput = {
+    AND?: KafkaProjectionProgressWhereInput | KafkaProjectionProgressWhereInput[]
+    OR?: KafkaProjectionProgressWhereInput[]
+    NOT?: KafkaProjectionProgressWhereInput | KafkaProjectionProgressWhereInput[]
+    id?: StringFilter<"KafkaProjectionProgress"> | string
+    consumerGroup?: StringFilter<"KafkaProjectionProgress"> | string
+    topic?: StringFilter<"KafkaProjectionProgress"> | string
+    partition?: IntFilter<"KafkaProjectionProgress"> | number
+    lastOffset?: BigIntFilter<"KafkaProjectionProgress"> | bigint | number
+    lastEventAt?: DateTimeFilter<"KafkaProjectionProgress"> | Date | string
+    updatedAt?: DateTimeFilter<"KafkaProjectionProgress"> | Date | string
+  }
+
+  export type KafkaProjectionProgressOrderByWithRelationInput = {
+    id?: SortOrder
+    consumerGroup?: SortOrder
+    topic?: SortOrder
+    partition?: SortOrder
+    lastOffset?: SortOrder
+    lastEventAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KafkaProjectionProgressWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    consumerGroup_topic_partition?: KafkaProjectionProgressConsumerGroupTopicPartitionCompoundUniqueInput
+    AND?: KafkaProjectionProgressWhereInput | KafkaProjectionProgressWhereInput[]
+    OR?: KafkaProjectionProgressWhereInput[]
+    NOT?: KafkaProjectionProgressWhereInput | KafkaProjectionProgressWhereInput[]
+    consumerGroup?: StringFilter<"KafkaProjectionProgress"> | string
+    topic?: StringFilter<"KafkaProjectionProgress"> | string
+    partition?: IntFilter<"KafkaProjectionProgress"> | number
+    lastOffset?: BigIntFilter<"KafkaProjectionProgress"> | bigint | number
+    lastEventAt?: DateTimeFilter<"KafkaProjectionProgress"> | Date | string
+    updatedAt?: DateTimeFilter<"KafkaProjectionProgress"> | Date | string
+  }, "id" | "consumerGroup_topic_partition">
+
+  export type KafkaProjectionProgressOrderByWithAggregationInput = {
+    id?: SortOrder
+    consumerGroup?: SortOrder
+    topic?: SortOrder
+    partition?: SortOrder
+    lastOffset?: SortOrder
+    lastEventAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: KafkaProjectionProgressCountOrderByAggregateInput
+    _avg?: KafkaProjectionProgressAvgOrderByAggregateInput
+    _max?: KafkaProjectionProgressMaxOrderByAggregateInput
+    _min?: KafkaProjectionProgressMinOrderByAggregateInput
+    _sum?: KafkaProjectionProgressSumOrderByAggregateInput
+  }
+
+  export type KafkaProjectionProgressScalarWhereWithAggregatesInput = {
+    AND?: KafkaProjectionProgressScalarWhereWithAggregatesInput | KafkaProjectionProgressScalarWhereWithAggregatesInput[]
+    OR?: KafkaProjectionProgressScalarWhereWithAggregatesInput[]
+    NOT?: KafkaProjectionProgressScalarWhereWithAggregatesInput | KafkaProjectionProgressScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"KafkaProjectionProgress"> | string
+    consumerGroup?: StringWithAggregatesFilter<"KafkaProjectionProgress"> | string
+    topic?: StringWithAggregatesFilter<"KafkaProjectionProgress"> | string
+    partition?: IntWithAggregatesFilter<"KafkaProjectionProgress"> | number
+    lastOffset?: BigIntWithAggregatesFilter<"KafkaProjectionProgress"> | bigint | number
+    lastEventAt?: DateTimeWithAggregatesFilter<"KafkaProjectionProgress"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"KafkaProjectionProgress"> | Date | string
   }
 
   export type DailySalesReportCreateInput = {
@@ -10007,6 +13436,251 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type InboxEventCreateInput = {
+    id?: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    lastError?: string | null
+    processedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InboxEventUncheckedCreateInput = {
+    id?: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    lastError?: string | null
+    processedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InboxEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InboxEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InboxEventCreateManyInput = {
+    id?: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    lastError?: string | null
+    processedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InboxEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InboxEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DailySalesProjectionCreateInput = {
+    id?: string
+    date: Date | string
+    totalOrders?: number
+    totalCompletedOrders?: number
+    totalCancelledOrders?: number
+    totalRevenue?: Decimal | DecimalJsLike | number | string
+    totalItemsSold?: number
+    updatedAt?: Date | string
+  }
+
+  export type DailySalesProjectionUncheckedCreateInput = {
+    id?: string
+    date: Date | string
+    totalOrders?: number
+    totalCompletedOrders?: number
+    totalCancelledOrders?: number
+    totalRevenue?: Decimal | DecimalJsLike | number | string
+    totalItemsSold?: number
+    updatedAt?: Date | string
+  }
+
+  export type DailySalesProjectionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    totalOrders?: IntFieldUpdateOperationsInput | number
+    totalCompletedOrders?: IntFieldUpdateOperationsInput | number
+    totalCancelledOrders?: IntFieldUpdateOperationsInput | number
+    totalRevenue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DailySalesProjectionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    totalOrders?: IntFieldUpdateOperationsInput | number
+    totalCompletedOrders?: IntFieldUpdateOperationsInput | number
+    totalCancelledOrders?: IntFieldUpdateOperationsInput | number
+    totalRevenue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DailySalesProjectionCreateManyInput = {
+    id?: string
+    date: Date | string
+    totalOrders?: number
+    totalCompletedOrders?: number
+    totalCancelledOrders?: number
+    totalRevenue?: Decimal | DecimalJsLike | number | string
+    totalItemsSold?: number
+    updatedAt?: Date | string
+  }
+
+  export type DailySalesProjectionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    totalOrders?: IntFieldUpdateOperationsInput | number
+    totalCompletedOrders?: IntFieldUpdateOperationsInput | number
+    totalCancelledOrders?: IntFieldUpdateOperationsInput | number
+    totalRevenue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DailySalesProjectionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    totalOrders?: IntFieldUpdateOperationsInput | number
+    totalCompletedOrders?: IntFieldUpdateOperationsInput | number
+    totalCancelledOrders?: IntFieldUpdateOperationsInput | number
+    totalRevenue?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalItemsSold?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KafkaProjectionProgressCreateInput = {
+    id?: string
+    consumerGroup: string
+    topic: string
+    partition: number
+    lastOffset: bigint | number
+    lastEventAt: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KafkaProjectionProgressUncheckedCreateInput = {
+    id?: string
+    consumerGroup: string
+    topic: string
+    partition: number
+    lastOffset: bigint | number
+    lastEventAt: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KafkaProjectionProgressUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    consumerGroup?: StringFieldUpdateOperationsInput | string
+    topic?: StringFieldUpdateOperationsInput | string
+    partition?: IntFieldUpdateOperationsInput | number
+    lastOffset?: BigIntFieldUpdateOperationsInput | bigint | number
+    lastEventAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KafkaProjectionProgressUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    consumerGroup?: StringFieldUpdateOperationsInput | string
+    topic?: StringFieldUpdateOperationsInput | string
+    partition?: IntFieldUpdateOperationsInput | number
+    lastOffset?: BigIntFieldUpdateOperationsInput | bigint | number
+    lastEventAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KafkaProjectionProgressCreateManyInput = {
+    id?: string
+    consumerGroup: string
+    topic: string
+    partition: number
+    lastOffset: bigint | number
+    lastEventAt: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type KafkaProjectionProgressUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    consumerGroup?: StringFieldUpdateOperationsInput | string
+    topic?: StringFieldUpdateOperationsInput | string
+    partition?: IntFieldUpdateOperationsInput | number
+    lastOffset?: BigIntFieldUpdateOperationsInput | bigint | number
+    lastEventAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type KafkaProjectionProgressUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    consumerGroup?: StringFieldUpdateOperationsInput | string
+    topic?: StringFieldUpdateOperationsInput | string
+    partition?: IntFieldUpdateOperationsInput | number
+    lastOffset?: BigIntFieldUpdateOperationsInput | bigint | number
+    lastEventAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -10713,6 +14387,181 @@ export namespace Prisma {
     _max?: NestedBoolFilter<$PrismaModel>
   }
 
+  export type InboxEventEventIdConsumerCompoundUniqueInput = {
+    eventId: string
+    consumer: string
+  }
+
+  export type InboxEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    payload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrder
+    processedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventAvgOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+
+  export type InboxEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrder
+    processedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrder
+    processedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventSumOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+
+  export type DailySalesProjectionCountOrderByAggregateInput = {
+    id?: SortOrder
+    date?: SortOrder
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DailySalesProjectionAvgOrderByAggregateInput = {
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+  }
+
+  export type DailySalesProjectionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    date?: SortOrder
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DailySalesProjectionMinOrderByAggregateInput = {
+    id?: SortOrder
+    date?: SortOrder
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DailySalesProjectionSumOrderByAggregateInput = {
+    totalOrders?: SortOrder
+    totalCompletedOrders?: SortOrder
+    totalCancelledOrders?: SortOrder
+    totalRevenue?: SortOrder
+    totalItemsSold?: SortOrder
+  }
+
+  export type BigIntFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
+  }
+
+  export type KafkaProjectionProgressConsumerGroupTopicPartitionCompoundUniqueInput = {
+    consumerGroup: string
+    topic: string
+    partition: number
+  }
+
+  export type KafkaProjectionProgressCountOrderByAggregateInput = {
+    id?: SortOrder
+    consumerGroup?: SortOrder
+    topic?: SortOrder
+    partition?: SortOrder
+    lastOffset?: SortOrder
+    lastEventAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KafkaProjectionProgressAvgOrderByAggregateInput = {
+    partition?: SortOrder
+    lastOffset?: SortOrder
+  }
+
+  export type KafkaProjectionProgressMaxOrderByAggregateInput = {
+    id?: SortOrder
+    consumerGroup?: SortOrder
+    topic?: SortOrder
+    partition?: SortOrder
+    lastOffset?: SortOrder
+    lastEventAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KafkaProjectionProgressMinOrderByAggregateInput = {
+    id?: SortOrder
+    consumerGroup?: SortOrder
+    topic?: SortOrder
+    partition?: SortOrder
+    lastOffset?: SortOrder
+    lastEventAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type KafkaProjectionProgressSumOrderByAggregateInput = {
+    partition?: SortOrder
+    lastOffset?: SortOrder
+  }
+
+  export type BigIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedBigIntFilter<$PrismaModel>
+    _max?: NestedBigIntFilter<$PrismaModel>
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
   }
@@ -10755,6 +14604,14 @@ export namespace Prisma {
 
   export type BoolFieldUpdateOperationsInput = {
     set?: boolean
+  }
+
+  export type BigIntFieldUpdateOperationsInput = {
+    set?: bigint | number
+    increment?: bigint | number
+    decrement?: bigint | number
+    multiply?: bigint | number
+    divide?: bigint | number
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -10996,6 +14853,33 @@ export namespace Prisma {
     _max?: NestedBoolFilter<$PrismaModel>
   }
 
+  export type NestedBigIntFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
+  }
+
+  export type NestedBigIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedBigIntFilter<$PrismaModel>
+    _max?: NestedBigIntFilter<$PrismaModel>
+  }
+
 
 
   /**
@@ -11029,6 +14913,18 @@ export namespace Prisma {
      * @deprecated Use AnalyticsEventDefaultArgs instead
      */
     export type AnalyticsEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = AnalyticsEventDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use InboxEventDefaultArgs instead
+     */
+    export type InboxEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = InboxEventDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use DailySalesProjectionDefaultArgs instead
+     */
+    export type DailySalesProjectionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = DailySalesProjectionDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use KafkaProjectionProgressDefaultArgs instead
+     */
+    export type KafkaProjectionProgressArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = KafkaProjectionProgressDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

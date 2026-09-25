@@ -1,7 +1,14 @@
 import request from 'supertest';
 import app from '../../src/app';
+import { prisma } from '../../src/prisma/client';
 
 describe('Shipping Routes (integration)', () => {
+  // Importing the app opens a Prisma connection pool. Closing it is what lets
+  // Jest exit on its own instead of hanging or needing --forceExit.
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
   describe('GET /health', () => {
     it('returns 200', async () => {
       const res = await request(app).get('/health');

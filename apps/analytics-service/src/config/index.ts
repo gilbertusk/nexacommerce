@@ -16,6 +16,10 @@ const analyticsEnvSchema = z.object({
   PRODUCT_SERVICE_URL: z.string().default('http://localhost:3003'),
   ORDER_SERVICE_URL: z.string().default('http://localhost:3005'),
   REVIEW_SERVICE_URL: z.string().default('http://localhost:3010'),
+  KAFKA_BROKERS: z.string().default('localhost:9092'),
+  KAFKA_CLIENT_ID: z.string().default('nexacommerce-analytics'),
+  KAFKA_TOPIC_PREFIX: z.string().default('nexacommerce'),
+  KAFKA_PROJECTION_GROUP_ID: z.string().default('analytics-daily-projection-v1'),
 });
 
 const env = validateEnv(analyticsEnvSchema);
@@ -31,6 +35,10 @@ export const config = {
   productServiceUrl: env.PRODUCT_SERVICE_URL,
   orderServiceUrl: env.ORDER_SERVICE_URL,
   reviewServiceUrl: env.REVIEW_SERVICE_URL,
+  kafkaBrokers: env.KAFKA_BROKERS.split(',').map((b) => b.trim()).filter(Boolean),
+  kafkaClientId: env.KAFKA_CLIENT_ID,
+  kafkaTopicPrefix: env.KAFKA_TOPIC_PREFIX,
+  kafkaProjectionGroupId: env.KAFKA_PROJECTION_GROUP_ID,
 };
 
 export default config;

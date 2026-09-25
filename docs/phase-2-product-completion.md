@@ -221,6 +221,113 @@ Full workspace baseline before the review/refund slices: `npm.cmd test` exited 0
 - Order Service build passes and its suite reports 37/37 tests; after preventing background cron timers from starting under `NODE_ENV=test`, Jest exits cleanly. Shipping Service build passes and its suite passes 21/21. Route tests still tolerate PostgreSQL `localhost:5445` connection failures, so neither migration application nor persisted snapshot reads are verified. `git diff --check` passes.
 - The consumer still uses Jakarta as an origin city because no fulfillment-origin model or quote contract has been selected. This remains an explicit shipping gate; no real rate or shipment acceptance is claimed.
 
+### Trusted Shipping Quote and Checkout Reopening (2026-09-25)
+
+Checkout had been fail-closed since Phase 2 began, because no fulfillment model or trusted price
+source had been decided. The product owner supplied both decisions on 2026-09-25, and the quote
+contract is now implemented against them.
+
+Decisions received (recorded as given; nothing was invented):
+
+1. **Fulfillment**: per-seller origin, **split shipment**. A cart with items from N sellers produces
+   N shipments and N fees, summed into one total. No merged or averaged fee.
+2. **Tariffs**: the internal **verified rate table** (`shipping_rates`). No external courier API is
+   called. A route/service/weight with no configured row fails closed.
+3. **Refunds**: allowed only after an **admin confirms physical receipt** of returned goods.
+   Approval alone is not sufficient. (Implementation of the receipt step is still open.)
+
+#### Seller dispatch origin
+
+`SellerProfile.storeAddress` was free text and cannot key a rate table. Added structured
+`originCity`, `originProvince`, and `originVerifiedAt`, all nullable on purpose: a seller without a
+verified origin **blocks** quoting for their items rather than falling back to an assumed warehouse.
+New internal endpoint `POST /users/internal/sellers/dispatch-origins` returns every requested seller
+with a `dispatchReady` flag, so a refusal can name the seller responsible.
+Migration `20260925120000_add_seller_dispatch_origin`.
+
+#### The quote contract
+
+`shipping_quotes` stores a server-computed price with everything needed to revalidate it:
+
+| Property | How it is enforced |
+|---|---|
+| Opaque id | UUID primary key; the browser never sees or sends a price |
+| Expiry | `expiresAt`, 30 minutes; checked on consumption |
+| Ownership | `customerId`; another customer's quote returns the same "not found" as a missing one, so ids cannot be probed |
+| Snapshot | `destination` and per-seller `shipments` (origin, courier, service, weight, cost) |
+| Revalidation | `cartHash`, a SHA-256 fingerprint of cart lines plus destination |
+| Single use | `status` + a partial unique index on `consumedBy`; consumption is one conditional UPDATE |
+| Idempotency | Re-consuming with the same `orderId` returns the same quote |
+
+The hash lives in `packages/common/src/shipping-quote-hash.ts` rather than being implemented twice,
+because Shipping Service and Order Service must produce byte-identical output or every checkout
+would fail.
+
+Endpoints: `POST /shipping/quotes` and `GET /shipping/quotes/:id` for the customer;
+`POST /shipping/internal/quotes/:id/consume` for Order Service.
+Migration `20260925130000_add_shipping_quotes`.
+
+#### Checkout
+
+The unconditional `throw` at the top of `OrderService.checkout` is removed. The new contract:
+
+- `checkoutSchema` now takes `shippingQuoteId` and **no** `courierName`, `courierService`, or
+  `shippingCost`. The schema is `.strict()`, so a client still sending `shippingCost` gets a loud
+  400 rather than having it silently dropped.
+- The order id is generated before the order row exists, so the quote is claimed **before** any
+  dependent state is created. A quote can therefore never price two orders, and a retry with the
+  same order id is idempotent.
+- `orders.shipping_quote_id` and `orders.shipment_breakdown` record which quote priced the order and
+  the full per-seller split. `courierName`/`courierService` keep the first shipment for existing
+  single-courier reads and are no longer the source of truth.
+  Migration `20260925140000_add_order_shipping_quote`.
+
+#### Customer Web
+
+The checkout page now groups the cart by seller, collects a courier choice per seller, requests a
+server quote, and displays the per-seller breakdown. It submits `shippingQuoteId` only. Changing a
+courier choice discards the previous quote, and a rejected order clears it, so a stale price can
+never be carried into a submission. Refusal reasons are surfaced in Indonesian with the specific
+cause (unverified seller origin, no configured rate, incomplete address) rather than a generic
+failure.
+
+#### Validation
+
+| Check | Result |
+|---|---|
+| `shipping-quote.service` unit tests | **11/11** — per-seller grouping, weight summation, and every fail-closed reason |
+| `shipping-quote` integration, **live PostgreSQL 16** | **10/10** |
+| Shipping Service full suite | **48/48** |
+| Order Service full suite | **62/62** |
+| Customer Web checkout page | **9/9** |
+
+The live suite covers the guarantees that only a real database can demonstrate: 10 concurrent
+checkouts racing for one quote yield exactly one success; a consumed quote is refused; an expired
+quote is refused; another customer's quote is refused without revealing that it exists; a cart or
+destination changed after quoting is refused; and a retried checkout for the same order is
+idempotent.
+
+#### Two defects found and fixed during this work
+
+- **Order Service returned 500 for validation errors.** `ZodError` was not handled in its error
+  middleware, unlike every other service, so a malformed checkout body surfaced as a server fault
+  and leaked internal detail. The previous integration test accepted `[400, 422, 500]`, which hid
+  it. Now handled, and the test asserts 400 exactly.
+- **Order integration tests hung for ~86s and needed a forced exit.** The cause was the Prisma
+  connection pool opened by importing the app and never closed, not the cron timers (already
+  test-guarded). Added `prisma.$disconnect()` in `afterAll`; the suite now finishes in ~6.7s with no
+  forced exit and no lingering-handle warning.
+
+#### Still open for Phase 2
+
+- No seller currently has a verified dispatch origin, and the rate table has no verified rows. Until
+  the marketplace supplies both, every quote correctly fails closed. **This is the remaining gate
+  for a working checkout**, and it needs business data, not code.
+- Seller and admin UI for entering and verifying a dispatch origin.
+- The admin "physical receipt confirmed" step before refunds.
+- Production media storage acceptance (needs S3 credentials).
+- Browser E2E across customer, seller, and admin.
+
 ### Prisma Schema Validation Audit (2026-09-24)
 
 - Ran `npx prisma validate` against all 22 service and generated-client `schema.prisma` files beneath `apps/`; all 22 validated successfully, including the new Order Item weight field.

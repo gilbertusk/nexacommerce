@@ -1,3 +1,5 @@
+import { getRequestId } from './request-context';
+
 export class Logger {
   private serviceName: string;
 
@@ -8,7 +10,12 @@ export class Logger {
   private log(level: string, message: string, ...meta: any[]) {
     const timestamp = new Date().toISOString();
     const metaStr = meta.length ? ` ${JSON.stringify(meta)}` : '';
-    console.log(`[${timestamp}] [${this.serviceName}] [${level}] ${message}${metaStr}`);
+    // The correlation id is what makes lines from one customer action findable
+    // together across services. Omitted entirely when there is no context, so
+    // startup and shutdown logs are not padded with an empty field.
+    const requestId = getRequestId();
+    const correlation = requestId ? ` [${requestId}]` : '';
+    console.log(`[${timestamp}] [${this.serviceName}]${correlation} [${level}] ${message}${metaStr}`);
   }
 
   info(message: string, ...meta: any[]) {

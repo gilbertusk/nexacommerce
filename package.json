@@ -33,6 +33,7 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "db:migrate": "bash scripts/migrate-all.sh",
+    "db:backup-drill": "bash scripts/backup-restore-drill.sh",
     "seed": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed.ts",
     "seed:reset": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-reset.ts",
     "docker:dev": "docker compose up -d",

@@ -11,6 +11,7 @@ const navigation = [
   { name: "Pesanan", href: "/orders", icon: "receipt_long" },
   { name: "Analitik", href: "/analytics", icon: "monitoring" },
   { name: "Verifikasi Toko", href: "/sellers/verification", icon: "verified_user" },
+  { name: "Lokasi Pengiriman", href: "/sellers/dispatch-origins", icon: "local_shipping" },
   { name: "Ulasan", href: "/reviews", icon: "star" },
   { name: "Pembayaran", href: "/payments", icon: "payments" },
   { name: "Notifikasi", href: "/notifications", icon: "notifications" },

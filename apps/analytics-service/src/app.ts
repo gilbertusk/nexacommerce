@@ -4,11 +4,20 @@ import swaggerUi from 'swagger-ui-express';
 import { ZodError } from 'zod';
 import { analyticsRoutes } from './routes/analytics.routes';
 import { swaggerSpec } from './docs/swagger';
-import { errorResponse } from '@nexacommerce/common';
+import { errorResponse, requestIdMiddleware } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
+import {
+  kafkaProjectionLag,
+  kafkaProjectionMetrics,
+  kafkaProjectionReady,
+} from './messaging/kafka-consumer';
 
 const logger = createLogger('analytics-service');
 const app = express();
+
+// Establish the request correlation id before anything else runs, so every
+// log line and every outbound internal call in this request carries it.
+app.use(requestIdMiddleware);
 
 app.use(cors({ origin: false }));
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
@@ -32,6 +41,25 @@ app.get('/health', (req, res) => {
 
 app.get('/analytics/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'analytics-service', timestamp: new Date().toISOString() });
+});
+
+/**
+ * Readiness, not liveness. It reports whether the Kafka projection is actually
+ * consuming and how far behind it is, so a deploy can be held back and an
+ * alert can fire on lag, rejected messages, or repeated failures.
+ */
+app.get('/analytics/readiness', async (req, res) => {
+  const [ready, metrics, lag] = await Promise.all([
+    kafkaProjectionReady(),
+    Promise.resolve(kafkaProjectionMetrics()),
+    Promise.resolve(kafkaProjectionLag()),
+  ]);
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'READY' : 'NOT_READY',
+    service: 'analytics-service',
+    kafkaProjection: { ...metrics, lag },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Swagger UI

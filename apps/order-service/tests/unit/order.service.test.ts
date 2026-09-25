@@ -49,16 +49,138 @@ describe('OrderService', () => {
   });
 
   describe('checkout', () => {
-    it('fails closed before any side effect while trusted shipping quotes are unavailable', async () => {
-      await expect(service.checkout('user-1', {
-        shippingAddressId: 'address-1',
-        courierName: 'Browser-supplied courier',
-        courierService: 'Browser-supplied service',
-        shippingCost: 0,
-      })).rejects.toThrow('trusted shipping quote is implemented');
+    const ADDRESS = { id: 'addr-1', userId: 'user-1', city: 'Bandung', province: 'Jawa Barat', postalCode: '40111' };
+    const CART = { items: [{ productId: 'prod-1', quantity: 2 }] };
+    const PRODUCTS = [
+      {
+        id: 'prod-1',
+        name: 'Widget',
+        price: 50000,
+        weight: 500,
+        status: 'ACTIVE',
+        sellerId: 'seller-1',
+        categoryId: 'cat-1',
+        images: [],
+      },
+    ];
+    const STOCKS = [{ productId: 'prod-1', availableStock: 10 }];
 
-      expect(global.fetch).not.toHaveBeenCalled();
-      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    /**
+     * Answer the checkout saga's internal calls by URL. Returns the recorded
+     * request bodies so a test can assert what checkout sent where.
+     */
+    function stubServices(overrides: { quote?: unknown; quoteStatus?: number } = {}) {
+      const calls: Array<{ url: string; body: any }> = [];
+      (global.fetch as jest.Mock).mockImplementation(async (url: string, init: any) => {
+        const body = init?.body ? JSON.parse(init.body) : undefined;
+        calls.push({ url, body });
+
+        const ok = (data: unknown) => ({ ok: true, status: 200, json: async () => ({ data }) });
+
+        if (url.includes('/cart/internal/cart/')) return ok(CART);
+        if (url.includes('/internal/products/batch')) return ok(PRODUCTS);
+        if (url.includes('/batch-check')) return ok(STOCKS);
+        if (url.includes('/addresses/')) return ok(ADDRESS);
+        if (url.includes('/auth/internal/users/')) return ok({ name: 'Customer', email: 'c@example.com' });
+        if (url.includes('/quotes/') && url.includes('/consume')) {
+          if (overrides.quoteStatus && overrides.quoteStatus >= 400) {
+            return {
+              ok: false,
+              status: overrides.quoteStatus,
+              json: async () => ({ message: 'Shipping quote is no longer valid' }),
+            };
+          }
+          return ok(
+            overrides.quote ?? {
+              quoteId: 'quote-1',
+              totalCost: 18000,
+              shipments: [{ sellerId: 'seller-1', courierName: 'JNE', serviceCode: 'REG', cost: 18000 }],
+            },
+          );
+        }
+        return ok({});
+      });
+      return calls;
+    }
+
+    const body = {
+      shippingAddressId: 'addr-1',
+      shippingQuoteId: 'quote-1',
+    };
+
+    it('prices shipping from the consumed quote rather than from the request', async () => {
+      // Arrange
+      const calls = stubServices();
+      mockOrderRepo.countCreatedToday.mockResolvedValue(0);
+      mockPrisma.order.create = jest.fn().mockResolvedValue({ ...mockOrder, items: [] });
+
+      // Act
+      await service.checkout('user-1', body).catch(() => undefined);
+
+      // Assert: the order was written with the quote's cost, not a client value.
+      const created = mockPrisma.order.create.mock.calls[0]?.[0]?.data;
+      expect(Number(created.shippingCost)).toBe(18000);
+      expect(created.shippingQuoteId).toBe('quote-1');
+      expect(created.shipmentBreakdown).toEqual([
+        expect.objectContaining({ sellerId: 'seller-1', cost: 18000 }),
+      ]);
+      expect(calls.some((c) => c.url.includes('/quotes/quote-1/consume'))).toBe(true);
+    });
+
+    it('sends the quote a cart fingerprint and the order id it is claiming', async () => {
+      // Arrange
+      const calls = stubServices();
+      mockOrderRepo.countCreatedToday.mockResolvedValue(0);
+      mockPrisma.order.create = jest.fn().mockResolvedValue({ ...mockOrder, items: [] });
+
+      // Act
+      await service.checkout('user-1', body).catch(() => undefined);
+
+      // Assert
+      const consume = calls.find((c) => c.url.includes('/consume'));
+      expect(consume!.body).toEqual({
+        customerId: 'user-1',
+        orderId: expect.any(String),
+        cartHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      });
+      const created = mockPrisma.order.create.mock.calls[0]?.[0]?.data;
+      expect(created.id).toBe(consume!.body.orderId);
+    });
+
+    it('creates no order when the quote is refused', async () => {
+      // Arrange: an expired, replayed, or tampered quote.
+      stubServices({ quoteStatus: 400 });
+      mockPrisma.order.create = jest.fn();
+
+      // Act + Assert
+      await expect(service.checkout('user-1', body)).rejects.toThrow();
+      expect(mockPrisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses a quote whose total is not a usable number', async () => {
+      // Arrange
+      stubServices({ quote: { quoteId: 'quote-1', totalCost: 'free', shipments: [] } });
+      mockPrisma.order.create = jest.fn();
+
+      // Act + Assert
+      await expect(service.checkout('user-1', body)).rejects.toThrow(/usable shipping cost/);
+      expect(mockPrisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects an empty cart before consuming a quote', async () => {
+      // Arrange
+      const calls: Array<{ url: string }> = [];
+      (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        calls.push({ url });
+        if (url.includes('/cart/internal/cart/')) {
+          return { ok: true, status: 200, json: async () => ({ data: { items: [] } }) };
+        }
+        return { ok: true, status: 200, json: async () => ({ data: {} }) };
+      });
+
+      // Act + Assert
+      await expect(service.checkout('user-1', body)).rejects.toThrow('Cart is empty');
+      expect(calls.some((c) => c.url.includes('/consume'))).toBe(false);
     });
   });
 

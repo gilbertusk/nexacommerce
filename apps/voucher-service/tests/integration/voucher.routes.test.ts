@@ -1,10 +1,17 @@
 import request from 'supertest';
 import app from '../../src/app';
+import { prisma } from '../../src/prisma/client';
 
 const adminHeaders = { 'x-user-id': 'admin-1', 'x-user-role': 'ADMIN', 'x-user-email': 'admin@test.com' };
 const customerHeaders = { 'x-user-id': 'user-1', 'x-user-role': 'CUSTOMER', 'x-user-email': 'user@test.com' };
 
 describe('Voucher Routes (integration)', () => {
+  // Importing the app opens a Prisma connection pool. Closing it is what lets
+  // Jest exit on its own instead of hanging or needing --forceExit.
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
   describe('GET /health', () => {
     it('returns 200', async () => {
       const res = await request(app).get('/health');

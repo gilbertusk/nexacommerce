@@ -1,4 +1,4 @@
-import { analyticsRepository } from '../repositories/analytics.repository';
+import { analyticsRepository, AnalyticsWriteClient } from '../repositories/analytics.repository';
 import { config } from '../config';
 import { createLogger } from '@nexacommerce/logger';
 import { buildInternalServiceHeaders } from '@nexacommerce/common';
@@ -104,231 +104,209 @@ function firstOfCurrentMonth(): Date {
   return new Date(n.getFullYear(), n.getMonth(), 1, 0, 0, 0, 0);
 }
 
-// ─── Event Handlers ──────────────────────────────────────────────────────────
+// --- Event projection -------------------------------------------------------
+
+/**
+ * Applying an event happens in two phases. `prepareAnalyticsEvent` performs the
+ * catalog/review lookups over HTTP, and `applyAnalyticsEvent` performs only
+ * database writes. Keeping the lookups outside means the projection
+ * transaction never waits on another service while holding row locks.
+ */
+
+type EnrichedItem = {
+  productId: string;
+  quantity: number;
+  price: number;
+  name: string;
+  sellerId: string;
+  sellerName: string;
+  categoryId: string | null;
+  categoryName: string | null;
+};
+
+export type PreparedEvent =
+  | { kind: 'OrderCreated'; items: EnrichedItem[] }
+  | { kind: 'OrderCompleted'; items: EnrichedItem[] }
+  | { kind: 'PaymentSuccess'; amount: number }
+  | { kind: 'PaymentFailed' }
+  | { kind: 'PaymentExpired' }
+  | { kind: 'OrderCancelled' }
+  | {
+      kind: 'ReviewCreated';
+      productId: string;
+      product: { name: string; sellerId: string; sellerName: string };
+      averageRating: number;
+    }
+  | { kind: 'Ignored'; eventName: string };
+
+async function enrichItems(
+  items: Array<{ productId: string; quantity: number; price: number }>,
+): Promise<EnrichedItem[]> {
+  return Promise.all(
+    items.map(async (item) => ({ ...item, ...(await fetchProductInfo(item.productId)) })),
+  );
+}
+
+/** Resolve everything an event needs from other services. Performs no writes. */
+export async function prepareAnalyticsEvent(
+  eventName: string,
+  payload: any,
+): Promise<PreparedEvent> {
+  switch (eventName) {
+    case 'OrderCreated':
+      return { kind: 'OrderCreated', items: await enrichItems(payload?.items ?? []) };
+    case 'OrderCompleted':
+      return { kind: 'OrderCompleted', items: await enrichItems(payload?.items ?? []) };
+    case 'PaymentSuccess':
+      return { kind: 'PaymentSuccess', amount: Number(payload?.amount) || 0 };
+    case 'PaymentFailed':
+      return { kind: 'PaymentFailed' };
+    case 'PaymentExpired':
+      return { kind: 'PaymentExpired' };
+    case 'OrderCancelled':
+      return { kind: 'OrderCancelled' };
+    case 'ReviewCreated': {
+      const [product, summary] = await Promise.all([
+        fetchProductInfo(payload.productId),
+        fetchReviewSummary(payload.productId),
+      ]);
+      return {
+        kind: 'ReviewCreated',
+        productId: payload.productId,
+        product,
+        averageRating: summary.averageRating,
+      };
+    }
+    // OrderPaid restates PaymentSuccess revenue, so it is archived only.
+    default:
+      return { kind: 'Ignored', eventName };
+  }
+}
+
+/**
+ * Write the prepared event into the report tables using `client`. Callers pass
+ * the inbox transaction so these mutations and the consumed marker commit
+ * together.
+ */
+export async function applyAnalyticsEvent(
+  client: AnalyticsWriteClient,
+  prepared: PreparedEvent,
+): Promise<void> {
+  const today = todayDate();
+  const { year, month } = currentYearMonth();
+  const periodDate = firstOfCurrentMonth();
+
+  switch (prepared.kind) {
+    case 'OrderCreated': {
+      await analyticsRepository.upsertDailyReport(today, { totalOrders: 1 }, client);
+      await analyticsRepository.upsertMonthlyReport(year, month, { totalOrders: 1 }, client);
+
+      for (const item of prepared.items) {
+        if (!item.sellerId) continue;
+        const productFields = {
+          productName: item.name,
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
+          categoryId: item.categoryId,
+          categoryName: item.categoryName,
+          totalOrders: 1,
+        };
+        await analyticsRepository.upsertProductSalesReport(item.productId, 'ALL_TIME', null, productFields, client);
+        await analyticsRepository.upsertProductSalesReport(item.productId, 'MONTHLY', periodDate, productFields, client);
+        await analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'ALL_TIME', null, { sellerName: item.sellerName, totalOrders: 1 }, client);
+        await analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'MONTHLY', periodDate, { sellerName: item.sellerName, totalOrders: 1 }, client);
+
+        if (item.categoryId) {
+          await analyticsRepository.upsertCategoryReport(item.categoryId, 'ALL_TIME', null, { categoryName: item.categoryName || '', totalOrders: 1 }, client);
+          await analyticsRepository.upsertCategoryReport(item.categoryId, 'MONTHLY', periodDate, { categoryName: item.categoryName || '', totalOrders: 1 }, client);
+        }
+      }
+      return;
+    }
+
+    case 'OrderCompleted': {
+      const totalQty = prepared.items.reduce((sum, i) => sum + i.quantity, 0);
+      await analyticsRepository.upsertDailyReport(today, { totalCompletedOrders: 1, totalItemsSold: totalQty }, client);
+      await analyticsRepository.upsertMonthlyReport(year, month, { totalCompletedOrders: 1, totalItemsSold: totalQty }, client);
+
+      for (const item of prepared.items) {
+        const revenue = item.quantity * item.price;
+        const productFields = {
+          productName: item.name,
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
+          categoryId: item.categoryId,
+          categoryName: item.categoryName,
+          totalUnitsSold: item.quantity,
+          totalRevenue: revenue,
+        };
+        await analyticsRepository.upsertProductSalesReport(item.productId, 'ALL_TIME', null, productFields, client);
+        await analyticsRepository.upsertProductSalesReport(item.productId, 'MONTHLY', periodDate, productFields, client);
+
+        if (item.sellerId) {
+          const sellerFields = { sellerName: item.sellerName, totalItemsSold: item.quantity, totalRevenue: revenue };
+          await analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'ALL_TIME', null, sellerFields, client);
+          await analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'MONTHLY', periodDate, sellerFields, client);
+        }
+
+        if (item.categoryId) {
+          const categoryFields = { categoryName: item.categoryName || '', totalUnitsSold: item.quantity, totalRevenue: revenue };
+          await analyticsRepository.upsertCategoryReport(item.categoryId, 'ALL_TIME', null, categoryFields, client);
+          await analyticsRepository.upsertCategoryReport(item.categoryId, 'MONTHLY', periodDate, categoryFields, client);
+        }
+      }
+      return;
+    }
+
+    case 'PaymentSuccess':
+      await analyticsRepository.upsertDailyReport(today, { totalRevenue: prepared.amount }, client);
+      await analyticsRepository.upsertMonthlyReport(year, month, { totalRevenue: prepared.amount }, client);
+      await analyticsRepository.upsertPaymentReport(today, { successCount: 1, amount: prepared.amount }, client);
+      return;
+
+    case 'PaymentFailed':
+      await analyticsRepository.upsertPaymentReport(today, { failedCount: 1 }, client);
+      return;
+
+    case 'PaymentExpired':
+      await analyticsRepository.upsertPaymentReport(today, { expiredCount: 1 }, client);
+      return;
+
+    case 'OrderCancelled':
+      await analyticsRepository.upsertDailyReport(today, { totalCancelledOrders: 1 }, client);
+      await analyticsRepository.upsertMonthlyReport(year, month, { totalCancelledOrders: 1 }, client);
+      return;
+
+    case 'ReviewCreated': {
+      const fields = {
+        productName: prepared.product.name,
+        sellerId: prepared.product.sellerId,
+        sellerName: prepared.product.sellerName,
+        averageRating: prepared.averageRating,
+      };
+      await analyticsRepository.upsertProductSalesReport(prepared.productId, 'ALL_TIME', null, fields, client);
+      await analyticsRepository.upsertProductSalesReport(prepared.productId, 'MONTHLY', periodDate, fields, client);
+
+      if (prepared.product.sellerId) {
+        const sellerFields = {
+          sellerName: prepared.product.sellerName,
+          totalReviews: 1,
+          averageRating: prepared.averageRating,
+        };
+        await analyticsRepository.upsertSellerPerformanceReport(prepared.product.sellerId, 'ALL_TIME', null, sellerFields, client);
+        await analyticsRepository.upsertSellerPerformanceReport(prepared.product.sellerId, 'MONTHLY', periodDate, sellerFields, client);
+      }
+      return;
+    }
+
+    case 'Ignored':
+      logger.warn(`[Analytics] Unhandled event: ${prepared.eventName}`);
+  }
+}
+
+// --- Query services ---------------------------------------------------------
 
 export const analyticsService = {
-  // ── OrderCreated ────────────────────────────────────────────────────────
-  async handleOrderCreated(payload: {
-    orderId: string;
-    customerId: string;
-    items: Array<{ productId: string; quantity: number; price: number }>;
-    grandTotal: number;
-  }) {
-    const today = todayDate();
-    const { year, month } = currentYearMonth();
-    const periodDate = firstOfCurrentMonth();
-
-    await Promise.all([
-      analyticsRepository.upsertDailyReport(today, { totalOrders: 1 }),
-      analyticsRepository.upsertMonthlyReport(year, month, { totalOrders: 1 }),
-    ]);
-
-    // Enrich each item with product info
-    const enriched = await Promise.all(
-      payload.items.map(async (item) => {
-        const info = await fetchProductInfo(item.productId);
-        return { ...item, ...info };
-      }),
-    );
-
-    // Upsert ProductSalesReport and SellerPerformanceReport per item
-    for (const item of enriched) {
-      if (!item.sellerId) continue;
-
-      await Promise.all([
-        analyticsRepository.upsertProductSalesReport(item.productId, 'ALL_TIME', null, {
-          productName: item.name,
-          sellerId: item.sellerId,
-          sellerName: item.sellerName,
-          categoryId: item.categoryId,
-          categoryName: item.categoryName,
-          totalOrders: 1,
-        }),
-        analyticsRepository.upsertProductSalesReport(item.productId, 'MONTHLY', periodDate, {
-          productName: item.name,
-          sellerId: item.sellerId,
-          sellerName: item.sellerName,
-          categoryId: item.categoryId,
-          categoryName: item.categoryName,
-          totalOrders: 1,
-        }),
-        analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'ALL_TIME', null, {
-          sellerName: item.sellerName,
-          totalOrders: 1,
-        }),
-        analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'MONTHLY', periodDate, {
-          sellerName: item.sellerName,
-          totalOrders: 1,
-        }),
-      ]);
-
-      if (item.categoryId) {
-        await Promise.all([
-          analyticsRepository.upsertCategoryReport(item.categoryId, 'ALL_TIME', null, {
-            categoryName: item.categoryName || '',
-            totalOrders: 1,
-          }),
-          analyticsRepository.upsertCategoryReport(item.categoryId, 'MONTHLY', periodDate, {
-            categoryName: item.categoryName || '',
-            totalOrders: 1,
-          }),
-        ]);
-      }
-    }
-  },
-
-  // ── PaymentSuccess ───────────────────────────────────────────────────────
-  async handlePaymentSuccess(payload: { orderId: string; customerId: string; amount: number }) {
-    const today = todayDate();
-    const { year, month } = currentYearMonth();
-
-    await Promise.all([
-      analyticsRepository.upsertDailyReport(today, { totalRevenue: payload.amount }),
-      analyticsRepository.upsertMonthlyReport(year, month, { totalRevenue: payload.amount }),
-      analyticsRepository.upsertPaymentReport(today, { successCount: 1, amount: payload.amount }),
-    ]);
-  },
-
-  // ── PaymentFailed ────────────────────────────────────────────────────────
-  async handlePaymentFailed(payload: any) {
-    const today = todayDate();
-    await analyticsRepository.upsertPaymentReport(today, { failedCount: 1 });
-  },
-
-  // ── PaymentExpired ───────────────────────────────────────────────────────
-  async handlePaymentExpired(payload: any) {
-    const today = todayDate();
-    await analyticsRepository.upsertPaymentReport(today, { expiredCount: 1 });
-  },
-
-  // ── OrderCancelled ───────────────────────────────────────────────────────
-  async handleOrderCancelled(payload: { orderId: string; customerId: string }) {
-    const today = todayDate();
-    const { year, month } = currentYearMonth();
-    const periodDate = firstOfCurrentMonth();
-
-    await Promise.all([
-      analyticsRepository.upsertDailyReport(today, { totalCancelledOrders: 1 }),
-      analyticsRepository.upsertMonthlyReport(year, month, { totalCancelledOrders: 1 }),
-    ]);
-  },
-
-  // ── OrderCompleted ───────────────────────────────────────────────────────
-  async handleOrderCompleted(payload: {
-    orderId: string;
-    customerId: string;
-    items: Array<{ productId: string; quantity: number; price: number }>;
-  }) {
-    const today = todayDate();
-    const { year, month } = currentYearMonth();
-    const periodDate = firstOfCurrentMonth();
-    const totalQty = payload.items.reduce((sum, i) => sum + i.quantity, 0);
-
-    await Promise.all([
-      analyticsRepository.upsertDailyReport(today, { totalCompletedOrders: 1, totalItemsSold: totalQty }),
-      analyticsRepository.upsertMonthlyReport(year, month, { totalCompletedOrders: 1, totalItemsSold: totalQty }),
-    ]);
-
-    const enriched = await Promise.all(
-      payload.items.map(async (item) => {
-        const info = await fetchProductInfo(item.productId);
-        return { ...item, ...info };
-      }),
-    );
-
-    for (const item of enriched) {
-      const revenue = item.quantity * item.price;
-
-      await Promise.all([
-        analyticsRepository.upsertProductSalesReport(item.productId, 'ALL_TIME', null, {
-          productName: item.name,
-          sellerId: item.sellerId,
-          sellerName: item.sellerName,
-          categoryId: item.categoryId,
-          categoryName: item.categoryName,
-          totalUnitsSold: item.quantity,
-          totalRevenue: revenue,
-        }),
-        analyticsRepository.upsertProductSalesReport(item.productId, 'MONTHLY', periodDate, {
-          productName: item.name,
-          sellerId: item.sellerId,
-          sellerName: item.sellerName,
-          categoryId: item.categoryId,
-          categoryName: item.categoryName,
-          totalUnitsSold: item.quantity,
-          totalRevenue: revenue,
-        }),
-      ]);
-
-      if (item.sellerId) {
-        await Promise.all([
-          analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'ALL_TIME', null, {
-            sellerName: item.sellerName,
-            totalItemsSold: item.quantity,
-            totalRevenue: revenue,
-          }),
-          analyticsRepository.upsertSellerPerformanceReport(item.sellerId, 'MONTHLY', periodDate, {
-            sellerName: item.sellerName,
-            totalItemsSold: item.quantity,
-            totalRevenue: revenue,
-          }),
-        ]);
-      }
-
-      if (item.categoryId) {
-        await Promise.all([
-          analyticsRepository.upsertCategoryReport(item.categoryId, 'ALL_TIME', null, {
-            categoryName: item.categoryName || '',
-            totalUnitsSold: item.quantity,
-            totalRevenue: revenue,
-          }),
-          analyticsRepository.upsertCategoryReport(item.categoryId, 'MONTHLY', periodDate, {
-            categoryName: item.categoryName || '',
-            totalUnitsSold: item.quantity,
-            totalRevenue: revenue,
-          }),
-        ]);
-      }
-    }
-  },
-
-  // ── ReviewCreated ────────────────────────────────────────────────────────
-  async handleReviewCreated(payload: { reviewId: string; productId: string; customerId: string; rating: number }) {
-    const periodDate = firstOfCurrentMonth();
-    const productInfo = await fetchProductInfo(payload.productId);
-    const summary = await fetchReviewSummary(payload.productId);
-
-    await Promise.all([
-      analyticsRepository.upsertProductSalesReport(payload.productId, 'ALL_TIME', null, {
-        productName: productInfo.name,
-        sellerId: productInfo.sellerId,
-        sellerName: productInfo.sellerName,
-        averageRating: summary.averageRating,
-      }),
-      analyticsRepository.upsertProductSalesReport(payload.productId, 'MONTHLY', periodDate, {
-        productName: productInfo.name,
-        sellerId: productInfo.sellerId,
-        sellerName: productInfo.sellerName,
-        averageRating: summary.averageRating,
-      }),
-    ]);
-
-    if (productInfo.sellerId) {
-      await Promise.all([
-        analyticsRepository.upsertSellerPerformanceReport(productInfo.sellerId, 'ALL_TIME', null, {
-          sellerName: productInfo.sellerName,
-          totalReviews: 1,
-          averageRating: summary.averageRating,
-        }),
-        analyticsRepository.upsertSellerPerformanceReport(productInfo.sellerId, 'MONTHLY', periodDate, {
-          sellerName: productInfo.sellerName,
-          totalReviews: 1,
-          averageRating: summary.averageRating,
-        }),
-      ]);
-    }
-  },
-
   // ── Dashboard ────────────────────────────────────────────────────────────
   async getAdminDashboard() {
     const [totalSums, paymentStats, recentTrend, totalCustomers, totalSellers, totalProducts] = await Promise.all([

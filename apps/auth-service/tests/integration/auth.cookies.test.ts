@@ -18,8 +18,15 @@ jest.mock('../../src/services/auth.service', () => ({
 }));
 
 import app from '../../src/app';
+import { prisma } from '../../src/prisma/client';
 
 describe('Auth cookie boundary', () => {
+  // Importing the app opens a Prisma connection pool. Closing it is what lets
+  // Jest exit on its own instead of hanging or needing --forceExit.
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
   it('sets HttpOnly cookies and does not expose tokens in JSON', async () => {
     const response = await request(app)
       .post('/auth/login')

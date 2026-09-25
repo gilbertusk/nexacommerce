@@ -11,6 +11,9 @@ import { formatIDR } from "@/lib/utils/format";
 import { useHydrated } from "@/lib/hooks/useHydrated";
 import type { ApiAddress } from "@/lib/api/hooks/useProfile";
 import { apiPost } from "@/lib/api/client";
+import ShippingQuotePanel, { type SellerGroup } from "@/components/checkout/ShippingQuotePanel";
+import { isQuoteExpired, type ShippingQuote } from "@/lib/api/hooks/useShippingQuote";
+import { useCreateOrder } from "@/lib/api/hooks/useOrders";
 
 const emptyAddresses: ApiAddress[] = [];
 
@@ -24,6 +27,7 @@ const emptyAddress = {
   postalCode: "",
   isDefault: false,
 };
+
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -41,11 +45,32 @@ export default function CheckoutPage() {
   const [voucherCartVersion, setVoucherCartVersion] = useState<string | null>(null);
   const [voucherError, setVoucherError] = useState("");
   const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuote | null>(null);
+  const [checkoutError, setCheckoutError] = useState("");
+  const createOrder = useCreateOrder();
 
   const addresses = addressesQuery.data?.data.addresses ?? emptyAddresses;
   const cart = cartQuery.data?.data;
   const items = cart?.items.map(normalizeCartItem) ?? [];
   const currentVoucherDiscount = voucherCartVersion === cart?.updatedAt ? voucherDiscount ?? 0 : 0;
+
+  // One shipment per seller: the fulfillment model is per-seller origin with
+  // split shipment, so the customer chooses a courier for each seller.
+  const sellerGroups: SellerGroup[] = Object.values(
+    items.reduce<Record<string, SellerGroup>>((groups, item) => {
+      const existing = groups[item.sellerId];
+      groups[item.sellerId] = {
+        sellerId: item.sellerId,
+        sellerName: item.sellerName || item.sellerId,
+        itemCount: (existing?.itemCount ?? 0) + item.qty,
+      };
+      return groups;
+    }, {}),
+  );
+
+  // The shipping figure shown is the server's, never a locally computed one.
+  const shippingCost = shippingQuote?.totalCost ?? 0;
+  const grandTotal = Math.max(0, (cart?.subtotal ?? 0) - currentVoucherDiscount + shippingCost);
 
   const handleValidateVoucher = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -88,6 +113,29 @@ export default function CheckoutPage() {
   if (!user) {
     return <div className="py-20"><EmptyState icon="lock" title="Login Diperlukan" description="Masuk untuk memuat keranjang dan alamat pengiriman dari akun Anda." actionLabel="Login Sekarang" actionHref="/auth/login?redirect=/checkout" /></div>;
   }
+
+  const handlePlaceOrder = async () => {
+    setCheckoutError("");
+    if (!shippingQuote) return;
+
+    try {
+      const result = await createOrder.mutateAsync({
+        shippingAddressId: effectiveAddressId,
+        // The only shipping value sent is the server-issued quote id; the
+        // server resolves the price from its own record.
+        shippingQuoteId: shippingQuote.quoteId,
+        ...(currentVoucherDiscount > 0 ? { voucherCode } : {}),
+      });
+      router.push(`/payment/${result.data.payment?.id ?? result.data.order.id}`);
+    } catch (error) {
+      setShippingQuote(null);
+      setCheckoutError(
+        error instanceof Error
+          ? error.message
+          : "Order gagal dibuat. Hitung ulang ongkos kirim dan coba lagi.",
+      );
+    }
+  };
 
   const handleAddAddress = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -175,9 +223,37 @@ export default function CheckoutPage() {
             {voucherDiscount !== null && voucherCartVersion !== cart?.updatedAt && <p role="status" className="mt-2 text-xs text-amber-900">Keranjang berubah; validasi voucher kembali.</p>}
           </form>
           {currentVoucherDiscount > 0 && <div className="flex justify-between text-sm mt-3 text-emerald-800"><span>Diskon voucher</span><span className="font-mono">−{formatIDR(currentVoucherDiscount)}</span></div>}
-          <div className="flex justify-between text-sm mt-3"><span>Ongkos kirim</span><span className="text-ink-secondary">Belum tersedia</span></div>
-          <div role="status" className="mt-5 p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">Diskon diperiksa server dari isi keranjang, katalog terkini, dan cakupan voucher. Nilai akhir tetap dihitung ulang saat order dibuat. Checkout belum dapat diteruskan karena backend belum memverifikasi tarif ongkir berdasarkan rute dan berat.</div>
-          <button type="button" disabled className="w-full mt-5 bg-primary text-white py-4 text-xs uppercase font-bold tracking-widest opacity-50 cursor-not-allowed">Checkout belum tersedia</button>
+          <div className="mt-5 pt-5 border-t border-hairline">
+            <h3 className="text-xs uppercase font-bold tracking-widest mb-3">Pengiriman</h3>
+            <ShippingQuotePanel
+              groups={sellerGroups}
+              addressId={effectiveAddressId}
+              quote={shippingQuote}
+              onQuote={setShippingQuote}
+            />
+          </div>
+          <div className="flex justify-between text-sm mt-4">
+            <span>Ongkos kirim</span>
+            {shippingQuote
+              ? <span className="font-mono">{formatIDR(shippingCost)}</span>
+              : <span className="text-ink-secondary">Belum dihitung</span>}
+          </div>
+          <div className="flex justify-between text-base font-semibold mt-3 pt-3 border-t border-hairline">
+            <span>Total</span>
+            {shippingQuote
+              ? <span className="font-mono">{formatIDR(grandTotal)}</span>
+              : <span className="text-ink-secondary text-sm">Menunggu ongkos kirim</span>}
+          </div>
+          <div role="status" className="mt-5 p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">Harga, diskon, dan ongkos kirim dihitung dan divalidasi ulang oleh server saat order dibuat. Ongkos kirim berlaku terbatas; jika keranjang atau alamat berubah, hitung ulang.</div>
+          {checkoutError && <p role="alert" className="mt-3 text-xs text-rose-800">{checkoutError}</p>}
+          <button
+            type="button"
+            onClick={handlePlaceOrder}
+            disabled={!shippingQuote || isQuoteExpired(shippingQuote) || createOrder.isPending || !effectiveAddressId}
+            className="w-full mt-5 bg-primary text-white py-4 text-xs uppercase font-bold tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {createOrder.isPending ? "Memproses..." : "Buat Pesanan"}
+          </button>
           <Link href="/cart" className="block text-center text-xs text-ink-secondary mt-4">Kembali ke keranjang</Link>
         </aside>
       </div>

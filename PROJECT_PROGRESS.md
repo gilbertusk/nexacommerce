@@ -1,26 +1,54 @@
 # NexaCommerce Project Progress
 
-Last updated: 2026-09-25
-Baseline commit: `dc9706f` (`feat: initial commit of Stage 2 codebase`)  
-Active branch: `master`
+- Last updated: 2026-09-25
+- Baseline commit: `216a53d` (`first commit`)
+- Active branch: `main`
+
+Header correction (2026-09-25): this document previously recorded branch `master` at baseline
+`dc9706f`. The actual checkout is branch `main` at `216a53d`, with a clean working tree; the
+Phase 0-4 work that was previously uncommitted is contained in `216a53d`. No work was lost.
 
 ## Current Status
+
+Updated 2026-09-25.
 
 | Item | Status |
 |---|---|
 | Phase 0 - Baseline and production-readiness audit | Complete |
 | Phase 1 - Security and payment hardening | Complete (local acceptance) |
-| Phase 2 - Product completion and real frontend integration | In progress - customer catalog/cart/address integration; checkout blocked on trusted shipping quote |
-| Phase 3 - Redis and RabbitMQ reliability | In progress |
-| Phase 4 - Kafka event streaming | In progress - live local RabbitMQ-to-Kafka bridge, replay, ordering, restart, and single-broker recovery pass; database-backed projection and production cluster acceptance pending |
-| Phase 5 - Production infrastructure and operations | In progress - workspace/migration/container CI hardened; deployment and operations pending |
-| Phase 6 - Production acceptance and limited beta | Not started |
+| Phase 2 - Product completion and real frontend integration | In progress - checkout reopened on a server-issued shipping quote; **blocked on business data**, not code |
+| Phase 3 - Redis and RabbitMQ reliability | In progress - atomic inbox implemented and proven on live PostgreSQL; live broker fault acceptance outstanding |
+| Phase 4 - Kafka event streaming | In progress - database-backed Analytics projection implemented and proven on live Kafka + PostgreSQL; production cluster is external acceptance |
+| Phase 5 - Production infrastructure and operations | In progress - migrations, backup/restore drill, request correlation, and CI verified; deployment target undecided |
+| Phase 6 - Production acceptance and limited beta | Not started - requires environments and credentials that have not been supplied |
 
-Phase 0 completion: **100%**.  
-Phase 1 completion: **100% for local implementation and static acceptance**.  
-Estimated public-production readiness: **40%**.
+Phase 0 completion: **100%**.
+Phase 1 completion: **100% for local implementation and static acceptance**.
+Estimated public-production readiness: **55%**, up from 40%.
 
-The readiness estimate measures production safety, not the number of screens or source files. The repository has broad feature scaffolding, but critical security, payment, migration, integration-test, messaging-reliability, backup, and operational gates remain open.
+The readiness estimate measures production safety, not the number of screens or source files. The
+increase reflects gates that moved from unproven to proven against live infrastructure: migrations
+deploy from empty with no drift, the consumer-side inbox is exactly-once under real concurrency, the
+Kafka projection commits offsets only after its transaction, shipping prices are server-authoritative
+and single-use, and the database backup restores completely. It is not higher because the remaining
+gates need environments, credentials, and business decisions rather than code.
+
+### What blocks each phase
+
+| Phase | Blocker | Whose call |
+|---|---|---|
+| 2 | No seller has a verified dispatch origin and the rate table has no verified rows, so every quote correctly fails closed | Business - supply origins and tariffs |
+| 2 | Production media storage acceptance | External - S3-compatible credentials |
+| 2 | Admin "physical receipt confirmed" step before refunds | Implementation, decision already given |
+| 3 | `OrderCreated` still publishes directly rather than through the outbox | Implementation - needs a saga boundary design |
+| 3 | Live RabbitMQ and Redis fault acceptance (DLQ, broker restart, failover, cross-instance rate limiting) | Implementation - brokers are running locally |
+| 4 | Cutover comparison before reads move to the Kafka projection | Implementation |
+| 4 | Production cluster topology, TLS/SASL/ACLs, DR | External - no cluster provided |
+| 5 | Deployment target undecided; no metrics exporter, tracing, or alert rules | Decision, then implementation |
+| 5 | PITR, RTO/RPO, offsite retention | External - needs a real environment |
+| 6 | Everything - full-stack E2E, Midtrans sandbox, SMTP, load/soak/DR, legal approval | External |
+
+Nothing above is marked complete on the strength of a passing build.
 
 ## Phase 0 Evidence
 
@@ -122,6 +150,384 @@ Order fulfillment transition hardening (2026-09-24): Order Service now enforces 
 Notification event presentation (2026-09-24): mapped service event types (`ORDER_CREATED/SHIPPED/DELIVERED/COMPLETED`, `PAYMENT_SUCCESS/FAILED`, `REVIEW_RECEIVED`, `LOW_STOCK`) to customer UI categories and registered their icons in Seller/Admin screens; formerly these event strings fell through to generic icons. Customer-store tests cover normalization for every documented notification type and real fetched records. Customer Web suite passes 36/36 across 10 files; all three frontend production builds and focused ESLint checks for changed dashboard files pass. No browser visual/E2E test was run.
 
 Courier handoff integration (2026-09-24): Order Service now verifies the internal Shipping Service record, tracking number, and `PICKED_UP`/later shipment status before accepting `SHIPPED`. Seller order detail fetches shipment data, displays courier/tracking/status, advances `WAITING_PICKUP -> PICKED_UP`, then updates order status; it disables handoff when no registered tracking shipment exists. Added Order Service tests for tracked courier-handoff success, missing tracking rejection, not-yet-handed-off rejection, and kept the skip/terminal-state guards. Order Service tests pass 37/37; TypeScript build passes. Seller orders ESLint and Seller Dashboard production build pass. Added `SHIPPING_SERVICE_URL` to Order Service config and production Compose. DB-backed route tests still tolerate PostgreSQL-unavailable failures; no live Shipping/Order workflow was exercised. A tracking shipment itself can only be created when approved route/service/weight rates exist, so new checkout remains gated.
+
+## 2026-09-25 Session Evidence
+
+### Environment baseline
+
+- Branch `main`, HEAD `216a53d`, working tree clean at session start.
+- Node v24.15.0, npm 10.8.0, Docker 29.7.2.
+- Pre-existing containers: `nexacommerce-rabbitmq` (healthy), `nexacommerce-kafka` (healthy),
+  `nexacommerce-event-stream` (healthy). No NexaCommerce PostgreSQL or Redis container existed.
+- Disposable `nexacommerce-postgres` (postgres:16-alpine, port 5445) and `nexacommerce-redis`
+  (redis:7-alpine, port 6379) were created from empty volumes through the project's own Compose
+  definitions using a scratchpad env file. Containers belonging to unrelated projects
+  (`tbe-*`, `kilat-*`, `labelflow-*`) were not used and not modified. No volume was deleted.
+- The repository `.env` is a stale 13-variable development file that lacks `POSTGRES_PASSWORD`,
+  `INTERNAL_SERVICE_TOKEN`, and the media/Midtrans/SMTP variables that `.env.example` and
+  `docker-compose.yml` require. It was left unmodified; live runs pass credentials explicitly.
+
+### Phase 5 - migration gate verified against live PostgreSQL 16
+
+First runtime proof for this gate. All 11 Prisma schemas were deployed from a genuinely empty
+database, not from a pre-existing one.
+
+- `prisma migrate deploy` from empty: **11/11 schemas applied, 24 migrations total**
+  (auth 2, users 2, products 1, inventory 2, orders 4, payments 4, vouchers 1, shipping 2,
+  reviews 2, notifications 2, analytics 2).
+- `prisma migrate status`: **11/11 report "Database schema is up to date"**.
+- `prisma validate`: **11/11 pass**.
+- `prisma migrate diff --exit-code` (datasource vs datamodel): **11/11 report no drift**.
+- `db push` was not used.
+
+This closes the previously recorded blocker that Order Service had no baseline migration history
+and Payment Service lacked baseline table creation; both now deploy cleanly from empty.
+
+### Phase 3 - general database-backed atomic inbox implemented
+
+The inbox pattern was previously **absent from the entire codebase** (no file, model, or migration
+matched `inbox`), while the outbox existed in five services. The consumer-side partial-side-effect
+window was therefore real and unmitigated: Analytics ran `saveEvent` -> handler mutations ->
+`markEventProcessed` as three separate transactions, so a crash between the second and third
+replayed the mutations on redelivery and double-counted revenue and order counters.
+
+- Added `packages/common/src/inbox.ts`: a storage-agnostic `processWithInbox` runtime with an
+  `InboxPort` seam, because each service generates its own Prisma client and there is no shared
+  client type to depend on. Claim, business mutation, and the processed marker all run inside one
+  caller-supplied transaction.
+- Added `apps/analytics-service/src/messaging/inbox.ts`: the Prisma-backed adapter. Unique key is
+  `(event_id, consumer)`; a lost concurrent claim surfaces as Prisma `P2002` and is read as a
+  duplicate delivery rather than an error.
+- Added the `InboxEvent` model and migration `20260925090000_add_analytics_inbox`.
+- Refactored the Analytics projection into `prepareAnalyticsEvent` (HTTP enrichment, no writes) and
+  `applyAnalyticsEvent` (writes only). Enrichment now runs **before** the transaction opens, so the
+  projection no longer holds row locks while waiting on Product/Review Service.
+- Threaded an `AnalyticsWriteClient` parameter through the six repository upsert methods so report
+  mutations can join the inbox transaction.
+- Rewrote the Analytics RabbitMQ consumer onto the inbox. Acknowledgement still happens only after
+  the handler resolves; retry and DLQ routing remain owned by the shared consumer.
+- Removed `analyticsRepository.saveEvent` / `markEventProcessed`, superseded by the inbox. The
+  `analytics_events` table was **not** dropped; retiring it is a data-retention decision and is
+  recorded as an open item, not silently executed.
+
+Validation:
+
+- `packages/common`: **13/13 pass** (6 pre-existing RabbitMQ, 7 new inbox unit tests).
+- `apps/analytics-service`: **27/27 pass across 4 suites**.
+- New `tests/integration/analytics.inbox.test.ts` runs against **live PostgreSQL 16**, not mocks,
+  and passes **7/7**:
+  - mutation and consumed marker commit together;
+  - redelivered event is not applied twice;
+  - 10 concurrent deliveries of one event yield exactly 1 `PROCESSED` and 9 `SKIPPED_DUPLICATE`,
+    with the counter incremented once;
+  - handler failure after writing rolls back the mutation and leaves no processed marker
+    (row recorded `FAILED`, attempts 1);
+  - a previously failed event applies exactly once on redelivery;
+  - deduplication is independent per consumer name;
+  - a real `applyAnalyticsEvent` projection commits inside the inbox transaction.
+  The suite fails rather than skips when the database is unreachable, so it cannot pass vacuously.
+
+Test-run correction: `apps/analytics-service` previously ran Jest with default parallel workers and
+its integration suite intermittently exceeded the 30s timeout when three workers each opened a
+Prisma pool. Its `test` script now uses `--runInBand`, matching api-gateway, event-stream-service,
+and packages/common. The suite passes 27/27 serially with no forced exit and no lingering-handle
+warning.
+
+### Honest scope of the above
+
+- Live PostgreSQL and Redis are now available locally, so Analytics no longer tolerates a 500 from
+  an unavailable database. Other services' DB-backed suites have **not** yet been re-run against the
+  live database and may still tolerate offline responses; that audit is outstanding.
+- Notification Service still has the partial-side-effect window; its inbox is not yet implemented.
+- No Kafka projection consumer exists yet.
+- Nothing here is production acceptance. Single-node local containers are not an HA cluster.
+
+### Business decisions recorded (supplied by the product owner, 2026-09-25)
+
+These unblock Phase 2 checkout design. They are recorded as received; none were invented.
+
+1. **Fulfillment model**: per-seller origin with **split shipment**. A multi-seller cart produces one
+   shipment and one shipping fee per seller.
+2. **Tariff source**: internal **verified rate table** (`shipping_rates`). Quotes fail closed when no
+   matching row exists. No external courier API is to be called and no rate may be invented.
+3. **Refund gate**: refund is permitted only after an **admin confirms physical receipt** of returned
+   goods. Approval alone is not sufficient.
+4. **Credentials available**: Midtrans sandbox only. S3-compatible storage and SMTP remain external
+   acceptance blockers.
+
+### Phase 3 continued - Notification inbox and durable email queue
+
+Notification Service had the same three-transaction consumer shape as Analytics, plus a worse
+failure mode on the email side: `createNotification` wrote the in-app row, then fired
+`emailService.sendEmail(...)` as an unawaited promise with in-process `setTimeout` retries. A crash
+after the notification row committed lost the email permanently, and redelivery short-circuited on
+the existing `source_event_id` row, so it was never queued on the retry either.
+
+- Added `InboxEvent` to Notification Service with the same `(event_id, consumer)` unique key.
+- Added `src/services/email-outbox.ts`: `email_logs` is now a claimed queue with `available_at`,
+  `locked_at`, and `lock_token`. Enqueuing happens inside the caller's transaction; delivery happens
+  later in `src/messaging/email-dispatcher.ts` with exponential backoff and a terminal FAILED state.
+- `emailService` was split into template resolution, transactional `queueEmail`, and transport-only
+  `deliverEmail`. The in-process retry loop is gone.
+- Split the consumer into `prepareNotificationEvent` (HTTP recipient lookups) and
+  `applyNotificationEvent` (writes only), so no network call happens while the transaction holds
+  row locks.
+- Migration `20260925100000_add_notification_inbox_and_email_dispatch`.
+
+Fabricated data removed. The consumer previously fell back to `${userId}@example.com` on a failed
+user lookup, to `Premium Product` and `seller-id-fallback` on a failed product lookup, and reached
+Review Service through a hard-coded `http://localhost:3010`. A guessed address sends real mail to
+the wrong person, so those lookups now throw and the event goes through bounded retry and DLQ
+instead. `REVIEW_SERVICE_URL` was added to Notification Service config.
+
+Two defects found and fixed while testing:
+
+- `EmailService`'s constructor called `initializeTransporter()`, which provisions an Ethereal
+  account over the network when no SMTP credentials are set. Importing the module therefore
+  performed network I/O. Initialization is now lazy, on first delivery. Notification Service's
+  suite went from **204s to 4.9s**.
+- Notification Service ran Jest with default parallel workers and its DB-backed suites timed out.
+  Its `test` script now uses `--runInBand`, matching the other services that touch shared resources.
+
+Validation:
+
+- `apps/notification-service`: **43/43 pass across 7 suites in 4.9s**.
+- New `tests/integration/notification.inbox.test.ts` runs against **live PostgreSQL 16**, **9/9**:
+  notification + email job + consumed marker commit together; a failed write leaves neither; a
+  redelivery does not duplicate the email; 8 concurrent deliveries queue exactly one email; two
+  dispatchers claim one job exactly once; a sent job is not re-claimed; retry budget is honoured
+  before a terminal FAILED; an unknown template is refused rather than silently skipped; token and
+  URL template values are redacted in the log table.
+
+### Phase 4 - Analytics Kafka projection implemented
+
+The first real Kafka projection now exists. The boundary is unchanged and one-way
+(`domain outbox -> RabbitMQ -> event-stream-service -> Kafka -> projection`); no domain service
+publishes to both brokers.
+
+- New `daily_sales_projections` table, deliberately **separate** from the RabbitMQ-fed
+  `daily_sales_report`. The same domain fact reaches Analytics over both paths, so a shared table
+  would double-count every order and payment. Separate inbox consumer names
+  (`analytics.rabbitmq`, `analytics.kafka`) let each path apply an event once to its own table.
+  The cutover sequence is documented in [docs/phase-4-kafka-streaming.md](docs/phase-4-kafka-streaming.md);
+  nothing reads the projection yet.
+- `kafka_projection_progress` records per-partition position for lag reporting only. Kafka remains
+  the authority for offsets; this table never decides where to resume.
+- `autoCommit: false`. A failed projection throws before `commitOffsets`, so the offset advances
+  only after the projection transaction commits.
+- `partitionsConsumedConcurrently: 1` preserves per-partition ordering.
+- `schemaVersion` is validated; only version 1 is accepted. Malformed or unsupported messages are
+  counted and stepped over rather than retried forever, because blocking a partition on one bad
+  record stalls every well-formed event behind it. The rejection counter is the alert signal.
+- `GET /analytics/readiness` reports connected state, projected/duplicate/rejected/failure counts,
+  last event time, and per-partition lag. The service now also shuts the consumer down on
+  SIGTERM/SIGINT so in-flight projections are not abandoned mid-transaction.
+- Migration `20260925110000_add_kafka_projection`; `kafkajs` added to Analytics.
+
+Validation - `tests/integration/kafka-projection.test.ts` against **live Kafka 4.3.1 and live
+PostgreSQL 16, 12/12 pass**, failing rather than skipping when either is unreachable:
+unsupported schema rejected; non-JSON rejected; missing eventId rejected; order projected with
+partition progress in one transaction; replay not double-counted; 8 concurrent deliveries produce
+exactly 1 projection; `OrderPaid` not projected so `PaymentSuccess` revenue is not doubled;
+transaction failure returns FAILED and projects nothing; redelivery after an uncommitted offset
+applies exactly once; a transient failure leaves the event projectable; per-key ordering preserved
+through a live partitioned topic; a fresh consumer group replays the log from the beginning.
+
+### Build fix - customer-web Turbopack root
+
+`frontend/customer-web` failed `next build` with `Could not find the Next.js package
+(next/package.json)`. Root cause: **`frontend/customer-web/.git` is a nested, empty Git repository**
+(`git init` with no commits, branch `master`). Next.js 16 Turbopack stops workspace-root detection
+at a Git boundary, so the root resolved to the app folder and the hoisted `next` package became
+unreachable. The other two dashboards have no nested `.git` and built normally.
+
+Fixed by setting `turbopack.root` to the monorepo root in `frontend/customer-web/next.config.ts`,
+which is the documented remedy and does not depend on the nested repository being removed. The
+nested `.git` was **not** deleted; that is the user's to decide. It is also the likely source of the
+`master` branch reported in the original task brief.
+
+### Workspace quality gate (2026-09-25)
+
+| Gate | Result |
+|---|---|
+| `npm.cmd run typecheck` | **exit 0**, 26 workspaces |
+| `npm.cmd run lint` | **exit 0**, 0 errors, 6 pre-existing Google-font warnings |
+| `npm.cmd audit --audit-level=high` | **exit 0**, 0 vulnerabilities |
+| `npm.cmd run build` | user-service and customer-web verified individually after their fixes; a clean full re-run is pending |
+| `git diff --check` | clean for hand-written files; pre-existing trailing whitespace remains in Prisma-generated output |
+| Prisma schema validate | 11/11 pass |
+| Migration deploy/status/drift on disposable PostgreSQL 16 | 11/11 pass, no drift |
+
+Caveat on that build row: the first full `npm.cmd run build` overlapped with `prisma generate`
+runs, which is the concurrency hazard the working rules warn about. Its two failures were a stale
+TypeScript error since fixed and the Turbopack issue above. A clean sequential re-run is required
+before the build gate is claimed green.
+
+### Phase 2 - Checkout reopened on a trusted shipping quote
+
+Checkout had been fail-closed since Phase 2 began. The product owner supplied the two missing
+decisions on 2026-09-25, and the contract is now implemented against them. Full detail is in
+[docs/phase-2-product-completion.md](docs/phase-2-product-completion.md).
+
+- Fulfillment: **per-seller origin, split shipment**. N sellers produce N shipments and N fees.
+- Tariffs: the **internal verified rate table**. No external courier API; no configured row means
+  the quote fails closed.
+- Refunds: only after an **admin confirms physical receipt** (receipt step still to be built).
+
+What was added:
+
+- `SellerProfile.originCity` / `originProvince` / `originVerifiedAt`. `storeAddress` was free text
+  and cannot key a rate table. All nullable on purpose: a seller without a verified origin blocks
+  quoting for their items rather than falling back to an assumed warehouse.
+- `shipping_quotes`: opaque id, 30-minute expiry, customer ownership, origin/destination/weight/
+  service/cost snapshot, a SHA-256 `cartHash` for revalidation, single use enforced by a partial
+  unique index plus a conditional UPDATE, and idempotency per order id.
+- The cart-hash function lives in `packages/common` because Shipping and Order Service must produce
+  byte-identical output; two implementations would drift and break every checkout.
+- `checkoutSchema` now takes `shippingQuoteId` and is `.strict()`. `courierName`, `courierService`,
+  and `shippingCost` are gone, and a client still sending `shippingCost` gets a 400 rather than
+  having it silently ignored.
+- The order id is generated before the order row exists, so the quote is claimed **before** any
+  dependent state. A quote can never price two orders.
+- `orders.shipping_quote_id` and `orders.shipment_breakdown` record the quote and the full
+  per-seller split.
+- Seller dashboard: a dispatch-origin form that always saves as unverified. Admin dashboard: a
+  verification queue. A seller may propose an origin but not approve it, because the origin decides
+  what customers are charged for delivery.
+- Customer Web checkout groups the cart by seller, collects a courier per seller, requests a server
+  quote, shows the per-seller breakdown, and submits the quote id alone. Changing a courier discards
+  the quote; a rejected order clears it.
+
+Migrations: `20260925120000_add_seller_dispatch_origin`, `20260925130000_add_shipping_quotes`,
+`20260925140000_add_order_shipping_quote`.
+
+Validation:
+
+| Suite | Result |
+|---|---|
+| Shipping quote unit tests | **11/11** |
+| Shipping quote integration, **live PostgreSQL 16** | **10/10** |
+| Shipping Service full suite | **48/48** |
+| Order Service full suite | **62/62** |
+| Customer Web checkout page | **9/9** |
+| User Service dispatch-origin trust boundary | covered by unit tests |
+
+The live suite proves what only a real database can: 10 concurrent checkouts racing for one quote
+yield exactly one success; consumed, expired, foreign-owned, and stale-cart quotes are all refused;
+a retried checkout for the same order is idempotent.
+
+### Test infrastructure corrected
+
+Three problems were making the workspace test suite unable to prove anything about runtime
+behaviour. All three are fixed.
+
+1. **Tests could not reach a database at all.** Every service's `tests/setup.ts` defaults to
+   `postgres:postgres123@localhost:5445` with a per-service `*_test` schema, but no such database
+   existed. Suites therefore accepted `[200, 500]` and `[400, 422, 500]`, which passes whether the
+   code works or not. The disposable container's password was aligned to the repository's own
+   convention and all 11 test schemas were migrated, so `npm.cmd test` now runs against live
+   PostgreSQL 16 with no configuration changes. Redis was recreated without a password to match
+   `tests/setup.ts` as well.
+2. **Parallel Jest workers exhausted the local database and broker.** Suites intermittently blew the
+   30s timeout; auth-service took over 270s and failed, analytics and notification did the same. All
+   14 services now run `jest --runInBand`, matching api-gateway, event-stream-service, and
+   packages/common. auth-service went from timing out to **29/29 in 4.2s**.
+3. **Open handles required forced exits.** Order Service left its Prisma pool open and Cart Service
+   left an ioredis connection open, so Jest hung. Both now disconnect in `afterAll`. Order Service
+   went from ~86s with a lingering-handle warning to **6.7s clean**; Cart Service no longer hangs.
+   No suite in this session relies on `--forceExit`.
+
+Assertions that previously tolerated an unavailable dependency have been tightened where the
+dependency is now live: Order Service asserts 200 and 404 exactly instead of `[200, 500]` and
+`[404, 500]`, and Cart Service asserts 200 instead of `[200, 500]`.
+
+A defect this uncovered: **Order Service returned 500 for validation errors** because `ZodError` was
+not handled in its error middleware, unlike every other service. A malformed checkout body was
+reported as a server fault and leaked internal detail. Now handled, asserted as 400.
+
+### Phase 5 - backup/restore drill, request correlation, CI
+
+#### Backup and restore drill
+
+`scripts/backup-restore-drill.sh` (`npm run db:backup-drill`) dumps the running database, restores
+it into a **separate, freshly created** scratch database, and compares per-table row counts. It
+fails if any count differs, if the dump is implausibly small, or if the restore target is not
+distinct from the source. It never writes to the source.
+
+Verified locally on PostgreSQL 16: `pg_dump -Fc` produced 276,569 bytes, restore succeeded, and
+**143/143 tables matched exactly**. The scratch database was dropped afterwards.
+
+Documented honestly in [docs/deployment.md](docs/deployment.md): this proves the backup mechanism
+works. It does **not** cover point-in-time recovery (no WAL archiving exists), RTO/RPO, offsite
+encrypted retention, cross-version restore, roles/grants, or backup-age alerting. Those remain
+production acceptance.
+
+#### Request correlation
+
+No correlation or request id existed anywhere in the codebase. One customer action fans out across
+a dozen services, and reconstructing a failure meant guessing from timestamps.
+
+- The ambient context lives in `@nexacommerce/logger` next to the logger, because its reason for
+  existing is that log lines from one action must be findable together. The HTTP adapter is in
+  `@nexacommerce/common`, which depends on logger — not the reverse.
+- `AsyncLocalStorage` carries the id rather than threading it through every signature; the
+  alternative is editing every call site for a value almost none of them use, where one missed call
+  site silently breaks the trace.
+- `requestIdMiddleware` is mounted first in **all 14 services**. An id supplied by an upstream caller
+  is reused so a trace spans services, but only if it matches `[A-Za-z0-9._-]{8,128}` — an unchecked
+  value lands in logs, where a newline forges entries.
+- The gateway forwards its id to every proxied service; `buildInternalServiceHeaders()` forwards it
+  on every internal call; Analytics and Notification consumers establish context from the event id,
+  since they have no HTTP request.
+- Every log line now carries the id when one is in scope, and it is echoed on the response so a
+  customer can quote it.
+
+`packages/common`: **20/20 pass**, including 7 correlation tests covering generation, reuse,
+rejection of malformed ids, survival across `await`, and isolation between concurrent requests.
+
+Also corrected: `docs/architecture.md` claimed `@nexacommerce/logger` wraps Winston. It does not;
+it is a small in-house logger writing to stdout.
+
+New: [docs/observability.md](docs/observability.md) records what is logged and what must never be,
+which metrics exist versus which a production deployment still needs, the liveness/readiness
+distinction, and which signals should page versus merely be visible. It is explicit that no metrics
+exporter, tracing, log aggregation, or alert rules are wired yet.
+
+#### CI
+
+`.github/workflows/backend-ci.yml` already ran lint, a 26-workspace typecheck, DB-backed tests
+against the same `*_test` schemas used locally, build, and `npm audit`. Added:
+
+- A **Kafka service** and a topic-provisioning step, so the Analytics projection tests run against a
+  real broker in CI. Without it those tests would fail there — which is correct, since a projection
+  suite that passes with no broker proves nothing.
+- `KAFKA_BROKERS` in the job environment.
+- `frontend/admin-dashboard`, which was missing from the workspace test list.
+
+#### Kafka production requirements
+
+[docs/kafka-production-requirements.md](docs/kafka-production-requirements.md) states the minimum a
+production cluster must meet: 3 brokers and controllers, replication factor 3,
+`min.insync.replicas` 2, `unclean.leader.election.enable=false`, TLS plus SASL with default-deny
+per-service ACLs, storage sizing, monitoring and alert thresholds, export, and DR. It also records
+that partition count is a one-way door for ordering, and the safe sequence for rebuilding a
+projection.
+
+**Marked external acceptance.** No production cluster has been provided, so none of it is verified.
+The local topology is a single-node KRaft container with plaintext listeners and replication
+factor 1 — adequate for proving projection correctness and for nothing else.
+
+#### Schema drift found and fixed
+
+The first migration-drift recheck after the day's new migrations reported drift in Analytics: the
+hand-written migration named the unique index `kafka_projection_progress_group_topic_partition_key`
+while Prisma's convention would generate a different name, so a fresh deployment would have
+reported drift immediately. The index name is now pinned in the schema with `map:`. The partial
+unique index on `shipping_quotes.consumed_by` — which is what makes "one quote prices at most one
+order" a database guarantee rather than an application convention — is documented in the schema
+because Prisma cannot express a partial index and would otherwise propose dropping it.
+
+After the fix: **11/11 schemas validate, 11/11 migrate status up to date, 11/11 no drift.**
 
 ## Phase Gates
 
