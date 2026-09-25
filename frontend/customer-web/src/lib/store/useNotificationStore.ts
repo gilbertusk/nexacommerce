@@ -1,7 +1,14 @@
 import { create } from "zustand";
-import { apiGet, apiPost, apiDelete } from "@/lib/api/client";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 
 export type NotificationType = "ORDER" | "PAYMENT" | "REVIEW" | "SYSTEM";
+
+export function normalizeNotificationType(type: string): NotificationType {
+  if (type.startsWith("ORDER_")) return "ORDER";
+  if (type.startsWith("PAYMENT_")) return "PAYMENT";
+  if (type.startsWith("REVIEW_")) return "REVIEW";
+  return "SYSTEM";
+}
 
 export interface Notification {
   id: string;
@@ -16,7 +23,7 @@ export interface Notification {
 interface NotificationListResponse {
   success: boolean;
   data: {
-    notifications: Notification[];
+    notifications: Array<Omit<Notification, "type"> & { type: string }>;
     total: number;
     unreadCount: number;
     page: number;
@@ -31,11 +38,12 @@ interface NotificationStore {
   total: number;
   page: number;
   limit: number;
+  ownerId: string | null;
 
-  fetchNotifications: (token: string, page?: number, unreadOnly?: boolean) => Promise<void>;
-  markAsRead: (id: string, token: string) => Promise<void>;
-  markAllAsRead: (token: string) => Promise<void>;
-  deleteNotification: (id: string, token: string) => Promise<void>;
+  fetchNotifications: (token: string, userId: string, page?: number, unreadOnly?: boolean) => Promise<void>;
+  markAsRead: (id: string, token: string, userId: string) => Promise<void>;
+  markAllAsRead: (token: string, userId: string) => Promise<void>;
+  deleteNotification: (id: string, token: string, userId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -46,9 +54,18 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
   total: 0,
   page: 1,
   limit: 20,
+  ownerId: null,
 
-  fetchNotifications: async (token, page = 1, unreadOnly = false) => {
-    set({ isLoading: true });
+  fetchNotifications: async (token, userId, page = 1, unreadOnly = false) => {
+    set((state) => ({
+      isLoading: true,
+      ...(state.ownerId === userId ? {} : {
+        ownerId: userId,
+        notifications: [],
+        unreadCount: 0,
+        total: 0,
+      }),
+    }));
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -59,22 +76,28 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
         `/notifications?${params.toString()}`,
         token
       );
-      set({
-        notifications: res.data.notifications,
-        unreadCount: res.data.unreadCount,
-        total: res.data.total,
-        page: res.data.page,
-      });
+      if (get().ownerId === userId) {
+        set({
+          notifications: res.data.notifications.map((notification) => ({
+            ...notification,
+            type: normalizeNotificationType(notification.type),
+          })),
+          unreadCount: res.data.unreadCount,
+          total: res.data.total,
+          page: res.data.page,
+        });
+      }
     } catch (err) {
       console.error("[NotificationStore] fetchNotifications failed:", err);
     } finally {
-      set({ isLoading: false });
+      if (get().ownerId === userId) set({ isLoading: false });
     }
   },
 
-  markAsRead: async (id, token) => {
+  markAsRead: async (id, token, userId) => {
     try {
-      await apiPost(`/notifications/${id}/read`, {}, token);
+      await apiPatch(`/notifications/${encodeURIComponent(id)}/read`, {}, token);
+      if (get().ownerId !== userId) return;
       set((state) => ({
         notifications: state.notifications.map((n) =>
           n.id === id ? { ...n, isRead: true } : n
@@ -86,9 +109,10 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
     }
   },
 
-  markAllAsRead: async (token) => {
+  markAllAsRead: async (token, userId) => {
     try {
       await apiPost("/notifications/read-all", {}, token);
+      if (get().ownerId !== userId) return;
       set((state) => ({
         notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
         unreadCount: 0,
@@ -98,9 +122,10 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
     }
   },
 
-  deleteNotification: async (id, token) => {
+  deleteNotification: async (id, token, userId) => {
     try {
-      await apiDelete(`/notifications/${id}`, token);
+      await apiDelete(`/notifications/${encodeURIComponent(id)}`, token);
+      if (get().ownerId !== userId) return;
       set((state) => {
         const deleted = state.notifications.find((n) => n.id === id);
         return {
@@ -117,6 +142,6 @@ export const useNotificationStore = create<NotificationStore>()((set, get) => ({
   },
 
   reset: () => {
-    set({ notifications: [], unreadCount: 0, isLoading: false, total: 0, page: 1 });
+    set({ notifications: [], unreadCount: 0, isLoading: false, total: 0, page: 1, ownerId: null });
   },
 }));

@@ -46,7 +46,6 @@ const DISCOUNT_TYPES = [
 
 const EMPTY_FORM = {
   code: '',
-  description: '',
   discountType: 'PERCENTAGE',
   discountValue: '',
   minPurchase: '',
@@ -107,6 +106,8 @@ export default function VouchersPage() {
   }, [token]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchVouchers();
   }, [fetchVouchers]);
 
@@ -121,19 +122,23 @@ export default function VouchersPage() {
       setFormError('Nilai diskon harus lebih dari 0.');
       return;
     }
+    if (!form.expiresAt) {
+      setFormError('Tanggal kedaluwarsa wajib diisi.');
+      return;
+    }
 
     setIsCreating(true);
     try {
       const payload: Record<string, unknown> = {
         code: form.code.trim().toUpperCase(),
-        discountType: form.discountType,
-        discountValue: Number(form.discountValue),
+        type: form.discountType === 'FIXED' ? 'FIXED_AMOUNT' : form.discountType,
+        value: Number(form.discountValue),
+        startsAt: new Date().toISOString(),
+        endsAt: new Date(form.expiresAt).toISOString(),
       };
-      if (form.description.trim()) payload.description = form.description.trim();
       if (form.minPurchase) payload.minPurchase = Number(form.minPurchase);
       if (form.maxDiscount) payload.maxDiscount = Number(form.maxDiscount);
       if (form.usageLimit) payload.usageLimit = Number(form.usageLimit);
-      if (form.expiresAt) payload.expiresAt = new Date(form.expiresAt).toISOString();
 
       const res = await apiPost<CreateVoucherResponse>(
         '/api/v1/vouchers/seller',
@@ -290,20 +295,6 @@ export default function VouchersPage() {
                   ))}
                 </select>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
-                Deskripsi
-              </label>
-              <input
-                type="text"
-                name="description"
-                value={form.description}
-                onChange={handleFormChange}
-                placeholder="Deskripsi voucher (opsional)"
-                className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

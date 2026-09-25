@@ -75,3 +75,26 @@ model ProductRatingSummary {
 
   @@map("product_rating_summaries")
 }
+
+model OutboxEvent {
+  id            String    @id
+  aggregateType String    @map("aggregate_type")
+  aggregateId   String    @map("aggregate_id")
+  eventName     String    @map("event_name")
+  routingKey    String    @map("routing_key")
+  eventPayload  Json      @map("event_payload")
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  availableAt   DateTime  @default(now()) @map("available_at")
+  lockedAt      DateTime? @map("locked_at")
+  lockToken     String?   @map("lock_token")
+  publishedAt   DateTime? @map("published_at")
+  lastError     String?   @map("last_error") @db.VarChar(1000)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, availableAt])
+  @@index([lockedAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
+}

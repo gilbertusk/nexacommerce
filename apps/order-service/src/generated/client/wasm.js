@@ -156,6 +156,7 @@ exports.Prisma.OrderItemScalarFieldEnum = {
   productImage: 'productImage',
   productPrice: 'productPrice',
   quantity: 'quantity',
+  weight: 'weight',
   subtotal: 'subtotal',
   sellerId: 'sellerId',
   sellerName: 'sellerName',
@@ -170,6 +171,37 @@ exports.Prisma.OrderStatusHistoryScalarFieldEnum = {
   note: 'note',
   changedBy: 'changedBy',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.OrderComplaintScalarFieldEnum = {
+  id: 'id',
+  orderId: 'orderId',
+  customerId: 'customerId',
+  category: 'category',
+  description: 'description',
+  status: 'status',
+  adminNote: 'adminNote',
+  resolvedAt: 'resolvedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.OutboxEventScalarFieldEnum = {
+  id: 'id',
+  aggregateType: 'aggregateType',
+  aggregateId: 'aggregateId',
+  eventName: 'eventName',
+  routingKey: 'routingKey',
+  eventPayload: 'eventPayload',
+  status: 'status',
+  attempts: 'attempts',
+  availableAt: 'availableAt',
+  lockedAt: 'lockedAt',
+  lockToken: 'lockToken',
+  publishedAt: 'publishedAt',
+  lastError: 'lastError',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -201,7 +233,9 @@ exports.Prisma.NullsOrder = {
 exports.Prisma.ModelName = {
   Order: 'Order',
   OrderItem: 'OrderItem',
-  OrderStatusHistory: 'OrderStatusHistory'
+  OrderStatusHistory: 'OrderStatusHistory',
+  OrderComplaint: 'OrderComplaint',
+  OutboxEvent: 'OutboxEvent'
 };
 
 /**

@@ -38,6 +38,7 @@ export class NotificationService {
     emailTo?: string;
     emailTemplateName?: string;
     emailTemplateData?: any;
+    sourceEventId?: string;
   }) {
     const {
       userId,
@@ -49,22 +50,36 @@ export class NotificationService {
       emailTo,
       emailTemplateName,
       emailTemplateData,
+      sourceEventId,
     } = options;
 
     logger.info(`Creating notification: type=${type}, userId=${userId}, channel=${channel}`);
 
     let notificationRecord = null;
 
+    if (sourceEventId) {
+      const existing = await notificationRepository.findBySourceEventId(sourceEventId);
+      if (existing) return existing;
+    }
+
     // Create In-App Notification if channel is IN_APP or BOTH
     if (channel === 'IN_APP' || channel === 'BOTH') {
-      notificationRecord = await notificationRepository.createNotification({
-        userId,
-        type,
-        title,
-        message,
-        data: data ? (data as any) : undefined,
-        channel,
-      });
+      try {
+        notificationRecord = await notificationRepository.createNotification({
+          userId,
+          sourceEventId,
+          type,
+          title,
+          message,
+          data: data ? (data as any) : undefined,
+          channel,
+        });
+      } catch (error: any) {
+        if (sourceEventId && error?.code === 'P2002') {
+          return notificationRepository.findBySourceEventId(sourceEventId);
+        }
+        throw error;
+      }
     }
 
     // Send Email if channel is EMAIL or BOTH
@@ -83,12 +98,17 @@ export class NotificationService {
     return notificationRecord;
   }
 
-  async getNotifications(userId: string, isRead?: boolean) {
-    return notificationRepository.getNotificationsByUserId(userId, isRead);
+  async getNotifications(userId: string, isRead: boolean | undefined, type: string | undefined, page: number, limit: number) {
+    return notificationRepository.getNotificationsByUserId(userId, isRead, type, page, limit);
   }
 
   async markAsRead(id: string, userId: string) {
     const result = await notificationRepository.markAsRead(id, userId);
+    return result.count > 0;
+  }
+
+  async deleteNotification(id: string, userId: string) {
+    const result = await notificationRepository.deleteForUser(id, userId);
     return result.count > 0;
   }
 
@@ -98,8 +118,7 @@ export class NotificationService {
   }
 
   async getUnreadCount(userId: string) {
-    const notifications = await notificationRepository.getNotificationsByUserId(userId, false);
-    return notifications.length;
+    return notificationRepository.countUnreadByUserId(userId);
   }
 
   // Seeding wrapper

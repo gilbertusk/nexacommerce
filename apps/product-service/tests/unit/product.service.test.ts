@@ -1,15 +1,23 @@
 jest.mock('../../src/repositories/product.repository');
 jest.mock('../../src/repositories/category.repository');
 jest.mock('../../src/repositories/brand.repository');
+jest.mock('../../src/services/product-media-storage.service', () => ({
+  productMediaStorage: {
+    uploadProductImage: jest.fn(),
+    deleteProductImageByUrl: jest.fn(),
+  },
+}));
 
 import { ProductService } from '../../src/services/product.service';
 import { productRepository } from '../../src/repositories/product.repository';
 import { categoryRepository } from '../../src/repositories/category.repository';
 import { brandRepository } from '../../src/repositories/brand.repository';
+import { productMediaStorage } from '../../src/services/product-media-storage.service';
 
 const mockProductRepo = productRepository as jest.Mocked<typeof productRepository>;
 const mockCategoryRepo = categoryRepository as jest.Mocked<typeof categoryRepository>;
 const mockBrandRepo = brandRepository as jest.Mocked<typeof brandRepository>;
+const mockMediaStorage = productMediaStorage as jest.Mocked<typeof productMediaStorage>;
 
 const mockProduct = {
   id: 'prod-1', name: 'Test Product', slug: 'test-product', description: 'desc',
@@ -105,6 +113,78 @@ describe('ProductService', () => {
       mockProductRepo.findById.mockResolvedValue(null);
 
       await expect(service.getProductById('bad')).rejects.toThrow('Product not found');
+    });
+  });
+
+  describe('addProductImage', () => {
+    it('rejects non-HTTPS or credential-bearing image URLs before repository access', async () => {
+      await expect(service.addProductImage('prod-1', { userId: 'seller-1', role: 'SELLER' }, {
+        url: 'http://images.example/item.jpg',
+      })).rejects.toThrow('HTTPS URL');
+      await expect(service.addProductImage('prod-1', { userId: 'seller-1', role: 'SELLER' }, {
+        url: 'https://user:password@images.example/item.jpg',
+      })).rejects.toThrow('HTTPS URL');
+      expect(mockProductRepo.findById).not.toHaveBeenCalled();
+    });
+
+    it('adds a valid HTTPS image for the owning seller', async () => {
+      mockProductRepo.findById.mockResolvedValue(mockProduct as any);
+      mockProductRepo.countImages.mockResolvedValue(0);
+      mockProductRepo.addImage.mockResolvedValue({ id: 'image-1', url: 'https://images.example/item.jpg' } as any);
+
+      const result = await service.addProductImage('prod-1', { userId: 'seller-1', role: 'SELLER' }, {
+        url: 'https://images.example/item.jpg',
+      });
+
+      expect(mockProductRepo.addImage).toHaveBeenCalledWith('prod-1', expect.objectContaining({ isMain: true }));
+      expect(result.id).toBe('image-1');
+    });
+  });
+
+  describe('uploadProductImage', () => {
+    it('stores a normalized image and creates the first image as main for the product owner', async () => {
+      mockProductRepo.findById.mockResolvedValue(mockProduct as any);
+      mockMediaStorage.uploadProductImage.mockResolvedValue({
+        key: 'products/prod-1/image.webp',
+        url: 'https://cdn.example.com/products/prod-1/image.webp',
+      });
+      mockProductRepo.countImages.mockResolvedValue(0);
+      mockProductRepo.unsetMainImages.mockResolvedValue({ count: 0 } as any);
+      mockProductRepo.addImage.mockResolvedValue({ id: 'image-1', isMain: true } as any);
+
+      const result = await service.uploadProductImage('prod-1', { userId: 'seller-1', role: 'SELLER' }, {
+        buffer: Buffer.from('image'), size: 5,
+      });
+
+      expect(mockMediaStorage.uploadProductImage).toHaveBeenCalledWith('prod-1', expect.objectContaining({ size: 5 }));
+      expect(mockProductRepo.addImage).toHaveBeenCalledWith('prod-1', expect.objectContaining({
+        url: 'https://cdn.example.com/products/prod-1/image.webp', isMain: true, sortOrder: 0,
+      }));
+      expect(result.id).toBe('image-1');
+    });
+
+    it('rejects another seller before storing bytes', async () => {
+      mockProductRepo.findById.mockResolvedValue(mockProduct as any);
+
+      await expect(service.uploadProductImage('prod-1', { userId: 'seller-2', role: 'SELLER' }, {
+        buffer: Buffer.from('image'), size: 5,
+      })).rejects.toThrow('not authorized');
+      expect(mockMediaStorage.uploadProductImage).not.toHaveBeenCalled();
+    });
+
+    it('removes the uploaded object if saving image metadata fails', async () => {
+      mockProductRepo.findById.mockResolvedValue(mockProduct as any);
+      mockMediaStorage.uploadProductImage.mockResolvedValue({
+        key: 'products/prod-1/image.webp',
+        url: 'https://cdn.example.com/products/prod-1/image.webp',
+      });
+      mockProductRepo.countImages.mockResolvedValue(2);
+      mockProductRepo.addImage.mockRejectedValue(new Error('database unavailable'));
+
+      await expect(service.uploadProductImage('prod-1', { userId: 'seller-1', role: 'SELLER' }, {
+        buffer: Buffer.from('image'), size: 5,
+      })).rejects.toThrow('database unavailable');
+      expect(mockMediaStorage.deleteProductImageByUrl).toHaveBeenCalledWith('https://cdn.example.com/products/prod-1/image.webp');
     });
   });
 

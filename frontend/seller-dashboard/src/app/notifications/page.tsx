@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPatch, apiPost, apiDelete } from '@/lib/api/client';
+import { apiGet, apiPatch, apiPost } from '@/lib/api/client';
 
 interface Notification {
   id: string;
@@ -17,18 +17,29 @@ interface Notification {
 
 interface NotificationsResponse {
   success: boolean;
-  data:
-    | Notification[]
-    | { notifications: Notification[]; total: number };
-  meta?: { total: number; page: number; limit: number };
+  data: {
+    notifications: Notification[];
+    total: number;
+    unreadCount: number;
+    page: number;
+    limit: number;
+  };
 }
 
 type FilterType = 'ALL' | 'UNREAD';
 
 const TYPE_ICONS: Record<string, string> = {
   ORDER: 'receipt_long',
+  ORDER_CREATED: 'receipt_long',
+  ORDER_SHIPPED: 'local_shipping',
+  ORDER_DELIVERED: 'inventory_2',
+  ORDER_COMPLETED: 'task_alt',
   PAYMENT: 'payments',
+  PAYMENT_SUCCESS: 'payments',
+  PAYMENT_FAILED: 'error',
   REVIEW: 'star',
+  REVIEW_RECEIVED: 'star',
+  LOW_STOCK: 'inventory',
   SYSTEM: 'notifications',
   SHIPPING: 'local_shipping',
   VOUCHER: 'confirmation_number',
@@ -54,54 +65,70 @@ function formatDate(dateStr: string): string {
 }
 
 export default function NotificationsPage() {
-  const { token } = useSellerStore();
+  const { token, seller } = useSellerStore();
+  const sellerId = seller?.id ?? null;
+  const currentSellerId = useRef(sellerId);
+  const latestRequestId = useRef(0);
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationsOwnerId, setNotificationsOwnerId] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterType>('ALL');
+  const [page, setPage] = useState(1);
+  const limit = 20;
   const [markingAllRead, setMarkingAllRead] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    currentSellerId.current = sellerId;
+  }, [sellerId]);
+
   const fetchNotifications = useCallback(async () => {
-    if (!token) return;
+    if (!token || !sellerId) return;
+    const requestId = ++latestRequestId.current;
     setIsLoading(true);
     setError('');
     try {
+      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (filter === 'UNREAD') params.set('isRead', 'false');
       const res = await apiGet<NotificationsResponse>(
-        '/api/v1/notifications',
+        `/api/v1/notifications?${params.toString()}`,
         token,
       );
-      if (res.success) {
-        const list = Array.isArray(res.data)
-          ? res.data
-          : (res.data as { notifications: Notification[] }).notifications ?? [];
-        setNotifications(list);
+      if (res.success && latestRequestId.current === requestId && currentSellerId.current === sellerId) {
+        setNotifications(res.data.notifications);
+        setTotal(res.data.total);
+        setUnreadCount(res.data.unreadCount);
+        setNotificationsOwnerId(sellerId);
+        const lastPage = Math.max(1, Math.ceil(res.data.total / limit));
+        if (page > lastPage) setPage(lastPage);
       }
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Gagal memuat notifikasi.',
-      );
+      if (latestRequestId.current === requestId && currentSellerId.current === sellerId) {
+        setError(err instanceof Error ? err.message : 'Gagal memuat notifikasi.');
+      }
     } finally {
-      setIsLoading(false);
+      if (latestRequestId.current === requestId) setIsLoading(false);
     }
-  }, [token]);
+  }, [token, sellerId, page, filter]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchNotifications();
   }, [fetchNotifications]);
 
   async function handleMarkRead(id: string) {
-    if (!token || markingId) return;
+    if (!token || !sellerId || markingId) return;
+    const ownerId = sellerId;
     setMarkingId(id);
     try {
-      await apiPatch(`/api/v1/notifications/${id}/read`, {}, token);
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, isRead: true, read: true } : n,
-        ),
-      );
+      await apiPatch(`/api/v1/notifications/${encodeURIComponent(id)}/read`, {}, token);
+      if (currentSellerId.current !== ownerId) return;
+      await fetchNotifications();
     } catch {
       // silent fail
     } finally {
@@ -110,13 +137,13 @@ export default function NotificationsPage() {
   }
 
   async function handleMarkAllRead() {
-    if (!token) return;
+    if (!token || !sellerId) return;
+    const ownerId = sellerId;
     setMarkingAllRead(true);
     try {
       await apiPost('/api/v1/notifications/read-all', {}, token);
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, isRead: true, read: true })),
-      );
+      if (currentSellerId.current !== ownerId) return;
+      await fetchNotifications();
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : 'Gagal menandai semua dibaca.',
@@ -126,27 +153,10 @@ export default function NotificationsPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!token) return;
-    setDeletingId(id);
-    try {
-      await apiDelete(`/api/v1/notifications/${id}`, token);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : 'Gagal menghapus notifikasi.',
-      );
-    } finally {
-      setDeletingId(null);
-    }
-  }
-
-  const displayed =
-    filter === 'UNREAD'
-      ? notifications.filter((n) => !n.isRead && !n.read)
-      : notifications;
-
-  const unreadCount = notifications.filter((n) => !n.isRead && !n.read).length;
+  const displayed = notificationsOwnerId === sellerId ? notifications : [];
+  const visibleUnreadCount = notificationsOwnerId === sellerId ? unreadCount : 0;
+  const visibleTotal = notificationsOwnerId === sellerId ? total : 0;
+  const totalPages = Math.max(1, Math.ceil(visibleTotal / limit));
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
@@ -160,7 +170,7 @@ export default function NotificationsPage() {
             Pantau semua aktivitas dan pembaruan toko Anda.
           </p>
         </div>
-        {unreadCount > 0 && (
+        {visibleUnreadCount > 0 && (
           <button
             onClick={handleMarkAllRead}
             disabled={markingAllRead}
@@ -198,7 +208,10 @@ export default function NotificationsPage() {
         {(['ALL', 'UNREAD'] as FilterType[]).map((tab) => (
           <button
             key={tab}
-            onClick={() => setFilter(tab)}
+            onClick={() => {
+              setFilter(tab);
+              setPage(1);
+            }}
             className={`px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${
               filter === tab
                 ? 'bg-primary text-white'
@@ -206,7 +219,7 @@ export default function NotificationsPage() {
             }`}
           >
             {tab === 'ALL' ? 'Semua' : 'Belum Dibaca'}
-            {tab === 'UNREAD' && unreadCount > 0 && (
+            {tab === 'UNREAD' && visibleUnreadCount > 0 && (
               <span
                 className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
                   filter === tab
@@ -214,7 +227,7 @@ export default function NotificationsPage() {
                     : 'bg-primary/10 text-primary'
                 }`}
               >
-                {unreadCount}
+                {visibleUnreadCount}
               </span>
             )}
           </button>
@@ -252,7 +265,6 @@ export default function NotificationsPage() {
               TYPE_ICONS[notif.type ?? ''] ?? 'notifications';
             const title = notif.title ?? notif.type ?? 'Notifikasi';
             const message = notif.message ?? notif.body ?? '';
-            const isDeleting = deletingId === notif.id;
             const isMarking = markingId === notif.id;
 
             return (
@@ -323,27 +335,29 @@ export default function NotificationsPage() {
                       )}
                     </button>
                   )}
-                  <button
-                    onClick={() => handleDelete(notif.id)}
-                    disabled={isDeleting}
-                    title="Hapus notifikasi"
-                    className="w-7 h-7 flex items-center justify-center text-ink-secondary hover:text-red-600 rounded-sm hover:bg-red-50 transition-colors disabled:opacity-50"
-                  >
-                    {isDeleting ? (
-                      <span className="material-symbols-outlined text-[16px] animate-spin">
-                        progress_activity
-                      </span>
-                    ) : (
-                      <span className="material-symbols-outlined text-[16px]">
-                        delete
-                      </span>
-                    )}
-                  </button>
                 </div>
               </div>
             );
           })
         )}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 text-xs text-ink-secondary">
+        <span>Halaman {page} dari {totalPages} · {visibleTotal} notifikasi</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page <= 1 || isLoading}
+            className="px-3 py-2 hairline rounded-sm disabled:opacity-40"
+          >Sebelumnya</button>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            disabled={page >= totalPages || isLoading}
+            className="px-3 py-2 hairline rounded-sm disabled:opacity-40"
+          >Berikutnya</button>
+        </div>
       </div>
     </div>
   );

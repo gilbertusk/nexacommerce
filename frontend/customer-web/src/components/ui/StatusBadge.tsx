@@ -12,6 +12,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
 
   switch (norm) {
     case "PENDING":
+    case "PENDING_PAYMENT":
       style = "bg-amber-50 text-amber-800 border-amber-200/60";
       label = "Menunggu Pembayaran";
       break;
@@ -28,6 +29,22 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
     case "COMPLETED":
       style = "bg-teal-50 text-teal-800 border-teal-200/60";
       label = "Selesai";
+      break;
+    case "RETURN_REQUESTED":
+      style = "bg-amber-50 text-amber-800 border-amber-200/60";
+      label = "Permintaan Retur Ditinjau";
+      break;
+    case "RETURN_APPROVED":
+      style = "bg-violet-50 text-violet-800 border-violet-200/60";
+      label = "Retur Disetujui, Refund Menunggu";
+      break;
+    case "PARTIALLY_REFUNDED":
+      style = "bg-blue-50 text-blue-800 border-blue-200/60";
+      label = "Sebagian Dana Dikembalikan";
+      break;
+    case "REFUNDED":
+      style = "bg-violet-50 text-violet-800 border-violet-200/60";
+      label = "Dana Dikembalikan";
       break;
     case "CANCELLED":
       style = "bg-rose-50 text-rose-800 border-rose-200/60";

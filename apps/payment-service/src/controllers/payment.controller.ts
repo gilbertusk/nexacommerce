@@ -13,6 +13,14 @@ export class PaymentController {
     res.status(201).json(successResponse(payment, 'Payment transaction created internally'));
   };
 
+  requestRefund = async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const { amount, reason } = req.body;
+    const idempotencyKey = req.header('Idempotency-Key') || '';
+    const refund = await paymentService.requestRefund(orderId, Number(amount), reason, idempotencyKey);
+    res.status(202).json(successResponse(refund, 'Refund request accepted; final completion awaits Midtrans/bank confirmation'));
+  };
+
   getPaymentByOrderId = async (req: Request, res: Response) => {
     const { orderId } = req.params;
     const userId = req.headers['x-user-id'] as string;
@@ -39,7 +47,8 @@ export class PaymentController {
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
 
-    const result = await paymentService.listAllPayments({ page, limit });
+    const status = req.query.status as string | undefined;
+    const result = await paymentService.listAllPayments({ page, limit, status });
     res.status(200).json(successResponse(result, 'Payments retrieved successfully'));
   };
 

@@ -1,97 +1,33 @@
-import { Channel } from 'amqplib';
-import { connectRabbitMQ, setupExchangeAndQueues, createPublisher, createConsumer } from '@nexacommerce/common';
+import crypto from 'crypto';
+import type { Channel, ChannelModel } from 'amqplib';
+import {
+  connectRabbitMQ,
+  createConsumer,
+  createPublisher,
+  setupExchangeAndQueues,
+} from '@nexacommerce/common';
+import { EXCHANGE_NAME, type OrderCreated, QUEUES } from '@nexacommerce/event-contracts';
+import { createLogger } from '@nexacommerce/logger';
 import { config } from '../config';
 import { orderService } from '../services/order.service';
-import { createLogger } from '@nexacommerce/logger';
-import { 
-  EXCHANGE_NAME, 
-  OrderCreated,
-  OrderCancelled,
-  OrderPaid,
-  OrderCompleted,
-  OrderDelivered
-} from '@nexacommerce/event-contracts';
-import crypto from 'crypto';
+import {
+  claimOrderOutboxBatch,
+  markOrderOutboxPublished,
+  releaseOrderOutboxClaim,
+  rescheduleOrderOutbox,
+} from './outbox';
 
 const logger = createLogger('order-messaging');
-let channel: Channel;
-let publishEvent: ReturnType<typeof createPublisher>;
 
-export async function initRabbitMQ() {
-  try {
-    const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createChannel();
-    await setupExchangeAndQueues(channel);
-    publishEvent = createPublisher(channel, EXCHANGE_NAME);
+let connection: ChannelModel | undefined;
+let channel: Channel | undefined;
+let publishEvent: ReturnType<typeof createPublisher> | undefined;
+let connectPromise: Promise<void> | undefined;
+let dispatcherTimer: NodeJS.Timeout | undefined;
+let dispatching = false;
 
-    // Setup consumers
-    await setupConsumers();
-    logger.info('[RabbitMQ] Order messaging initialized successfully.');
-  } catch (err: any) {
-    logger.error('[RabbitMQ] Initializing messaging failed:', err);
-    // Don't crash process, but log error
-  }
-}
-
-export async function publishOrderCreated(order: OrderCreated['payload']) {
-  const event: OrderCreated = {
-    eventId: crypto.randomUUID(),
-    eventName: 'OrderCreated',
-    timestamp: new Date().toISOString(),
-    payload: order,
-  };
-  await publishEvent('order.created', event);
-}
-
-export async function publishOrderCancelled(orderId: string, customerId: string, reason: string) {
-  const event: OrderCancelled = {
-    eventId: crypto.randomUUID(),
-    eventName: 'OrderCancelled',
-    timestamp: new Date().toISOString(),
-    payload: {
-      orderId,
-      customerId,
-      reason,
-      cancelledAt: new Date().toISOString(),
-    },
-  };
-  await publishEvent('order.cancelled', event);
-}
-
-export async function publishOrderPaid(orderId: string, customerId: string, paidAt: string, amount: number) {
-  const event: OrderPaid = {
-    eventId: crypto.randomUUID(),
-    eventName: 'OrderPaid',
-    timestamp: new Date().toISOString(),
-    payload: {
-      orderId,
-      customerId,
-      paidAt,
-      amount,
-    },
-  };
-  await publishEvent('order.paid', event);
-}
-
-export async function publishOrderCompleted(orderId: string, customerId: string, items: Array<{ productId: string, quantity: number, price: number }>) {
-  const event: OrderCompleted = {
-    eventId: crypto.randomUUID(),
-    eventName: 'OrderCompleted',
-    timestamp: new Date().toISOString(),
-    payload: {
-      orderId,
-      customerId,
-      completedAt: new Date().toISOString(),
-      items,
-    },
-  };
-  await publishEvent('order.completed', event);
-}
-
-async function setupConsumers() {
-  // Consumer for payment events
-  // Queue: order-service.payment-events
-  await createConsumer(channel, 'order-service.payment-events', async (event: any) => {
+async function setupConsumers(consumerChannel: Channel): Promise<void> {
+  await createConsumer(consumerChannel, QUEUES.ORDER_PAYMENT_EVENTS, async (event: any) => {
     logger.info(`[RabbitMQ] Handling payment event: ${event.eventName}`);
     const { orderId } = event.payload;
 
@@ -105,19 +41,129 @@ async function setupConsumers() {
     }
   });
 
-  // Consumer for stock events (optional logging/audit)
-  // Queue: order-service.stock-events
-  await createConsumer(channel, 'order-service.stock-events', async (event: any) => {
+  await createConsumer(consumerChannel, QUEUES.ORDER_STOCK_EVENTS, async (event: any) => {
     logger.info(`[RabbitMQ] Handling stock event: ${event.eventName}`);
   });
 
-  // Consumer for shipping events (OrderDelivered)
-  // Queue: order-service.shipping-events
-  await createConsumer(channel, 'order-service.shipping-events', async (event: any) => {
+  await createConsumer(consumerChannel, QUEUES.ORDER_SHIPPING_EVENTS, async (event: any) => {
     logger.info(`[RabbitMQ] Handling shipping event: ${event.eventName}`);
     if (event.eventName === 'OrderDelivered') {
-      const { orderId } = event.payload;
-      await orderService.handleOrderDelivered(orderId);
+      await orderService.handleOrderDelivered(event.payload.orderId);
     }
   });
+}
+
+async function ensureMessaging(): Promise<void> {
+  if (publishEvent) return;
+  if (connectPromise) return connectPromise;
+
+  connectPromise = (async () => {
+    const nextConnection = await connectRabbitMQ(config.rabbitmqUrl);
+    let nextChannel: Channel | undefined;
+    try {
+      nextChannel = await nextConnection.createConfirmChannel();
+      await setupExchangeAndQueues(nextChannel);
+      await setupConsumers(nextChannel);
+    } catch (error) {
+      if (nextChannel) await nextChannel.close().catch(() => undefined);
+      await nextConnection.close().catch(() => undefined);
+      throw error;
+    }
+
+    const resetMessaging = () => {
+      if (channel === nextChannel) {
+        channel = undefined;
+        connection = undefined;
+        publishEvent = undefined;
+      }
+    };
+    nextConnection.on('close', resetMessaging);
+    nextChannel.on('close', resetMessaging);
+
+    connection = nextConnection;
+    channel = nextChannel;
+    publishEvent = createPublisher(nextChannel, EXCHANGE_NAME);
+    logger.info('[RabbitMQ] Order messaging initialized successfully.');
+  })().finally(() => {
+    connectPromise = undefined;
+  });
+
+  return connectPromise;
+}
+
+// Checkout remains fail-closed and its multi-service saga needs a separate
+// finalization design before OrderCreated can be transactionally enqueued.
+export async function publishOrderCreated(payload: OrderCreated['payload']): Promise<void> {
+  const event: OrderCreated = {
+    eventId: crypto.randomUUID(),
+    eventName: 'OrderCreated',
+    timestamp: new Date().toISOString(),
+    payload,
+  };
+  await ensureMessaging();
+  await publishEvent!('order.created', event);
+}
+
+export async function dispatchOrderOutboxOnce(): Promise<number> {
+  if (dispatching) return 0;
+  dispatching = true;
+  try {
+    await ensureMessaging();
+    const events = await claimOrderOutboxBatch(config.outboxBatchSize, config.outboxLeaseMs);
+    let published = 0;
+
+    for (let index = 0; index < events.length; index += 1) {
+      const event = events[index];
+      const lockToken = event.lockToken;
+      if (!lockToken) continue;
+
+      try {
+        await publishEvent!(event.routingKey, event.eventPayload);
+        await markOrderOutboxPublished(event.id, lockToken);
+        published += 1;
+      } catch (error) {
+        await rescheduleOrderOutbox(event.id, lockToken, event.attempts, error);
+        await Promise.all(events.slice(index + 1).map((pending) => pending.lockToken
+          ? releaseOrderOutboxClaim(pending.id, pending.lockToken)
+          : Promise.resolve()));
+        throw error;
+      }
+    }
+
+    return published;
+  } finally {
+    dispatching = false;
+  }
+}
+
+function startOutboxDispatcher(): void {
+  if (dispatcherTimer) return;
+  dispatcherTimer = setInterval(() => {
+    void dispatchOrderOutboxOnce().catch((error) => {
+      logger.error('[Outbox] Dispatch failed; pending events remain durable:', error);
+    });
+  }, config.outboxPollIntervalMs);
+  dispatcherTimer.unref();
+}
+
+export async function initRabbitMQ(): Promise<void> {
+  startOutboxDispatcher();
+  try {
+    await dispatchOrderOutboxOnce();
+  } catch (error) {
+    logger.error('[RabbitMQ] Initial connection failed; outbox dispatcher will retry:', error);
+  }
+}
+
+export async function stopRabbitMQ(): Promise<void> {
+  if (dispatcherTimer) clearInterval(dispatcherTimer);
+  dispatcherTimer = undefined;
+  if (connectPromise) await connectPromise.catch(() => undefined);
+  publishEvent = undefined;
+  const activeChannel = channel;
+  const activeConnection = connection;
+  channel = undefined;
+  connection = undefined;
+  if (activeChannel) await activeChannel.close().catch(() => undefined);
+  if (activeConnection) await activeConnection.close().catch(() => undefined);
 }

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api/client";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api/client";
 import { useUserStore } from "@/lib/store/useUserStore";
 
 // ------- Types -------
@@ -55,14 +55,74 @@ export interface CreateAddressPayload {
   isDefault: boolean;
 }
 
+interface RawProfileResponse {
+  success: boolean;
+  data: {
+    userId: string;
+    displayName: string | null;
+    phone?: string;
+  };
+}
+
+interface RawAddressesResponse {
+  success: boolean;
+  data: RawAddress[];
+}
+
+interface AddressResponse {
+  success: boolean;
+  data: RawAddress;
+}
+
+interface RawAddress {
+  id: string;
+  label: string;
+  recipientName: string;
+  phone: string;
+  street: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  isDefault: boolean;
+}
+
+function normalizeAddress(address: RawAddress): ApiAddress {
+  return {
+    id: address.id,
+    label: address.label,
+    receiverName: address.recipientName,
+    phoneNumber: address.phone,
+    street: address.street,
+    city: address.city,
+    province: address.province,
+    postalCode: address.postalCode,
+    isDefault: address.isDefault,
+  };
+}
+
 // ------- Hooks -------
 
 export function useUserProfile() {
   const token = useUserStore((s) => s.token);
+  const currentUser = useUserStore((s) => s.user);
 
   return useQuery({
     queryKey: ["user-profile"],
-    queryFn: () => apiGet<UserProfileResponse>("/users/profile", token ?? undefined),
+    queryFn: async (): Promise<UserProfileResponse> => {
+      const raw = await apiGet<RawProfileResponse>("/users/me", token ?? undefined);
+      return {
+        success: raw.success,
+        data: {
+          user: {
+            id: raw.data.userId,
+            name: raw.data.displayName ?? currentUser?.name ?? "",
+            email: currentUser?.email ?? "",
+            role: currentUser?.role,
+            phone: raw.data.phone,
+          },
+        },
+      };
+    },
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 5,
   });
@@ -74,7 +134,10 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: (payload: UpdateProfilePayload) =>
-      apiPut<UserProfileResponse>("/users/profile", payload, token ?? undefined),
+      apiPatch<RawProfileResponse>("/users/me", {
+        displayName: payload.name,
+        phone: payload.phone,
+      }, token ?? undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
     },
@@ -86,7 +149,10 @@ export function useAddresses() {
 
   return useQuery({
     queryKey: ["addresses"],
-    queryFn: () => apiGet<AddressesResponse>("/users/addresses", token ?? undefined),
+    queryFn: async (): Promise<AddressesResponse> => {
+      const raw = await apiGet<RawAddressesResponse>("/users/me/addresses", token ?? undefined);
+      return { success: raw.success, data: { addresses: raw.data.map(normalizeAddress) } };
+    },
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 5,
   });
@@ -98,7 +164,16 @@ export function useCreateAddress() {
 
   return useMutation({
     mutationFn: (payload: CreateAddressPayload) =>
-      apiPost<AddressesResponse>("/users/addresses", payload, token ?? undefined),
+      apiPost<AddressResponse>("/users/me/addresses", {
+        label: payload.label,
+        recipientName: payload.receiverName,
+        phone: payload.phoneNumber,
+        street: payload.street,
+        city: payload.city,
+        province: payload.province,
+        postalCode: payload.postalCode,
+        isDefault: payload.isDefault,
+      }, token ?? undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses"] });
     },
@@ -111,7 +186,7 @@ export function useDeleteAddress() {
 
   return useMutation({
     mutationFn: (addressId: string) =>
-      apiDelete<{ success: boolean }>(`/users/addresses/${addressId}`, token ?? undefined),
+      apiDelete<{ success: boolean }>(`/users/me/addresses/${addressId}`, token ?? undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["addresses"] });
     },

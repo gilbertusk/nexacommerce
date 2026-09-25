@@ -87,6 +87,8 @@ export default function ProductsPage() {
   }, [seller, token, page, search]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProducts();
   }, [fetchProducts]);
 

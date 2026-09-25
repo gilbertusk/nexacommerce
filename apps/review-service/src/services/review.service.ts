@@ -1,7 +1,7 @@
 import { reviewRepository } from '../repositories/review.repository';
 import { prisma } from '../prisma/client';
 import { NotFoundError, ValidationError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
-import { publishReviewCreated } from '../messaging/rabbitmq';
+import { enqueueReviewCreated } from '../messaging/outbox';
 import { config } from '../config';
 
 export class ReviewService {
@@ -75,16 +75,28 @@ export class ReviewService {
     }
 
     // 2. Call Order Service internal to validate eligibility
+    let verifiedOrderId: string;
     try {
-      const eligibilityUrl = `${config.orderServiceUrl}/orders/internal/orders/check-review-eligibility?customerId=${customerId}&productId=${data.productId}&orderItemId=${data.orderItemId}`;
-      const response = await fetch(eligibilityUrl, {
+      const eligibilityUrl = new URL(`${config.orderServiceUrl.replace(/\/+$/, '')}/orders/internal/orders/check-review-eligibility`);
+      eligibilityUrl.searchParams.set('customerId', customerId);
+      eligibilityUrl.searchParams.set('productId', data.productId);
+      eligibilityUrl.searchParams.set('orderItemId', data.orderItemId);
+      const response = await fetch(eligibilityUrl.toString(), {
         headers: buildInternalServiceHeaders('review-service')
       });
       
       const resBody = await response.json() as any;
-      if (!response.ok || !resBody.success || !resBody.data.eligible) {
+      if (!response.ok || !resBody.success || !resBody.data?.eligible) {
         throw new ValidationError(resBody.data?.reason || resBody.message || 'You are not eligible to review this item');
       }
+      const eligibleOrderId = resBody.data?.orderId;
+      if (typeof eligibleOrderId !== 'string' || !eligibleOrderId) {
+        throw new ValidationError('Order Service did not return the eligible order ID');
+      }
+      if (eligibleOrderId !== data.orderId) {
+        throw new ValidationError('Review order ID does not match the verified order item');
+      }
+      verifiedOrderId = eligibleOrderId;
     } catch (err: any) {
       if (err instanceof ValidationError) throw err;
       throw new ValidationError(`Failed to verify review eligibility: ${err.message}`);
@@ -109,7 +121,7 @@ export class ReviewService {
         productId: data.productId,
         customerId,
         customerName,
-        orderId: data.orderId,
+        orderId: verifiedOrderId,
         orderItemId: data.orderItemId,
         rating: data.rating,
         title: data.title,
@@ -118,17 +130,15 @@ export class ReviewService {
       });
 
       await this.recalculateRatingSummary(tx, data.productId);
+      await enqueueReviewCreated(tx, {
+        reviewId: review.id,
+        productId: review.productId,
+        customerId: review.customerId,
+        rating: review.rating,
+        orderId: review.orderId,
+      });
       return review;
     });
-
-    // 4. Publish Event
-    await publishReviewCreated({
-      reviewId: result!.id,
-      productId: result!.productId,
-      customerId: result!.customerId,
-      rating: result!.rating,
-      orderId: result!.orderId,
-    }).catch((err) => console.error('[Review Service] Publish event failed:', err.message));
 
     return result;
   }
@@ -197,9 +207,19 @@ export class ReviewService {
   }
 
   async createReport(customerId: string, reviewId: string, reason: string, description?: string) {
+    if (!['SPAM', 'INAPPROPRIATE', 'FAKE', 'OFFENSIVE', 'OTHER'].includes(reason)) {
+      throw new ValidationError('Invalid review report reason');
+    }
+    if (description && description.length > 500) {
+      throw new ValidationError('Review report description cannot exceed 500 characters');
+    }
+
     const review = await reviewRepository.findReviewById(reviewId);
     if (!review) {
       throw new NotFoundError('Review not found');
+    }
+    if (review.customerId === customerId) {
+      throw new ForbiddenError('You cannot report your own review');
     }
 
     return reviewRepository.createReport({

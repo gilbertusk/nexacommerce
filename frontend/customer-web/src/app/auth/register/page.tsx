@@ -47,8 +47,11 @@ function RegisterContent() {
     }
 
     try {
-      await registerMutation.mutateAsync({ name, email, password });
-      router.push(`/auth/login?redirect=${encodeURIComponent(redirectUrl)}`);
+      const result = await registerMutation.mutateAsync({ name, email, password });
+      const deliveryStatus = result.data?.verificationEmailAccepted ? "accepted" : "unconfirmed";
+      router.push(
+        `/auth/resend-verification?registered=1&delivery=${deliveryStatus}&redirect=${encodeURIComponent(redirectUrl)}`
+      );
     } catch {
       // Error is captured in registerMutation.error
     }

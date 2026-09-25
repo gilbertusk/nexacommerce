@@ -40,14 +40,6 @@ export interface Review {
   date: string;
 }
 
-export interface ShippingOption {
-  id: string;
-  courier: string;
-  service: string;
-  cost: number;
-  etd: string; // Estimated Time of Delivery
-}
-
 // ----------------------------------------------------
 // Mock Database
 // ----------------------------------------------------
@@ -304,14 +296,6 @@ export const vouchers = [
   { code: "CLAYCLAY", discountType: "PERCENTAGE" as const, discountValue: 20, minOrderAmount: 300000, maxDiscountAmount: 100000, description: "Diskon Khusus 20% s.d. Rp100.000 dengan minimal pembelian Rp300.000" }
 ];
 
-export const shippingOptions: ShippingOption[] = [
-  { id: "ship-jne-reg", courier: "JNE", service: "Reguler", cost: 15000, etd: "2-3 Hari" },
-  { id: "ship-jne-yes", courier: "JNE", service: "Yakin Esok Sampai (YES)", cost: 30000, etd: "1 Hari" },
-  { id: "ship-jnt-reg", courier: "J&T", service: "Reguler", cost: 12000, etd: "2-4 Hari" },
-  { id: "ship-sicepat-reg", courier: "SiCepat", service: "Reguler", cost: 14000, etd: "2-3 Hari" },
-  { id: "ship-sicepat-gokil", courier: "SiCepat", service: "Cargo (GOKIL)", cost: 25000, etd: "3-5 Hari" }
-];
-
 // Helper to simulate network latency
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -384,9 +368,4 @@ export async function validateVoucher(code: string): Promise<{ success: boolean;
     return { success: true, voucher: found, message: "Voucher berhasil dipasang." };
   }
   return { success: false, message: "Kode voucher tidak valid." };
-}
-
-export async function fetchShippingRates(): Promise<ShippingOption[]> {
-  await delay(200);
-  return shippingOptions;
 }

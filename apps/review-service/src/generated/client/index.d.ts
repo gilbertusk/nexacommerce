@@ -15,28 +15,33 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 /**
  * Model Review
- * 
+ *
  */
 export type Review = $Result.DefaultSelection<Prisma.$ReviewPayload>
 /**
  * Model ReviewImage
- * 
+ *
  */
 export type ReviewImage = $Result.DefaultSelection<Prisma.$ReviewImagePayload>
 /**
  * Model ReviewReport
- * 
+ *
  */
 export type ReviewReport = $Result.DefaultSelection<Prisma.$ReviewReportPayload>
 /**
  * Model ProductRatingSummary
- * 
+ *
  */
 export type ProductRatingSummary = $Result.DefaultSelection<Prisma.$ProductRatingSummaryPayload>
+/**
+ * Model OutboxEvent
+ *
+ */
+export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
 
 /**
  * ##  Prisma Client ʲˢ
- * 
+ *
  * Type-safe database client for TypeScript & Node.js
  * @example
  * ```
@@ -45,7 +50,7 @@ export type ProductRatingSummary = $Result.DefaultSelection<Prisma.$ProductRatin
  * const reviews = await prisma.review.findMany()
  * ```
  *
- * 
+ *
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
  */
 export class PrismaClient<
@@ -57,7 +62,7 @@ export class PrismaClient<
 
     /**
    * ##  Prisma Client ʲˢ
-   * 
+   *
    * Type-safe database client for TypeScript & Node.js
    * @example
    * ```
@@ -66,7 +71,7 @@ export class PrismaClient<
    * const reviews = await prisma.review.findMany()
    * ```
    *
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
    */
 
@@ -96,7 +101,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRaw`UPDATE User SET cool = ${true} WHERE email = ${'user@email.com'};`
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -108,7 +113,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRawUnsafe('UPDATE User SET cool = $1 WHERE email = $2 ;', true, 'user@email.com')
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -119,7 +124,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRaw`SELECT * FROM User WHERE id = ${1} OR email = ${'user@email.com'};`
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -131,7 +136,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRawUnsafe('SELECT * FROM User WHERE id = $1 OR email = $2;', 1, 'user@email.com')
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -147,7 +152,7 @@ export class PrismaClient<
    *   prisma.user.create({ data: { name: 'Alice' } }),
    * ])
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
@@ -196,6 +201,16 @@ export class PrismaClient<
     * ```
     */
   get productRatingSummary(): Prisma.ProductRatingSummaryDelegate<ExtArgs>;
+
+  /**
+   * `prisma.outboxEvent`: Exposes CRUD operations for the **OutboxEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more OutboxEvents
+    * const outboxEvents = await prisma.outboxEvent.findMany()
+    * ```
+    */
+  get outboxEvent(): Prisma.OutboxEventDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -237,7 +252,7 @@ export namespace Prisma {
   export type DecimalJsLike = runtime.DecimalJsLike
 
   /**
-   * Metrics 
+   * Metrics
    */
   export type Metrics = runtime.Metrics
   export type Metric<T> = runtime.Metric<T>
@@ -262,7 +277,7 @@ export namespace Prisma {
     client: string
   }
 
-  export const prismaVersion: PrismaVersion 
+  export const prismaVersion: PrismaVersion
 
   /**
    * Utility Types
@@ -278,15 +293,15 @@ export namespace Prisma {
 
   /**
    * Types of the values used to represent different kinds of `null` values when working with JSON fields.
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   namespace NullTypes {
     /**
     * Type of `Prisma.DbNull`.
-    * 
+    *
     * You cannot use other instances of this class. Please use the `Prisma.DbNull` value.
-    * 
+    *
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class DbNull {
@@ -296,9 +311,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.JsonNull`.
-    * 
+    *
     * You cannot use other instances of this class. Please use the `Prisma.JsonNull` value.
-    * 
+    *
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class JsonNull {
@@ -308,9 +323,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.AnyNull`.
-    * 
+    *
     * You cannot use other instances of this class. Please use the `Prisma.AnyNull` value.
-    * 
+    *
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class AnyNull {
@@ -321,21 +336,21 @@ export namespace Prisma {
 
   /**
    * Helper for filtering JSON entries that have `null` on the database (empty on the db)
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const DbNull: NullTypes.DbNull
 
   /**
    * Helper for filtering JSON entries that have JSON `null` values (not empty on the db)
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const JsonNull: NullTypes.JsonNull
 
   /**
    * Helper for filtering JSON entries that are `Prisma.DbNull` or `Prisma.JsonNull`
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const AnyNull: NullTypes.AnyNull
@@ -640,7 +655,8 @@ export namespace Prisma {
     Review: 'Review',
     ReviewImage: 'ReviewImage',
     ReviewReport: 'ReviewReport',
-    ProductRatingSummary: 'ProductRatingSummary'
+    ProductRatingSummary: 'ProductRatingSummary',
+    OutboxEvent: 'OutboxEvent'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -656,7 +672,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "review" | "reviewImage" | "reviewReport" | "productRatingSummary"
+      modelProps: "review" | "reviewImage" | "reviewReport" | "productRatingSummary" | "outboxEvent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -940,6 +956,76 @@ export namespace Prisma {
           }
         }
       }
+      OutboxEvent: {
+        payload: Prisma.$OutboxEventPayload<ExtArgs>
+        fields: Prisma.OutboxEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.OutboxEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.OutboxEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          findFirst: {
+            args: Prisma.OutboxEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.OutboxEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          findMany: {
+            args: Prisma.OutboxEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>[]
+          }
+          create: {
+            args: Prisma.OutboxEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          createMany: {
+            args: Prisma.OutboxEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.OutboxEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>[]
+          }
+          delete: {
+            args: Prisma.OutboxEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          update: {
+            args: Prisma.OutboxEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.OutboxEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.OutboxEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.OutboxEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          aggregate: {
+            args: Prisma.OutboxEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateOutboxEvent>
+          }
+          groupBy: {
+            args: Prisma.OutboxEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<OutboxEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.OutboxEventCountArgs<ExtArgs>
+            result: $Utils.Optional<OutboxEventCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -985,7 +1071,7 @@ export namespace Prisma {
      * ```
      * // Defaults to stdout
      * log: ['query', 'info', 'warn', 'error']
-     * 
+     *
      * // Emit as events
      * log: [
      *   { emit: 'stdout', level: 'query' },
@@ -1304,55 +1390,55 @@ export namespace Prisma {
     where?: ReviewWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Reviews to fetch.
      */
     orderBy?: ReviewOrderByWithRelationInput | ReviewOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ReviewWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Reviews from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Reviews.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Reviews
     **/
     _count?: true | ReviewCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: ReviewAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: ReviewSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ReviewMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ReviewMaxAggregateInputType
@@ -1527,7 +1613,7 @@ export namespace Prisma {
 
   type ReviewGetPayload<S extends boolean | null | undefined | ReviewDefaultArgs> = $Result.GetResult<Prisma.$ReviewPayload, S>
 
-  type ReviewCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type ReviewCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<ReviewFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ReviewCountAggregateInputType | true
     }
@@ -1548,7 +1634,7 @@ export namespace Prisma {
     findUnique<T extends ReviewFindUniqueArgs>(args: SelectSubset<T, ReviewFindUniqueArgs<ExtArgs>>): Prisma__ReviewClient<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one Review that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one Review that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {ReviewFindUniqueOrThrowArgs} args - Arguments to find a Review
      * @example
@@ -1600,13 +1686,13 @@ export namespace Prisma {
      * @example
      * // Get all Reviews
      * const reviews = await prisma.review.findMany()
-     * 
+     *
      * // Get first 10 Reviews
      * const reviews = await prisma.review.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const reviewWithIdOnly = await prisma.review.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ReviewFindManyArgs>(args?: SelectSubset<T, ReviewFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "findMany">>
 
@@ -1620,7 +1706,7 @@ export namespace Prisma {
      *     // ... data to create a Review
      *   }
      * })
-     * 
+     *
      */
     create<T extends ReviewCreateArgs>(args: SelectSubset<T, ReviewCreateArgs<ExtArgs>>): Prisma__ReviewClient<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -1634,7 +1720,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ReviewCreateManyArgs>(args?: SelectSubset<T, ReviewCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1648,9 +1734,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many Reviews and only return the `id`
-     * const reviewWithIdOnly = await prisma.review.createManyAndReturn({ 
+     * const reviewWithIdOnly = await prisma.review.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -1658,7 +1744,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends ReviewCreateManyAndReturnArgs>(args?: SelectSubset<T, ReviewCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -1672,7 +1758,7 @@ export namespace Prisma {
      *     // ... filter to delete one Review
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ReviewDeleteArgs>(args: SelectSubset<T, ReviewDeleteArgs<ExtArgs>>): Prisma__ReviewClient<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -1689,7 +1775,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ReviewUpdateArgs>(args: SelectSubset<T, ReviewUpdateArgs<ExtArgs>>): Prisma__ReviewClient<$Result.GetResult<Prisma.$ReviewPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -1703,7 +1789,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ReviewDeleteManyArgs>(args?: SelectSubset<T, ReviewDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1722,7 +1808,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ReviewUpdateManyArgs>(args: SelectSubset<T, ReviewUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1811,7 +1897,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ReviewGroupByArgs,
@@ -1914,7 +2000,7 @@ export namespace Prisma {
 
   /**
    * Fields of the Review model
-   */ 
+   */
   interface ReviewFieldRefs {
     readonly id: FieldRef<"Review", 'String'>
     readonly productId: FieldRef<"Review", 'String'>
@@ -1935,7 +2021,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Review", 'DateTime'>
     readonly updatedAt: FieldRef<"Review", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -1992,31 +2078,31 @@ export namespace Prisma {
     where?: ReviewWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Reviews to fetch.
      */
     orderBy?: ReviewOrderByWithRelationInput | ReviewOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Reviews.
      */
     cursor?: ReviewWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Reviews from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Reviews.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Reviews.
      */
     distinct?: ReviewScalarFieldEnum | ReviewScalarFieldEnum[]
@@ -2040,31 +2126,31 @@ export namespace Prisma {
     where?: ReviewWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Reviews to fetch.
      */
     orderBy?: ReviewOrderByWithRelationInput | ReviewOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Reviews.
      */
     cursor?: ReviewWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Reviews from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Reviews.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Reviews.
      */
     distinct?: ReviewScalarFieldEnum | ReviewScalarFieldEnum[]
@@ -2088,25 +2174,25 @@ export namespace Prisma {
     where?: ReviewWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Reviews to fetch.
      */
     orderBy?: ReviewOrderByWithRelationInput | ReviewOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Reviews.
      */
     cursor?: ReviewWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Reviews from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Reviews.
      */
     skip?: number
@@ -2394,55 +2480,55 @@ export namespace Prisma {
     where?: ReviewImageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewImages to fetch.
      */
     orderBy?: ReviewImageOrderByWithRelationInput | ReviewImageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ReviewImageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewImages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewImages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned ReviewImages
     **/
     _count?: true | ReviewImageCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: ReviewImageAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: ReviewImageSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ReviewImageMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ReviewImageMaxAggregateInputType
@@ -2555,7 +2641,7 @@ export namespace Prisma {
 
   type ReviewImageGetPayload<S extends boolean | null | undefined | ReviewImageDefaultArgs> = $Result.GetResult<Prisma.$ReviewImagePayload, S>
 
-  type ReviewImageCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type ReviewImageCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<ReviewImageFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ReviewImageCountAggregateInputType | true
     }
@@ -2576,7 +2662,7 @@ export namespace Prisma {
     findUnique<T extends ReviewImageFindUniqueArgs>(args: SelectSubset<T, ReviewImageFindUniqueArgs<ExtArgs>>): Prisma__ReviewImageClient<$Result.GetResult<Prisma.$ReviewImagePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one ReviewImage that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one ReviewImage that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {ReviewImageFindUniqueOrThrowArgs} args - Arguments to find a ReviewImage
      * @example
@@ -2628,13 +2714,13 @@ export namespace Prisma {
      * @example
      * // Get all ReviewImages
      * const reviewImages = await prisma.reviewImage.findMany()
-     * 
+     *
      * // Get first 10 ReviewImages
      * const reviewImages = await prisma.reviewImage.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const reviewImageWithIdOnly = await prisma.reviewImage.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ReviewImageFindManyArgs>(args?: SelectSubset<T, ReviewImageFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewImagePayload<ExtArgs>, T, "findMany">>
 
@@ -2648,7 +2734,7 @@ export namespace Prisma {
      *     // ... data to create a ReviewImage
      *   }
      * })
-     * 
+     *
      */
     create<T extends ReviewImageCreateArgs>(args: SelectSubset<T, ReviewImageCreateArgs<ExtArgs>>): Prisma__ReviewImageClient<$Result.GetResult<Prisma.$ReviewImagePayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -2662,7 +2748,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ReviewImageCreateManyArgs>(args?: SelectSubset<T, ReviewImageCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2676,9 +2762,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many ReviewImages and only return the `id`
-     * const reviewImageWithIdOnly = await prisma.reviewImage.createManyAndReturn({ 
+     * const reviewImageWithIdOnly = await prisma.reviewImage.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -2686,7 +2772,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends ReviewImageCreateManyAndReturnArgs>(args?: SelectSubset<T, ReviewImageCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewImagePayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -2700,7 +2786,7 @@ export namespace Prisma {
      *     // ... filter to delete one ReviewImage
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ReviewImageDeleteArgs>(args: SelectSubset<T, ReviewImageDeleteArgs<ExtArgs>>): Prisma__ReviewImageClient<$Result.GetResult<Prisma.$ReviewImagePayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -2717,7 +2803,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ReviewImageUpdateArgs>(args: SelectSubset<T, ReviewImageUpdateArgs<ExtArgs>>): Prisma__ReviewImageClient<$Result.GetResult<Prisma.$ReviewImagePayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -2731,7 +2817,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ReviewImageDeleteManyArgs>(args?: SelectSubset<T, ReviewImageDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2750,7 +2836,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ReviewImageUpdateManyArgs>(args: SelectSubset<T, ReviewImageUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2839,7 +2925,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ReviewImageGroupByArgs,
@@ -2941,7 +3027,7 @@ export namespace Prisma {
 
   /**
    * Fields of the ReviewImage model
-   */ 
+   */
   interface ReviewImageFieldRefs {
     readonly id: FieldRef<"ReviewImage", 'String'>
     readonly reviewId: FieldRef<"ReviewImage", 'String'>
@@ -2950,7 +3036,7 @@ export namespace Prisma {
     readonly sortOrder: FieldRef<"ReviewImage", 'Int'>
     readonly createdAt: FieldRef<"ReviewImage", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -3007,31 +3093,31 @@ export namespace Prisma {
     where?: ReviewImageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewImages to fetch.
      */
     orderBy?: ReviewImageOrderByWithRelationInput | ReviewImageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ReviewImages.
      */
     cursor?: ReviewImageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewImages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewImages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ReviewImages.
      */
     distinct?: ReviewImageScalarFieldEnum | ReviewImageScalarFieldEnum[]
@@ -3055,31 +3141,31 @@ export namespace Prisma {
     where?: ReviewImageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewImages to fetch.
      */
     orderBy?: ReviewImageOrderByWithRelationInput | ReviewImageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ReviewImages.
      */
     cursor?: ReviewImageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewImages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewImages.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ReviewImages.
      */
     distinct?: ReviewImageScalarFieldEnum | ReviewImageScalarFieldEnum[]
@@ -3103,25 +3189,25 @@ export namespace Prisma {
     where?: ReviewImageWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewImages to fetch.
      */
     orderBy?: ReviewImageOrderByWithRelationInput | ReviewImageOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing ReviewImages.
      */
     cursor?: ReviewImageWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewImages from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewImages.
      */
     skip?: number
@@ -3373,43 +3459,43 @@ export namespace Prisma {
     where?: ReviewReportWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewReports to fetch.
      */
     orderBy?: ReviewReportOrderByWithRelationInput | ReviewReportOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ReviewReportWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewReports from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewReports.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned ReviewReports
     **/
     _count?: true | ReviewReportCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ReviewReportMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ReviewReportMaxAggregateInputType
@@ -3533,7 +3619,7 @@ export namespace Prisma {
 
   type ReviewReportGetPayload<S extends boolean | null | undefined | ReviewReportDefaultArgs> = $Result.GetResult<Prisma.$ReviewReportPayload, S>
 
-  type ReviewReportCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type ReviewReportCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<ReviewReportFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ReviewReportCountAggregateInputType | true
     }
@@ -3554,7 +3640,7 @@ export namespace Prisma {
     findUnique<T extends ReviewReportFindUniqueArgs>(args: SelectSubset<T, ReviewReportFindUniqueArgs<ExtArgs>>): Prisma__ReviewReportClient<$Result.GetResult<Prisma.$ReviewReportPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one ReviewReport that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one ReviewReport that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {ReviewReportFindUniqueOrThrowArgs} args - Arguments to find a ReviewReport
      * @example
@@ -3606,13 +3692,13 @@ export namespace Prisma {
      * @example
      * // Get all ReviewReports
      * const reviewReports = await prisma.reviewReport.findMany()
-     * 
+     *
      * // Get first 10 ReviewReports
      * const reviewReports = await prisma.reviewReport.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const reviewReportWithIdOnly = await prisma.reviewReport.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ReviewReportFindManyArgs>(args?: SelectSubset<T, ReviewReportFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewReportPayload<ExtArgs>, T, "findMany">>
 
@@ -3626,7 +3712,7 @@ export namespace Prisma {
      *     // ... data to create a ReviewReport
      *   }
      * })
-     * 
+     *
      */
     create<T extends ReviewReportCreateArgs>(args: SelectSubset<T, ReviewReportCreateArgs<ExtArgs>>): Prisma__ReviewReportClient<$Result.GetResult<Prisma.$ReviewReportPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -3640,7 +3726,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ReviewReportCreateManyArgs>(args?: SelectSubset<T, ReviewReportCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3654,9 +3740,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many ReviewReports and only return the `id`
-     * const reviewReportWithIdOnly = await prisma.reviewReport.createManyAndReturn({ 
+     * const reviewReportWithIdOnly = await prisma.reviewReport.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -3664,7 +3750,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends ReviewReportCreateManyAndReturnArgs>(args?: SelectSubset<T, ReviewReportCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReviewReportPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -3678,7 +3764,7 @@ export namespace Prisma {
      *     // ... filter to delete one ReviewReport
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ReviewReportDeleteArgs>(args: SelectSubset<T, ReviewReportDeleteArgs<ExtArgs>>): Prisma__ReviewReportClient<$Result.GetResult<Prisma.$ReviewReportPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -3695,7 +3781,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ReviewReportUpdateArgs>(args: SelectSubset<T, ReviewReportUpdateArgs<ExtArgs>>): Prisma__ReviewReportClient<$Result.GetResult<Prisma.$ReviewReportPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -3709,7 +3795,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ReviewReportDeleteManyArgs>(args?: SelectSubset<T, ReviewReportDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3728,7 +3814,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ReviewReportUpdateManyArgs>(args: SelectSubset<T, ReviewReportUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3817,7 +3903,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ReviewReportGroupByArgs,
@@ -3919,7 +4005,7 @@ export namespace Prisma {
 
   /**
    * Fields of the ReviewReport model
-   */ 
+   */
   interface ReviewReportFieldRefs {
     readonly id: FieldRef<"ReviewReport", 'String'>
     readonly reviewId: FieldRef<"ReviewReport", 'String'>
@@ -3931,7 +4017,7 @@ export namespace Prisma {
     readonly reviewedAt: FieldRef<"ReviewReport", 'DateTime'>
     readonly createdAt: FieldRef<"ReviewReport", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -3988,31 +4074,31 @@ export namespace Prisma {
     where?: ReviewReportWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewReports to fetch.
      */
     orderBy?: ReviewReportOrderByWithRelationInput | ReviewReportOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ReviewReports.
      */
     cursor?: ReviewReportWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewReports from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewReports.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ReviewReports.
      */
     distinct?: ReviewReportScalarFieldEnum | ReviewReportScalarFieldEnum[]
@@ -4036,31 +4122,31 @@ export namespace Prisma {
     where?: ReviewReportWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewReports to fetch.
      */
     orderBy?: ReviewReportOrderByWithRelationInput | ReviewReportOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ReviewReports.
      */
     cursor?: ReviewReportWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewReports from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewReports.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ReviewReports.
      */
     distinct?: ReviewReportScalarFieldEnum | ReviewReportScalarFieldEnum[]
@@ -4084,25 +4170,25 @@ export namespace Prisma {
     where?: ReviewReportWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ReviewReports to fetch.
      */
     orderBy?: ReviewReportOrderByWithRelationInput | ReviewReportOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing ReviewReports.
      */
     cursor?: ReviewReportWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ReviewReports from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ReviewReports.
      */
     skip?: number
@@ -4402,55 +4488,55 @@ export namespace Prisma {
     where?: ProductRatingSummaryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductRatingSummaries to fetch.
      */
     orderBy?: ProductRatingSummaryOrderByWithRelationInput | ProductRatingSummaryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: ProductRatingSummaryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductRatingSummaries from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductRatingSummaries.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned ProductRatingSummaries
     **/
     _count?: true | ProductRatingSummaryCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: ProductRatingSummaryAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: ProductRatingSummarySumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: ProductRatingSummaryMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: ProductRatingSummaryMaxAggregateInputType
@@ -4573,7 +4659,7 @@ export namespace Prisma {
 
   type ProductRatingSummaryGetPayload<S extends boolean | null | undefined | ProductRatingSummaryDefaultArgs> = $Result.GetResult<Prisma.$ProductRatingSummaryPayload, S>
 
-  type ProductRatingSummaryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type ProductRatingSummaryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<ProductRatingSummaryFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ProductRatingSummaryCountAggregateInputType | true
     }
@@ -4594,7 +4680,7 @@ export namespace Prisma {
     findUnique<T extends ProductRatingSummaryFindUniqueArgs>(args: SelectSubset<T, ProductRatingSummaryFindUniqueArgs<ExtArgs>>): Prisma__ProductRatingSummaryClient<$Result.GetResult<Prisma.$ProductRatingSummaryPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one ProductRatingSummary that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one ProductRatingSummary that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {ProductRatingSummaryFindUniqueOrThrowArgs} args - Arguments to find a ProductRatingSummary
      * @example
@@ -4646,13 +4732,13 @@ export namespace Prisma {
      * @example
      * // Get all ProductRatingSummaries
      * const productRatingSummaries = await prisma.productRatingSummary.findMany()
-     * 
+     *
      * // Get first 10 ProductRatingSummaries
      * const productRatingSummaries = await prisma.productRatingSummary.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const productRatingSummaryWithIdOnly = await prisma.productRatingSummary.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends ProductRatingSummaryFindManyArgs>(args?: SelectSubset<T, ProductRatingSummaryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProductRatingSummaryPayload<ExtArgs>, T, "findMany">>
 
@@ -4666,7 +4752,7 @@ export namespace Prisma {
      *     // ... data to create a ProductRatingSummary
      *   }
      * })
-     * 
+     *
      */
     create<T extends ProductRatingSummaryCreateArgs>(args: SelectSubset<T, ProductRatingSummaryCreateArgs<ExtArgs>>): Prisma__ProductRatingSummaryClient<$Result.GetResult<Prisma.$ProductRatingSummaryPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -4680,7 +4766,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends ProductRatingSummaryCreateManyArgs>(args?: SelectSubset<T, ProductRatingSummaryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4694,9 +4780,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many ProductRatingSummaries and only return the `id`
-     * const productRatingSummaryWithIdOnly = await prisma.productRatingSummary.createManyAndReturn({ 
+     * const productRatingSummaryWithIdOnly = await prisma.productRatingSummary.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -4704,7 +4790,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends ProductRatingSummaryCreateManyAndReturnArgs>(args?: SelectSubset<T, ProductRatingSummaryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProductRatingSummaryPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -4718,7 +4804,7 @@ export namespace Prisma {
      *     // ... filter to delete one ProductRatingSummary
      *   }
      * })
-     * 
+     *
      */
     delete<T extends ProductRatingSummaryDeleteArgs>(args: SelectSubset<T, ProductRatingSummaryDeleteArgs<ExtArgs>>): Prisma__ProductRatingSummaryClient<$Result.GetResult<Prisma.$ProductRatingSummaryPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -4735,7 +4821,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends ProductRatingSummaryUpdateArgs>(args: SelectSubset<T, ProductRatingSummaryUpdateArgs<ExtArgs>>): Prisma__ProductRatingSummaryClient<$Result.GetResult<Prisma.$ProductRatingSummaryPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -4749,7 +4835,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends ProductRatingSummaryDeleteManyArgs>(args?: SelectSubset<T, ProductRatingSummaryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4768,7 +4854,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends ProductRatingSummaryUpdateManyArgs>(args: SelectSubset<T, ProductRatingSummaryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4857,7 +4943,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends ProductRatingSummaryGroupByArgs,
@@ -4958,7 +5044,7 @@ export namespace Prisma {
 
   /**
    * Fields of the ProductRatingSummary model
-   */ 
+   */
   interface ProductRatingSummaryFieldRefs {
     readonly id: FieldRef<"ProductRatingSummary", 'String'>
     readonly productId: FieldRef<"ProductRatingSummary", 'String'>
@@ -4971,7 +5057,7 @@ export namespace Prisma {
     readonly rating1Count: FieldRef<"ProductRatingSummary", 'Int'>
     readonly updatedAt: FieldRef<"ProductRatingSummary", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -5016,31 +5102,31 @@ export namespace Prisma {
     where?: ProductRatingSummaryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductRatingSummaries to fetch.
      */
     orderBy?: ProductRatingSummaryOrderByWithRelationInput | ProductRatingSummaryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ProductRatingSummaries.
      */
     cursor?: ProductRatingSummaryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductRatingSummaries from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductRatingSummaries.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ProductRatingSummaries.
      */
     distinct?: ProductRatingSummaryScalarFieldEnum | ProductRatingSummaryScalarFieldEnum[]
@@ -5060,31 +5146,31 @@ export namespace Prisma {
     where?: ProductRatingSummaryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductRatingSummaries to fetch.
      */
     orderBy?: ProductRatingSummaryOrderByWithRelationInput | ProductRatingSummaryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for ProductRatingSummaries.
      */
     cursor?: ProductRatingSummaryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductRatingSummaries from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductRatingSummaries.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of ProductRatingSummaries.
      */
     distinct?: ProductRatingSummaryScalarFieldEnum | ProductRatingSummaryScalarFieldEnum[]
@@ -5104,25 +5190,25 @@ export namespace Prisma {
     where?: ProductRatingSummaryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of ProductRatingSummaries to fetch.
      */
     orderBy?: ProductRatingSummaryOrderByWithRelationInput | ProductRatingSummaryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing ProductRatingSummaries.
      */
     cursor?: ProductRatingSummaryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` ProductRatingSummaries from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` ProductRatingSummaries.
      */
     skip?: number
@@ -5259,6 +5345,1034 @@ export namespace Prisma {
 
 
   /**
+   * Model OutboxEvent
+   */
+
+  export type AggregateOutboxEvent = {
+    _count: OutboxEventCountAggregateOutputType | null
+    _avg: OutboxEventAvgAggregateOutputType | null
+    _sum: OutboxEventSumAggregateOutputType | null
+    _min: OutboxEventMinAggregateOutputType | null
+    _max: OutboxEventMaxAggregateOutputType | null
+  }
+
+  export type OutboxEventAvgAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type OutboxEventSumAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type OutboxEventMinAggregateOutputType = {
+    id: string | null
+    aggregateType: string | null
+    aggregateId: string | null
+    eventName: string | null
+    routingKey: string | null
+    status: string | null
+    attempts: number | null
+    availableAt: Date | null
+    lockedAt: Date | null
+    lockToken: string | null
+    publishedAt: Date | null
+    lastError: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type OutboxEventMaxAggregateOutputType = {
+    id: string | null
+    aggregateType: string | null
+    aggregateId: string | null
+    eventName: string | null
+    routingKey: string | null
+    status: string | null
+    attempts: number | null
+    availableAt: Date | null
+    lockedAt: Date | null
+    lockToken: string | null
+    publishedAt: Date | null
+    lastError: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type OutboxEventCountAggregateOutputType = {
+    id: number
+    aggregateType: number
+    aggregateId: number
+    eventName: number
+    routingKey: number
+    eventPayload: number
+    status: number
+    attempts: number
+    availableAt: number
+    lockedAt: number
+    lockToken: number
+    publishedAt: number
+    lastError: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type OutboxEventAvgAggregateInputType = {
+    attempts?: true
+  }
+
+  export type OutboxEventSumAggregateInputType = {
+    attempts?: true
+  }
+
+  export type OutboxEventMinAggregateInputType = {
+    id?: true
+    aggregateType?: true
+    aggregateId?: true
+    eventName?: true
+    routingKey?: true
+    status?: true
+    attempts?: true
+    availableAt?: true
+    lockedAt?: true
+    lockToken?: true
+    publishedAt?: true
+    lastError?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type OutboxEventMaxAggregateInputType = {
+    id?: true
+    aggregateType?: true
+    aggregateId?: true
+    eventName?: true
+    routingKey?: true
+    status?: true
+    attempts?: true
+    availableAt?: true
+    lockedAt?: true
+    lockToken?: true
+    publishedAt?: true
+    lastError?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type OutboxEventCountAggregateInputType = {
+    id?: true
+    aggregateType?: true
+    aggregateId?: true
+    eventName?: true
+    routingKey?: true
+    eventPayload?: true
+    status?: true
+    attempts?: true
+    availableAt?: true
+    lockedAt?: true
+    lockToken?: true
+    publishedAt?: true
+    lastError?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type OutboxEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which OutboxEvent to aggregate.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the start position
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Count returned OutboxEvents
+    **/
+    _count?: true | OutboxEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to average
+    **/
+    _avg?: OutboxEventAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to sum
+    **/
+    _sum?: OutboxEventSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the minimum value
+    **/
+    _min?: OutboxEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the maximum value
+    **/
+    _max?: OutboxEventMaxAggregateInputType
+  }
+
+  export type GetOutboxEventAggregateType<T extends OutboxEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateOutboxEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateOutboxEvent[P]>
+      : GetScalarType<T[P], AggregateOutboxEvent[P]>
+  }
+
+
+
+
+  export type OutboxEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: OutboxEventWhereInput
+    orderBy?: OutboxEventOrderByWithAggregationInput | OutboxEventOrderByWithAggregationInput[]
+    by: OutboxEventScalarFieldEnum[] | OutboxEventScalarFieldEnum
+    having?: OutboxEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: OutboxEventCountAggregateInputType | true
+    _avg?: OutboxEventAvgAggregateInputType
+    _sum?: OutboxEventSumAggregateInputType
+    _min?: OutboxEventMinAggregateInputType
+    _max?: OutboxEventMaxAggregateInputType
+  }
+
+  export type OutboxEventGroupByOutputType = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonValue
+    status: string
+    attempts: number
+    availableAt: Date
+    lockedAt: Date | null
+    lockToken: string | null
+    publishedAt: Date | null
+    lastError: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: OutboxEventCountAggregateOutputType | null
+    _avg: OutboxEventAvgAggregateOutputType | null
+    _sum: OutboxEventSumAggregateOutputType | null
+    _min: OutboxEventMinAggregateOutputType | null
+    _max: OutboxEventMaxAggregateOutputType | null
+  }
+
+  type GetOutboxEventGroupByPayload<T extends OutboxEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<OutboxEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof OutboxEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], OutboxEventGroupByOutputType[P]>
+            : GetScalarType<T[P], OutboxEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type OutboxEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    aggregateType?: boolean
+    aggregateId?: boolean
+    eventName?: boolean
+    routingKey?: boolean
+    eventPayload?: boolean
+    status?: boolean
+    attempts?: boolean
+    availableAt?: boolean
+    lockedAt?: boolean
+    lockToken?: boolean
+    publishedAt?: boolean
+    lastError?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["outboxEvent"]>
+
+  export type OutboxEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    aggregateType?: boolean
+    aggregateId?: boolean
+    eventName?: boolean
+    routingKey?: boolean
+    eventPayload?: boolean
+    status?: boolean
+    attempts?: boolean
+    availableAt?: boolean
+    lockedAt?: boolean
+    lockToken?: boolean
+    publishedAt?: boolean
+    lastError?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["outboxEvent"]>
+
+  export type OutboxEventSelectScalar = {
+    id?: boolean
+    aggregateType?: boolean
+    aggregateId?: boolean
+    eventName?: boolean
+    routingKey?: boolean
+    eventPayload?: boolean
+    status?: boolean
+    attempts?: boolean
+    availableAt?: boolean
+    lockedAt?: boolean
+    lockToken?: boolean
+    publishedAt?: boolean
+    lastError?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $OutboxEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "OutboxEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      aggregateType: string
+      aggregateId: string
+      eventName: string
+      routingKey: string
+      eventPayload: Prisma.JsonValue
+      status: string
+      attempts: number
+      availableAt: Date
+      lockedAt: Date | null
+      lockToken: string | null
+      publishedAt: Date | null
+      lastError: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["outboxEvent"]>
+    composites: {}
+  }
+
+  type OutboxEventGetPayload<S extends boolean | null | undefined | OutboxEventDefaultArgs> = $Result.GetResult<Prisma.$OutboxEventPayload, S>
+
+  type OutboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<OutboxEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: OutboxEventCountAggregateInputType | true
+    }
+
+  export interface OutboxEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['OutboxEvent'], meta: { name: 'OutboxEvent' } }
+    /**
+     * Find zero or one OutboxEvent that matches the filter.
+     * @param {OutboxEventFindUniqueArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends OutboxEventFindUniqueArgs>(args: SelectSubset<T, OutboxEventFindUniqueArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one OutboxEvent that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {OutboxEventFindUniqueOrThrowArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends OutboxEventFindUniqueOrThrowArgs>(args: SelectSubset<T, OutboxEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first OutboxEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventFindFirstArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends OutboxEventFindFirstArgs>(args?: SelectSubset<T, OutboxEventFindFirstArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first OutboxEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventFindFirstOrThrowArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends OutboxEventFindFirstOrThrowArgs>(args?: SelectSubset<T, OutboxEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more OutboxEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all OutboxEvents
+     * const outboxEvents = await prisma.outboxEvent.findMany()
+     *
+     * // Get first 10 OutboxEvents
+     * const outboxEvents = await prisma.outboxEvent.findMany({ take: 10 })
+     *
+     * // Only select the `id`
+     * const outboxEventWithIdOnly = await prisma.outboxEvent.findMany({ select: { id: true } })
+     *
+     */
+    findMany<T extends OutboxEventFindManyArgs>(args?: SelectSubset<T, OutboxEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a OutboxEvent.
+     * @param {OutboxEventCreateArgs} args - Arguments to create a OutboxEvent.
+     * @example
+     * // Create one OutboxEvent
+     * const OutboxEvent = await prisma.outboxEvent.create({
+     *   data: {
+     *     // ... data to create a OutboxEvent
+     *   }
+     * })
+     *
+     */
+    create<T extends OutboxEventCreateArgs>(args: SelectSubset<T, OutboxEventCreateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many OutboxEvents.
+     * @param {OutboxEventCreateManyArgs} args - Arguments to create many OutboxEvents.
+     * @example
+     * // Create many OutboxEvents
+     * const outboxEvent = await prisma.outboxEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     */
+    createMany<T extends OutboxEventCreateManyArgs>(args?: SelectSubset<T, OutboxEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many OutboxEvents and returns the data saved in the database.
+     * @param {OutboxEventCreateManyAndReturnArgs} args - Arguments to create many OutboxEvents.
+     * @example
+     * // Create many OutboxEvents
+     * const outboxEvent = await prisma.outboxEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     * // Create many OutboxEvents and only return the `id`
+     * const outboxEventWithIdOnly = await prisma.outboxEvent.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     *
+     */
+    createManyAndReturn<T extends OutboxEventCreateManyAndReturnArgs>(args?: SelectSubset<T, OutboxEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a OutboxEvent.
+     * @param {OutboxEventDeleteArgs} args - Arguments to delete one OutboxEvent.
+     * @example
+     * // Delete one OutboxEvent
+     * const OutboxEvent = await prisma.outboxEvent.delete({
+     *   where: {
+     *     // ... filter to delete one OutboxEvent
+     *   }
+     * })
+     *
+     */
+    delete<T extends OutboxEventDeleteArgs>(args: SelectSubset<T, OutboxEventDeleteArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one OutboxEvent.
+     * @param {OutboxEventUpdateArgs} args - Arguments to update one OutboxEvent.
+     * @example
+     * // Update one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    update<T extends OutboxEventUpdateArgs>(args: SelectSubset<T, OutboxEventUpdateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more OutboxEvents.
+     * @param {OutboxEventDeleteManyArgs} args - Arguments to filter OutboxEvents to delete.
+     * @example
+     * // Delete a few OutboxEvents
+     * const { count } = await prisma.outboxEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     *
+     */
+    deleteMany<T extends OutboxEventDeleteManyArgs>(args?: SelectSubset<T, OutboxEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more OutboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many OutboxEvents
+     * const outboxEvent = await prisma.outboxEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    updateMany<T extends OutboxEventUpdateManyArgs>(args: SelectSubset<T, OutboxEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one OutboxEvent.
+     * @param {OutboxEventUpsertArgs} args - Arguments to update or create a OutboxEvent.
+     * @example
+     * // Update or create a OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.upsert({
+     *   create: {
+     *     // ... data to create a OutboxEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the OutboxEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends OutboxEventUpsertArgs>(args: SelectSubset<T, OutboxEventUpsertArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of OutboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventCountArgs} args - Arguments to filter OutboxEvents to count.
+     * @example
+     * // Count the number of OutboxEvents
+     * const count = await prisma.outboxEvent.count({
+     *   where: {
+     *     // ... the filter for the OutboxEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends OutboxEventCountArgs>(
+      args?: Subset<T, OutboxEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], OutboxEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a OutboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends OutboxEventAggregateArgs>(args: Subset<T, OutboxEventAggregateArgs>): Prisma.PrismaPromise<GetOutboxEventAggregateType<T>>
+
+    /**
+     * Group by OutboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     *
+    **/
+    groupBy<
+      T extends OutboxEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: OutboxEventGroupByArgs['orderBy'] }
+        : { orderBy?: OutboxEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, OutboxEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetOutboxEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the OutboxEvent model
+   */
+  readonly fields: OutboxEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for OutboxEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__OutboxEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the OutboxEvent model
+   */
+  interface OutboxEventFieldRefs {
+    readonly id: FieldRef<"OutboxEvent", 'String'>
+    readonly aggregateType: FieldRef<"OutboxEvent", 'String'>
+    readonly aggregateId: FieldRef<"OutboxEvent", 'String'>
+    readonly eventName: FieldRef<"OutboxEvent", 'String'>
+    readonly routingKey: FieldRef<"OutboxEvent", 'String'>
+    readonly eventPayload: FieldRef<"OutboxEvent", 'Json'>
+    readonly status: FieldRef<"OutboxEvent", 'String'>
+    readonly attempts: FieldRef<"OutboxEvent", 'Int'>
+    readonly availableAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly lockedAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly lockToken: FieldRef<"OutboxEvent", 'String'>
+    readonly publishedAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly lastError: FieldRef<"OutboxEvent", 'String'>
+    readonly createdAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly updatedAt: FieldRef<"OutboxEvent", 'DateTime'>
+  }
+
+
+  // Custom InputTypes
+  /**
+   * OutboxEvent findUnique
+   */
+  export type OutboxEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent findUniqueOrThrow
+   */
+  export type OutboxEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent findFirst
+   */
+  export type OutboxEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for OutboxEvents.
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of OutboxEvents.
+     */
+    distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * OutboxEvent findFirstOrThrow
+   */
+  export type OutboxEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for OutboxEvents.
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of OutboxEvents.
+     */
+    distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * OutboxEvent findMany
+   */
+  export type OutboxEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvents to fetch.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for listing OutboxEvents.
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * OutboxEvent create
+   */
+  export type OutboxEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to create a OutboxEvent.
+     */
+    data: XOR<OutboxEventCreateInput, OutboxEventUncheckedCreateInput>
+  }
+
+  /**
+   * OutboxEvent createMany
+   */
+  export type OutboxEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many OutboxEvents.
+     */
+    data: OutboxEventCreateManyInput | OutboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * OutboxEvent createManyAndReturn
+   */
+  export type OutboxEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many OutboxEvents.
+     */
+    data: OutboxEventCreateManyInput | OutboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * OutboxEvent update
+   */
+  export type OutboxEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to update a OutboxEvent.
+     */
+    data: XOR<OutboxEventUpdateInput, OutboxEventUncheckedUpdateInput>
+    /**
+     * Choose, which OutboxEvent to update.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent updateMany
+   */
+  export type OutboxEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update OutboxEvents.
+     */
+    data: XOR<OutboxEventUpdateManyMutationInput, OutboxEventUncheckedUpdateManyInput>
+    /**
+     * Filter which OutboxEvents to update
+     */
+    where?: OutboxEventWhereInput
+  }
+
+  /**
+   * OutboxEvent upsert
+   */
+  export type OutboxEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * The filter to search for the OutboxEvent to update in case it exists.
+     */
+    where: OutboxEventWhereUniqueInput
+    /**
+     * In case the OutboxEvent found by the `where` argument doesn't exist, create a new OutboxEvent with this data.
+     */
+    create: XOR<OutboxEventCreateInput, OutboxEventUncheckedCreateInput>
+    /**
+     * In case the OutboxEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<OutboxEventUpdateInput, OutboxEventUncheckedUpdateInput>
+  }
+
+  /**
+   * OutboxEvent delete
+   */
+  export type OutboxEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter which OutboxEvent to delete.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent deleteMany
+   */
+  export type OutboxEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which OutboxEvents to delete
+     */
+    where?: OutboxEventWhereInput
+  }
+
+  /**
+   * OutboxEvent without action
+   */
+  export type OutboxEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -5339,12 +6453,40 @@ export namespace Prisma {
   export type ProductRatingSummaryScalarFieldEnum = (typeof ProductRatingSummaryScalarFieldEnum)[keyof typeof ProductRatingSummaryScalarFieldEnum]
 
 
+  export const OutboxEventScalarFieldEnum: {
+    id: 'id',
+    aggregateType: 'aggregateType',
+    aggregateId: 'aggregateId',
+    eventName: 'eventName',
+    routingKey: 'routingKey',
+    eventPayload: 'eventPayload',
+    status: 'status',
+    attempts: 'attempts',
+    availableAt: 'availableAt',
+    lockedAt: 'lockedAt',
+    lockToken: 'lockToken',
+    publishedAt: 'publishedAt',
+    lastError: 'lastError',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const QueryMode: {
@@ -5363,8 +6505,17 @@ export namespace Prisma {
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
   /**
-   * Field references 
+   * Field references
    */
 
 
@@ -5372,63 +6523,70 @@ export namespace Prisma {
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
-    
+
 
 
   /**
    * Reference to a field of type 'String[]'
    */
   export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
-    
+
 
 
   /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
+
 
 
   /**
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-    
+
 
 
   /**
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
-    
+
 
 
   /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
+
 
 
   /**
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
+
 
 
   /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-    
+
 
 
   /**
    * Reference to a field of type 'Float[]'
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-    
+
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+
   /**
    * Deep Input Types
    */
@@ -5774,6 +6932,110 @@ export namespace Prisma {
     rating2Count?: IntWithAggregatesFilter<"ProductRatingSummary"> | number
     rating1Count?: IntWithAggregatesFilter<"ProductRatingSummary"> | number
     updatedAt?: DateTimeWithAggregatesFilter<"ProductRatingSummary"> | Date | string
+  }
+
+  export type OutboxEventWhereInput = {
+    AND?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    OR?: OutboxEventWhereInput[]
+    NOT?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    id?: StringFilter<"OutboxEvent"> | string
+    aggregateType?: StringFilter<"OutboxEvent"> | string
+    aggregateId?: StringFilter<"OutboxEvent"> | string
+    eventName?: StringFilter<"OutboxEvent"> | string
+    routingKey?: StringFilter<"OutboxEvent"> | string
+    eventPayload?: JsonFilter<"OutboxEvent">
+    status?: StringFilter<"OutboxEvent"> | string
+    attempts?: IntFilter<"OutboxEvent"> | number
+    availableAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    lockedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lockToken?: StringNullableFilter<"OutboxEvent"> | string | null
+    publishedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lastError?: StringNullableFilter<"OutboxEvent"> | string | null
+    createdAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+  }
+
+  export type OutboxEventOrderByWithRelationInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    eventPayload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrderInput | SortOrder
+    lockToken?: SortOrderInput | SortOrder
+    publishedAt?: SortOrderInput | SortOrder
+    lastError?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    OR?: OutboxEventWhereInput[]
+    NOT?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    aggregateType?: StringFilter<"OutboxEvent"> | string
+    aggregateId?: StringFilter<"OutboxEvent"> | string
+    eventName?: StringFilter<"OutboxEvent"> | string
+    routingKey?: StringFilter<"OutboxEvent"> | string
+    eventPayload?: JsonFilter<"OutboxEvent">
+    status?: StringFilter<"OutboxEvent"> | string
+    attempts?: IntFilter<"OutboxEvent"> | number
+    availableAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    lockedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lockToken?: StringNullableFilter<"OutboxEvent"> | string | null
+    publishedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lastError?: StringNullableFilter<"OutboxEvent"> | string | null
+    createdAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+  }, "id">
+
+  export type OutboxEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    eventPayload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrderInput | SortOrder
+    lockToken?: SortOrderInput | SortOrder
+    publishedAt?: SortOrderInput | SortOrder
+    lastError?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: OutboxEventCountOrderByAggregateInput
+    _avg?: OutboxEventAvgOrderByAggregateInput
+    _max?: OutboxEventMaxOrderByAggregateInput
+    _min?: OutboxEventMinOrderByAggregateInput
+    _sum?: OutboxEventSumOrderByAggregateInput
+  }
+
+  export type OutboxEventScalarWhereWithAggregatesInput = {
+    AND?: OutboxEventScalarWhereWithAggregatesInput | OutboxEventScalarWhereWithAggregatesInput[]
+    OR?: OutboxEventScalarWhereWithAggregatesInput[]
+    NOT?: OutboxEventScalarWhereWithAggregatesInput | OutboxEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    aggregateType?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    aggregateId?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    eventName?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    routingKey?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    eventPayload?: JsonWithAggregatesFilter<"OutboxEvent">
+    status?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    attempts?: IntWithAggregatesFilter<"OutboxEvent"> | number
+    availableAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
+    lockedAt?: DateTimeNullableWithAggregatesFilter<"OutboxEvent"> | Date | string | null
+    lockToken?: StringNullableWithAggregatesFilter<"OutboxEvent"> | string | null
+    publishedAt?: DateTimeNullableWithAggregatesFilter<"OutboxEvent"> | Date | string | null
+    lastError?: StringNullableWithAggregatesFilter<"OutboxEvent"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
   }
 
   export type ReviewCreateInput = {
@@ -6164,6 +7426,132 @@ export namespace Prisma {
     rating3Count?: IntFieldUpdateOperationsInput | number
     rating2Count?: IntFieldUpdateOperationsInput | number
     rating1Count?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventCreateInput = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    availableAt?: Date | string
+    lockedAt?: Date | string | null
+    lockToken?: string | null
+    publishedAt?: Date | string | null
+    lastError?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type OutboxEventUncheckedCreateInput = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    availableAt?: Date | string
+    lockedAt?: Date | string | null
+    lockToken?: string | null
+    publishedAt?: Date | string | null
+    lastError?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type OutboxEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventCreateManyInput = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    availableAt?: Date | string
+    lockedAt?: Date | string | null
+    lockToken?: string | null
+    publishedAt?: Date | string | null
+    lastError?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type OutboxEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -6585,6 +7973,113 @@ export namespace Prisma {
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
   }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type OutboxEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    eventPayload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrder
+    lockToken?: SortOrder
+    publishedAt?: SortOrder
+    lastError?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventAvgOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+
+  export type OutboxEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrder
+    lockToken?: SortOrder
+    publishedAt?: SortOrder
+    lastError?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrder
+    lockToken?: SortOrder
+    publishedAt?: SortOrder
+    lastError?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventSumOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
 
   export type ReviewImageCreateNestedManyWithoutReviewInput = {
     create?: XOR<ReviewImageCreateWithoutReviewInput, ReviewImageUncheckedCreateWithoutReviewInput> | ReviewImageCreateWithoutReviewInput[] | ReviewImageUncheckedCreateWithoutReviewInput[]
@@ -6922,6 +8417,28 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type ReviewImageCreateWithoutReviewInput = {
@@ -7350,6 +8867,10 @@ export namespace Prisma {
      * @deprecated Use ProductRatingSummaryDefaultArgs instead
      */
     export type ProductRatingSummaryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ProductRatingSummaryDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use OutboxEventDefaultArgs instead
+     */
+    export type OutboxEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = OutboxEventDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

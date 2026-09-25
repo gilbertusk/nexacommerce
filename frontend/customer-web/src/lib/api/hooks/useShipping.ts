@@ -80,10 +80,21 @@ export function useShippingCouriers() {
   });
 }
 
+export function canRequestShippingRates(
+  originCity: string,
+  destinationCity: string,
+  weight: number
+): boolean {
+  return Boolean(originCity.trim())
+    && Boolean(destinationCity.trim())
+    && Number.isSafeInteger(weight)
+    && weight > 0;
+}
+
 export function useShippingRates(
   originCity: string,
   destinationCity: string,
-  weight: number = 500,
+  weight: number,
   courierId?: string
 ) {
   return useQuery({
@@ -105,7 +116,7 @@ export function useShippingRates(
         },
       };
     },
-    enabled: Boolean(originCity) && Boolean(destinationCity),
+    enabled: canRequestShippingRates(originCity, destinationCity, weight),
     staleTime: 1000 * 60 * 5,
   });
 }

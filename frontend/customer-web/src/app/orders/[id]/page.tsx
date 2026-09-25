@@ -1,7 +1,8 @@
 "use client";
 
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { formatIDR, formatDate } from "@/lib/utils/format";
 import { useOrder } from "@/lib/api/hooks/useOrders";
@@ -9,6 +10,8 @@ import { useUserStore } from "@/lib/store/useUserStore";
 import StatusBadge from "@/components/ui/StatusBadge";
 import TimelineVertical from "@/components/ui/TimelineVertical";
 import EmptyState from "@/components/ui/EmptyState";
+import { apiPost } from "@/lib/api/client";
+import OrderComplaintPanel from "@/components/order/OrderComplaintPanel";
 
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>;
@@ -28,10 +31,10 @@ function buildTimeline(status: string, order: { createdAt?: string; date?: strin
 
   const norm = status.toUpperCase();
 
-  if (norm === "PENDING") {
+  if (norm === "PENDING" || norm === "PENDING_PAYMENT") {
     return [
       ...baseEvents,
-      { id: "2", title: "Menunggu Pembayaran", description: "Silakan selesaikan pembayaran tagihan via QRIS", isActive: true },
+      { id: "2", title: "Menunggu Pembayaran", description: "Silakan selesaikan pembayaran melalui instruksi dari penyedia pembayaran.", isActive: true },
     ];
   }
 
@@ -78,8 +81,19 @@ function buildTimeline(status: string, order: { createdAt?: string; date?: strin
 
 export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = use(params);
-  const router = useRouter();
   const { user } = useUserStore();
+  const queryClient = useQueryClient();
+  const [returnReason, setReturnReason] = useState("");
+  const returnMutation = useMutation({
+    mutationFn: () => apiPost(`/orders/${id}/return-request`, { reason: returnReason.trim() }),
+    onSuccess: async () => {
+      setReturnReason("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+      ]);
+    },
+  });
 
   const { data: orderData, isLoading, isError } = useOrder(id);
 
@@ -148,7 +162,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={order.status} />
-          {order.status.toUpperCase() === "PENDING" && (
+          {["PENDING", "PENDING_PAYMENT"].includes(order.status.toUpperCase()) && (
             <Link
               href={`/payment/${order.id}`}
               className="bg-primary hover:bg-primary-hover text-white text-xs uppercase font-bold tracking-widest px-5 py-2.5 rounded-xs transition-colors cursor-pointer"
@@ -170,6 +184,38 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Side Info Panel: col-span-8 */}
         <div className="lg:col-span-8 flex flex-col gap-6">
+          {["DELIVERED", "COMPLETED"].includes(order.status.toUpperCase()) && (
+            <form
+              className="bg-white border border-hairline p-5 rounded-sm flex flex-col gap-3"
+              onSubmit={(event) => { event.preventDefault(); returnMutation.mutate(); }}
+            >
+              <h3 className="text-xs uppercase font-bold tracking-widest text-ink-primary">Ajukan Retur</h3>
+              <p className="text-xs text-ink-secondary">Jelaskan alasan pengajuan. Persetujuan retur belum berarti dana sudah dikembalikan.</p>
+              <textarea
+                value={returnReason}
+                onChange={(event) => setReturnReason(event.target.value)}
+                minLength={5}
+                required
+                maxLength={1000}
+                rows={3}
+                placeholder="Alasan retur (minimal 5 karakter)"
+                className="w-full px-3 py-2 bg-surface border border-hairline rounded-sm text-sm"
+              />
+              {returnMutation.isError && <p role="alert" className="text-xs text-rose-700">{returnMutation.error instanceof Error ? returnMutation.error.message : "Gagal mengirim permintaan retur."}</p>}
+              {returnMutation.isSuccess && <p role="status" className="text-xs text-emerald-700">Permintaan retur terkirim.</p>}
+              <button type="submit" disabled={returnMutation.isPending || returnReason.trim().length < 5} className="self-start px-4 py-2 bg-ink-primary text-white text-xs font-bold uppercase tracking-widest rounded-sm disabled:opacity-50">
+                {returnMutation.isPending ? "Mengirim..." : "Kirim Permintaan"}
+              </button>
+            </form>
+          )}
+
+          {order.status.toUpperCase() === "RETURN_REQUESTED" && (
+            <p role="status" className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-sm text-sm">Permintaan retur Anda sedang ditinjau.</p>
+          )}
+          {order.status.toUpperCase() === "RETURN_APPROVED" && (
+            <p role="status" className="bg-violet-50 border border-violet-200 text-violet-900 p-4 rounded-sm text-sm">Retur disetujui. Pengembalian dana masih menunggu pemrosesan provider pembayaran.</p>
+          )}
+          <OrderComplaintPanel orderId={id} orderStatus={order.status} />
           {/* Items card */}
           <div className="bg-surface border border-hairline p-6 rounded-sm">
             <h3 className="text-xs uppercase font-bold tracking-widest text-ink-primary mb-4 pb-2 border-b border-hairline">

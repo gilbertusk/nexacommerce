@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import { config } from './config/index';
 import { createLogger } from '@nexacommerce/logger';
+import { createRateLimitStore, RateLimitStoreUnavailableError } from './redis/rate-limit-store';
 
 const logger = createLogger('api-gateway');
 const app = express();
@@ -35,6 +36,9 @@ app.use((req, res, next) => {
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 500,
+  store: createRateLimitStore('global', 15 * 60 * 1000),
+  passOnStoreError: false,
+  skip: (req) => req.path === '/health',
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
@@ -43,6 +47,8 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  store: createRateLimitStore('auth', 15 * 60 * 1000),
+  passOnStoreError: false,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many authentication attempts, please try again in 15 minutes.' },
@@ -51,9 +57,21 @@ const authLimiter = rateLimit({
 const checkoutLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10,
+  store: createRateLimitStore('orders', 60 * 1000),
+  passOnStoreError: false,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many checkout requests, please slow down.' },
+});
+
+const productMediaUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  store: createRateLimitStore('product-media', 15 * 60 * 1000),
+  passOnStoreError: false,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many product image uploads, please try again later.' },
 });
 
 app.use(globalLimiter);
@@ -210,6 +228,7 @@ app.use('/api/v1/auth', createGatewayProxy(config.authServiceUrl, { '^/api/v1/au
 app.use('/api/v1/users', createGatewayProxy(config.userServiceUrl, { '^/api/v1/users': '/users' }));
 app.use('/api/v1/inventory', createGatewayProxy(config.inventoryServiceUrl, { '^/api/v1/inventory': '/inventory' }));
 app.use('/api/v1/brands', createGatewayProxy(config.productServiceUrl, { '^/api/v1/brands': '/brands' }));
+app.use('/api/v1/products/products/:id/images/upload', productMediaUploadLimiter);
 app.use('/api/v1/products', createGatewayProxy(config.productServiceUrl, { '^/api/v1/products': '' }));
 app.use('/api/v1/cart', createGatewayProxy(config.cartServiceUrl, { '^/api/v1/cart': '/cart' }));
 app.use('/api/v1/orders', createGatewayProxy(config.orderServiceUrl, { '^/api/v1/orders': '/orders' }));
@@ -288,6 +307,15 @@ app.get('/api/docs', swaggerUi.setup(null, {
 }));
 
 // 404 handler
+app.use((error: any, req: Request, res: Response, next: NextFunction) => {
+  if (error instanceof RateLimitStoreUnavailableError) {
+    logger.error('Distributed rate-limit store unavailable; rejecting request');
+    return res.status(503).json({ success: false, message: 'Request protection is temporarily unavailable' });
+  }
+  logger.error(`Unhandled gateway error: ${error?.message || 'unknown error'}`);
+  return res.status(500).json({ success: false, message: 'Internal gateway error' });
+});
+
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Resource not found' });
 });

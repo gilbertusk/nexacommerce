@@ -19,32 +19,32 @@ describe('Cart Routes (integration)', () => {
     });
   });
 
-  describe('GET /cart/cart', () => {
+  describe('GET /cart', () => {
     it('returns 401 without user context', async () => {
-      const res = await request(app).get('/cart/cart');
-      expect([401, 403]).toContain(res.status);
+      const res = await request(app).get('/cart');
+      expect(res.status).toBe(401);
     });
 
     it('accepts customer request (Redis may not be available)', async () => {
-      const res = await request(app).get('/cart/cart').set(customerHeaders);
+      const res = await request(app).get('/cart').set(customerHeaders);
       expect([200, 500]).toContain(res.status);
     });
   });
 
-  describe('POST /cart/cart/items', () => {
+  describe('POST /cart/items', () => {
     it('returns 400 for missing productId', async () => {
       const res = await request(app)
-        .post('/cart/cart/items')
+        .post('/cart/items')
         .set(customerHeaders)
         .send({ quantity: 1 });
-      expect([400, 500]).toContain(res.status);
+      expect(res.status).toBe(400);
     });
   });
 
-  describe('DELETE /cart/cart', () => {
+  describe('DELETE /cart/clear', () => {
     it('returns 401 without user context', async () => {
-      const res = await request(app).delete('/cart/cart');
-      expect([401, 403]).toContain(res.status);
+      const res = await request(app).delete('/cart/clear');
+      expect(res.status).toBe(401);
     });
   });
 });

@@ -157,13 +157,7 @@ export default function LoginPage() {
 
         {/* Register Link */}
         <p className="text-center text-sm text-ink-secondary mt-6">
-          Belum punya toko?{' '}
-          <a
-            href="#"
-            className="text-primary hover:underline font-medium"
-          >
-            Daftar sebagai penjual
-          </a>
+          Pendaftaran akun penjual belum tersedia dari aplikasi ini.
         </p>
       </div>
     </div>

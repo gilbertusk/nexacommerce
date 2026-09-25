@@ -100,9 +100,9 @@ function LoginContent() {
                 <label className="text-[10px] uppercase font-bold tracking-wider text-ink-secondary">
                   Kata Sandi
                 </label>
-                <a href="#" className="text-[10px] text-ink-secondary hover:text-primary transition-colors">
+                <Link href="/auth/forgot-password" className="text-[10px] text-ink-secondary hover:text-primary transition-colors">
                   Lupa Sandi?
-                </a>
+                </Link>
               </div>
               <input
                 type="password"

@@ -25,6 +25,8 @@ function ShopContent() {
 
   // Sync query params when they change
   useEffect(() => {
+    // This effect intentionally mirrors browser URL navigation into controlled filters.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedCategory(searchParams.get("category") || "");
     setSearchInput(searchParams.get("search") || "");
     setDebouncedSearch(searchParams.get("search") || "");

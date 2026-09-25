@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { notificationService } from '../services/notification.service';
-import { successResponse, ValidationError, ForbiddenError } from '@nexacommerce/common';
+import { successResponse, ValidationError, ForbiddenError, NotFoundError } from '@nexacommerce/common';
 import prisma from '../prisma/client';
 import { z } from 'zod';
 
@@ -9,6 +9,13 @@ const authEmailSchema = z.object({
   email: z.string().email(),
   name: z.string().trim().min(1).max(120),
   token: z.string().uuid(),
+}).strict();
+
+const listNotificationsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  isRead: z.enum(['true', 'false']).optional(),
+  type: z.string().trim().min(1).max(80).optional(),
 }).strict();
 
 export class NotificationController {
@@ -27,13 +34,9 @@ export class NotificationController {
     if (!userId) {
       throw new ValidationError('User ID is required');
     }
-    const isReadParam = req.query.isRead;
-    let isRead: boolean | undefined;
-    if (isReadParam !== undefined) {
-      isRead = isReadParam === 'true';
-    }
-
-    const result = await notificationService.getNotifications(userId, isRead);
+    const query = listNotificationsQuerySchema.parse(req.query);
+    const isRead = query.isRead === undefined ? undefined : query.isRead === 'true';
+    const result = await notificationService.getNotifications(userId, isRead, query.type, query.page, query.limit);
     res.status(200).json(successResponse(result, 'Notifications retrieved successfully'));
   };
 
@@ -60,6 +63,21 @@ export class NotificationController {
     }
 
     res.status(200).json(successResponse(null, 'Notification marked as read'));
+  };
+
+  deleteNotification = async (req: Request, res: Response) => {
+    const userId = req.headers['x-user-id'] as string;
+    const { id } = req.params;
+    if (!userId || !id) {
+      throw new ValidationError('User ID and Notification ID are required');
+    }
+
+    const deleted = await notificationService.deleteNotification(id, userId);
+    if (!deleted) {
+      throw new NotFoundError('Notification not found');
+    }
+
+    res.status(200).json(successResponse(null, 'Notification deleted successfully'));
   };
 
   markAllAsRead = async (req: Request, res: Response) => {

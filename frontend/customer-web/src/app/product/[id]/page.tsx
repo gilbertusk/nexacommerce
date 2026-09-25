@@ -2,12 +2,14 @@
 
 import { use } from "react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useProduct } from "@/lib/api/hooks/useProducts";
 import { useProductReviews } from "@/lib/api/hooks/useReviews";
+import ReviewReportAction from "@/components/ui/ReviewReportAction";
 import { formatIDR } from "@/lib/utils/format";
-import { useCartStore } from "@/lib/store/useCartStore";
+import { useAddCartItem } from "@/lib/api/hooks/useCart";
+import { useUserStore } from "@/lib/store/useUserStore";
 import { useWishlistStore } from "@/lib/store/useWishlistStore";
 import QuantityStepper from "@/components/ui/QuantityStepper";
 import EmptyState from "@/components/ui/EmptyState";
@@ -19,17 +21,22 @@ interface ProductDetailPageProps {
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { id } = use(params);
 
   const [activeImage, setActiveImage] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "shipping" | "reviews">("desc");
+  const [activeTab, setActiveTab] = useState<"desc" | "specs" | "shipping" | "reviews">(
+    searchParams.get("tab") === "reviews" ? "reviews" : "desc"
+  );
   const [addedToCart, setAddedToCart] = useState(false);
+  const [cartError, setCartError] = useState("");
 
   const { data: productData, isLoading, isError } = useProduct(id);
   const { data: reviewsData, isLoading: reviewsLoading } = useProductReviews(id);
 
-  const { addItem } = useCartStore();
+  const addCartItem = useAddCartItem();
+  const { user } = useUserStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
 
   const product = productData?.data?.product ?? null;
@@ -77,26 +84,25 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     );
   }
 
-  const handleAddToCart = () => {
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.images[0],
-        stock: product.stock,
-        sellerId: product.sellerId,
-        sellerName: product.sellerName ?? "",
-      },
-      quantity
-    );
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+  const handleAddToCart = async () => {
+    setCartError("");
+    if (!user) {
+      router.push(`/auth/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`);
+      return false;
+    }
+    try {
+      await addCartItem.mutateAsync({ productId: product.id, quantity });
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
+      return true;
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Produk gagal ditambahkan ke keranjang.");
+      return false;
+    }
   };
 
-  const handleBuyNow = () => {
-    handleAddToCart();
-    router.push("/checkout");
+  const handleBuyNow = async () => {
+    if (await handleAddToCart()) router.push("/checkout");
   };
 
   const handleWishlistToggle = () => {
@@ -245,8 +251,10 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                {cartError && <p role="alert" className="text-xs text-rose-800 mb-3">{cartError}</p>}
                 <button
                   onClick={handleAddToCart}
+                  disabled={addCartItem.isPending}
                   className={`font-bold text-xs uppercase tracking-widest px-6 py-4 rounded-xs hairline transition-colors flex items-center justify-center gap-2 cursor-pointer ${
                     addedToCart
                       ? "bg-emerald-50 text-emerald-800 border-emerald-200"
@@ -256,10 +264,11 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                   <span className="material-symbols-outlined text-lg">
                     {addedToCart ? "check" : "shopping_bag"}
                   </span>
-                  {addedToCart ? "Ditambahkan!" : "Keranjang"}
+                  {addCartItem.isPending ? "Menambahkan..." : addedToCart ? "Ditambahkan!" : "Keranjang"}
                 </button>
                 <button
                   onClick={handleBuyNow}
+                  disabled={addCartItem.isPending}
                   className="bg-primary hover:bg-primary-hover text-white font-bold text-xs uppercase tracking-widest px-6 py-4 rounded-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   Beli Sekarang
@@ -347,20 +356,15 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
 
           {activeTab === "shipping" && (
             <div className="max-w-3xl flex flex-col gap-4 text-sm text-ink-secondary leading-relaxed">
-              <p>
-                Seluruh produk dikirim dari gudang pusat kami di Jakarta Barat. Kami menggunakan material pembungkus organik (bio-degradable bubble wrap alternatif honeycomb paper) demi kelestarian alam.
+              <h5 className="font-semibold text-ink-primary">Informasi biaya dan estimasi</h5>
+              <p role="status" className="rounded-xs border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                Tarif dan estimasi pengiriman belum dapat dikonfirmasi untuk produk dan alamat tujuan ini. Checkout sementara belum tersedia karena server belum memvalidasi ongkir berdasarkan rute dan berat barang. Kami tidak akan menampilkan tarif, kurir, atau jadwal yang belum terkonfirmasi.
               </p>
-              <h5 className="font-semibold text-ink-primary mt-2">Kebijakan Pemesanan & Pengiriman:</h5>
-              <ul className="list-disc pl-5 flex flex-col gap-1.5">
-                <li>Pemesanan sebelum pukul 15.00 WIB akan diproses dan dikirim pada hari yang sama.</li>
-                <li>Pengiriman cargo (Sicepat Gokil) direkomendasikan untuk berat produk keramik di atas 5kg.</li>
-                <li>Garansi pecah belah berlaku penuh dengan syarat melampirkan video unboxing utuh tanpa potongan.</li>
-              </ul>
             </div>
           )}
 
           {activeTab === "reviews" && (
-            <div className="max-w-3xl flex flex-col gap-6">
+            <div id="reviews" className="max-w-3xl flex flex-col gap-6">
               {reviewsLoading ? (
                 <div className="flex flex-col gap-4">
                   {[1, 2].map((i) => (
@@ -377,7 +381,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                 </div>
               ) : (
                 reviews.map((rev) => (
-                  <div key={rev.id} className="border-b border-hairline pb-6 last:border-0 last:pb-0 flex flex-col gap-2">
+                  <div id={`review-${rev.id}`} key={rev.id} className="border-b border-hairline pb-6 last:border-0 last:pb-0 flex flex-col gap-2">
                     <div className="flex justify-between items-center gap-4">
                       <span className="text-xs font-bold text-ink-primary">
                         {rev.userName ?? "Pengguna Anonim"}
@@ -403,6 +407,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                     <p className="text-xs text-ink-secondary leading-relaxed mt-1">
                       {rev.comment}
                     </p>
+                    <ReviewReportAction review={rev} productId={id} />
                   </div>
                 ))
               )}

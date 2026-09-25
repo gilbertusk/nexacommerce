@@ -143,6 +143,7 @@ exports.Prisma.SellerProfileScalarFieldEnum = {
   storeBanner: 'storeBanner',
   storeAddress: 'storeAddress',
   isVerified: 'isVerified',
+  status: 'status',
   verifiedAt: 'verifiedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

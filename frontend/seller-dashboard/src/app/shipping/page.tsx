@@ -109,6 +109,8 @@ export default function ShippingPage() {
   }, [token, statusFilter]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchShippings();
   }, [fetchShippings]);
 

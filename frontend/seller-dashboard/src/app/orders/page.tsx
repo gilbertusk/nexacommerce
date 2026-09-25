@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPut } from '@/lib/api/client';
+import { apiGet, apiPatch } from '@/lib/api/client';
 
 interface Order {
   id: string;
@@ -24,7 +24,8 @@ interface OrdersResponse {
 
 const STATUS_TABS = [
   { key: '', label: 'Semua' },
-  { key: 'PENDING', label: 'Menunggu' },
+  { key: 'PENDING_PAYMENT', label: 'Menunggu Pembayaran' },
+  { key: 'PAID', label: 'Dibayar' },
   { key: 'PROCESSING', label: 'Diproses' },
   { key: 'SHIPPED', label: 'Dikirim' },
   { key: 'COMPLETED', label: 'Selesai' },
@@ -32,7 +33,8 @@ const STATUS_TABS = [
 ];
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Menunggu',
+  PENDING_PAYMENT: 'Menunggu Pembayaran',
+  PAID: 'Dibayar',
   PROCESSING: 'Diproses',
   SHIPPED: 'Dikirim',
   COMPLETED: 'Selesai',
@@ -40,7 +42,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-stone-50 text-stone-600',
+  PENDING_PAYMENT: 'bg-stone-50 text-stone-600',
+  PAID: 'bg-teal-50 text-teal-700',
   PROCESSING: 'bg-blue-50 text-blue-700',
   SHIPPED: 'bg-orange-50 text-orange-700',
   COMPLETED: 'bg-green-50 text-green-700',
@@ -110,6 +113,8 @@ export default function OrdersPage() {
   }, [seller, token, page, statusFilter]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrders();
   }, [fetchOrders]);
 
@@ -121,7 +126,7 @@ export default function OrdersPage() {
     setUpdatingId(orderId);
     setActionError('');
     try {
-      await apiPut(
+      await apiPatch(
         `/api/v1/orders/${orderId}/status`,
         { status: newStatus },
         token,
@@ -269,7 +274,7 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          {order.status === 'PENDING' && (
+                          {order.status === 'PAID' && (
                             <button
                               onClick={() =>
                                 updateOrderStatus(order.id, 'PROCESSING')

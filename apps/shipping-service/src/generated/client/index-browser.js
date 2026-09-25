@@ -176,6 +176,24 @@ exports.Prisma.ShippingStatusHistoryScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.OutboxEventScalarFieldEnum = {
+  id: 'id',
+  aggregateType: 'aggregateType',
+  aggregateId: 'aggregateId',
+  eventName: 'eventName',
+  routingKey: 'routingKey',
+  eventPayload: 'eventPayload',
+  status: 'status',
+  attempts: 'attempts',
+  availableAt: 'availableAt',
+  lockedAt: 'lockedAt',
+  lockToken: 'lockToken',
+  publishedAt: 'publishedAt',
+  lastError: 'lastError',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -206,7 +224,8 @@ exports.Prisma.ModelName = {
   Courier: 'Courier',
   ShippingRate: 'ShippingRate',
   ShippingOrder: 'ShippingOrder',
-  ShippingStatusHistory: 'ShippingStatusHistory'
+  ShippingStatusHistory: 'ShippingStatusHistory',
+  OutboxEvent: 'OutboxEvent'
 };
 
 /**

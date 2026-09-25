@@ -244,8 +244,17 @@ async function main() {
     console.log(`  ✓ Voucher ${v.code} (${v.type === 'PERCENTAGE' ? v.value + '%' : 'Rp' + v.value.toLocaleString('id-ID')} off)`);
   }
 
-  // ─── 7. COURIERS & SHIPPING RATES ────────────────────────────────────────────
-  console.log('\n🚚 Seeding Couriers & Shipping Rates...');
+  // Synthetic rates exist only for explicitly opted-in development/demo databases.
+  const allowDemoShippingRates = process.env.ALLOW_DEMO_SHIPPING_RATES === 'true';
+  if (allowDemoShippingRates && process.env.NODE_ENV === 'production') {
+    throw new Error('Synthetic shipping rates cannot be seeded in production');
+  }
+
+  if (!allowDemoShippingRates) {
+    console.log('\n🚚 Skipping synthetic shipping rates; configure verified rates before enabling checkout.');
+  } else {
+  // ─── 7. DEMO-ONLY COURIERS & SHIPPING RATES ───────────────────────────────────
+  console.log('\n🚚 Seeding demo couriers & synthetic shipping rates...');
 
   const couriersData = [
     {
@@ -373,6 +382,7 @@ async function main() {
     }
   }
   console.log(`  ✓ ${rateCount} shipping rates seeded (${cities.length}×${cities.length} kota, ${dbCouriers.length} kurir).`);
+  }
 
   // ─── SUMMARY ─────────────────────────────────────────────────────────────────
   console.log('\n✅ Seeding selesai!\n');

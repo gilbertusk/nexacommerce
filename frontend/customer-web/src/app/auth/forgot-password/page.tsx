@@ -73,11 +73,11 @@ function ForgotPasswordContent() {
                 <span className="material-symbols-outlined text-3xl text-emerald-600">mark_email_read</span>
               </div>
               <div className="text-center">
-                <h2 className="font-serif text-xl text-ink-primary mb-2">Email Terkirim!</h2>
+                <h2 className="font-serif text-xl text-ink-primary mb-2">Permintaan Diterima</h2>
                 <p className="text-xs text-ink-secondary leading-relaxed">
-                  Kami telah mengirimkan tautan pemulihan ke{" "}
-                  <span className="font-semibold text-ink-primary">{email}</span>.
-                  Silakan periksa kotak masuk Anda.
+                  Jika alamat email{" "}
+                  <span className="font-semibold text-ink-primary">{email}</span>{" "}
+                  terdaftar, instruksi pemulihan akan dikirim. Periksa inbox dan folder spam. Demi keamanan, kami tidak mengungkap status akun.
                 </p>
                 <p className="text-[10px] text-ink-secondary mt-3">
                   Tidak menerima email? Periksa folder spam atau{" "}

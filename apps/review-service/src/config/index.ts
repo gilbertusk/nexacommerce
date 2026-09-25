@@ -14,6 +14,9 @@ const reviewEnvSchema = z.object({
   JWT_SECRET: z.string().default('supersecretjwtkey123'),
   ORDER_SERVICE_URL: z.string().default('http://localhost:3005'),
   PRODUCT_SERVICE_URL: z.string().default('http://localhost:3003'),
+  REVIEW_OUTBOX_POLL_INTERVAL_MS: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().int().positive().default(5000)),
+  REVIEW_OUTBOX_BATCH_SIZE: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().int().positive().max(500).default(50)),
+  REVIEW_OUTBOX_LEASE_MS: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().int().positive().default(60000)),
 });
 
 const env = validateEnv(reviewEnvSchema);
@@ -27,6 +30,9 @@ export const config = {
   jwtSecret: env.JWT_SECRET,
   orderServiceUrl: env.ORDER_SERVICE_URL,
   productServiceUrl: env.PRODUCT_SERVICE_URL,
+  outboxPollIntervalMs: env.REVIEW_OUTBOX_POLL_INTERVAL_MS,
+  outboxBatchSize: env.REVIEW_OUTBOX_BATCH_SIZE,
+  outboxLeaseMs: env.REVIEW_OUTBOX_LEASE_MS,
 };
 
 export default config;

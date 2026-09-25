@@ -3,27 +3,26 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useCartStore } from "@/lib/store/useCartStore";
 import { useWishlistStore } from "@/lib/store/useWishlistStore";
 import { useUserStore } from "@/lib/store/useUserStore";
+import { useCart } from "@/lib/api/hooks/useCart";
+import { useHydrated } from "@/lib/hooks/useHydrated";
 
 export default function Header() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated();
 
-  const cartItems = useCartStore((state) => state.items);
+  const { data: cartData } = useCart();
   const wishlistItems = useWishlistStore((state) => state.items);
   const { user, logout } = useUserStore();
 
-  // Get quantities
-  const cartCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
+  const cartCount = cartData?.data.totalItems ?? 0;
   const wishlistCount = wishlistItems.length;
 
   useEffect(() => {
-    setMounted(true);
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };

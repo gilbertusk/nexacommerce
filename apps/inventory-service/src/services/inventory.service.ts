@@ -2,6 +2,11 @@ import { inventoryRepository } from '../repositories/inventory.repository';
 import { prisma } from '../prisma/client';
 import { config } from '../config';
 import { NotFoundError, ValidationError, ForbiddenError, ConflictError, buildInternalServiceHeaders } from '@nexacommerce/common';
+import {
+  enqueueLowStockDetected,
+  enqueueStockConfirmed,
+  enqueueStockReleased,
+} from '../messaging/outbox';
 
 export class InventoryService {
   // --- Product Service Internal Calls ---
@@ -319,29 +324,34 @@ export class InventoryService {
       where: {
         inventoryId: inv.id,
         orderId: data.orderId,
-        status: 'RESERVED',
       },
     });
 
     if (!reservation) {
-      throw new NotFoundError(`No active reservation found for Product ${data.productId} and Order ${data.orderId}`);
+      throw new NotFoundError(`No reservation found for Product ${data.productId} and Order ${data.orderId}`);
+    }
+    if (reservation.status === 'CONFIRMED') return reservation;
+    if (reservation.status !== 'RESERVED') {
+      throw new ConflictError(`Reservation cannot be confirmed from ${reservation.status}`);
     }
 
     return prisma.$transaction(async (tx) => {
-      const updatedInv = await tx.inventory.update({
+      const claimed = await tx.stockReservation.updateMany({
+        where: { id: reservation.id, status: 'RESERVED' },
+        data: { status: 'CONFIRMED', confirmedAt: new Date() },
+      });
+      if (claimed.count === 0) {
+        const current = await tx.stockReservation.findUnique({ where: { id: reservation.id } });
+        if (current?.status === 'CONFIRMED') return current;
+        throw new ConflictError(`Reservation cannot be confirmed from ${current?.status || 'UNKNOWN'}`);
+      }
+
+      await tx.inventory.update({
         where: { id: inv.id },
         data: {
           currentStock: { decrement: reservation.quantity },
           reservedStock: { decrement: reservation.quantity },
           // availableStock is already correct because it was decremented during reserve
-        },
-      });
-
-      const updatedRes = await tx.stockReservation.update({
-        where: { id: reservation.id },
-        data: {
-          status: 'CONFIRMED',
-          confirmedAt: new Date(),
         },
       });
 
@@ -355,7 +365,7 @@ export class InventoryService {
         createdBy: actor.userId,
       });
 
-      return updatedRes;
+      return tx.stockReservation.findUniqueOrThrow({ where: { id: reservation.id } });
     });
   }
 
@@ -372,28 +382,33 @@ export class InventoryService {
       where: {
         inventoryId: inv.id,
         orderId: data.orderId,
-        status: 'RESERVED',
       },
     });
 
     if (!reservation) {
-      throw new NotFoundError(`No active reservation found for Product ${data.productId} and Order ${data.orderId}`);
+      throw new NotFoundError(`No reservation found for Product ${data.productId} and Order ${data.orderId}`);
+    }
+    if (reservation.status === 'RELEASED') return reservation;
+    if (reservation.status !== 'RESERVED') {
+      throw new ConflictError(`Reservation cannot be released from ${reservation.status}`);
     }
 
     return prisma.$transaction(async (tx) => {
-      const updatedInv = await tx.inventory.update({
+      const claimed = await tx.stockReservation.updateMany({
+        where: { id: reservation.id, status: 'RESERVED' },
+        data: { status: 'RELEASED', releasedAt: new Date() },
+      });
+      if (claimed.count === 0) {
+        const current = await tx.stockReservation.findUnique({ where: { id: reservation.id } });
+        if (current?.status === 'RELEASED') return current;
+        throw new ConflictError(`Reservation cannot be released from ${current?.status || 'UNKNOWN'}`);
+      }
+
+      await tx.inventory.update({
         where: { id: inv.id },
         data: {
           reservedStock: { decrement: reservation.quantity },
           availableStock: { increment: reservation.quantity },
-        },
-      });
-
-      const updatedRes = await tx.stockReservation.update({
-        where: { id: reservation.id },
-        data: {
-          status: 'RELEASED',
-          releasedAt: new Date(),
         },
       });
 
@@ -407,7 +422,7 @@ export class InventoryService {
         createdBy: actor.userId,
       });
 
-      return updatedRes;
+      return tx.stockReservation.findUniqueOrThrow({ where: { id: reservation.id } });
     });
   }
 
@@ -459,35 +474,66 @@ export class InventoryService {
       include: { inventory: true },
     });
 
-    const confirmedReservations = [];
-    const lowStockAlerts = [];
+    const productOwners = new Map<string, string>();
+    await Promise.all(reservations.map(async (reservation) => {
+      const product = await this.getProductDetails(reservation.inventory.productId);
+      productOwners.set(reservation.inventory.productId, product?.sellerId || 'SYSTEM');
+    }));
 
-    for (const res of reservations) {
-      await this.confirmStock({ userId: 'SYSTEM', role: 'ADMIN' }, {
-        productId: res.inventory.productId,
-        orderId,
-      });
+    return prisma.$transaction(async (tx) => {
+      const confirmedReservations = [];
+      const lowStockAlerts = [];
 
-      confirmedReservations.push({
-        reservationId: res.id,
-        productId: res.inventory.productId,
-        quantity: res.quantity,
-      });
+      for (const reservation of reservations) {
+        const claimed = await tx.stockReservation.updateMany({
+          where: { id: reservation.id, status: 'RESERVED' },
+          data: { status: 'CONFIRMED', confirmedAt: new Date() },
+        });
+        if (claimed.count === 0) continue;
 
-      const updatedInv = await prisma.inventory.findUnique({
-        where: { id: res.inventoryId },
-      });
+        const updatedInventory = await tx.inventory.update({
+          where: { id: reservation.inventoryId },
+          data: {
+            currentStock: { decrement: reservation.quantity },
+            reservedStock: { decrement: reservation.quantity },
+          },
+        });
+        await inventoryRepository.createMovement(tx, {
+          inventoryId: reservation.inventoryId,
+          type: 'CONFIRM',
+          quantity: -reservation.quantity,
+          referenceType: 'ORDER',
+          referenceId: orderId,
+          note: `Confirmed sale for Order ${orderId}`,
+          createdBy: 'SYSTEM',
+        });
 
-      if (updatedInv && updatedInv.availableStock <= updatedInv.lowStockThreshold) {
-        lowStockAlerts.push({
-          productId: res.inventory.productId,
-          currentStock: updatedInv.availableStock,
-          threshold: updatedInv.lowStockThreshold,
+        confirmedReservations.push({
+          reservationId: reservation.id,
+          productId: reservation.inventory.productId,
+          quantity: reservation.quantity,
+        });
+        if (updatedInventory.availableStock <= updatedInventory.lowStockThreshold) {
+          lowStockAlerts.push({
+            productId: reservation.inventory.productId,
+            currentStock: updatedInventory.availableStock,
+            threshold: updatedInventory.lowStockThreshold,
+          });
+        }
+      }
+
+      if (confirmedReservations.length > 0) {
+        await enqueueStockConfirmed(tx, { orderId, reservations: confirmedReservations });
+      }
+      for (const alert of lowStockAlerts) {
+        await enqueueLowStockDetected(tx, {
+          ...alert,
+          sellerId: productOwners.get(alert.productId) || 'SYSTEM',
         });
       }
-    }
 
-    return { confirmedReservations, lowStockAlerts };
+      return { confirmedReservations, lowStockAlerts };
+    });
   }
 
   async releaseOrderStock(orderId: string) {
@@ -496,22 +542,44 @@ export class InventoryService {
       include: { inventory: true },
     });
 
-    const releasedReservations = [];
+    return prisma.$transaction(async (tx) => {
+      const releasedReservations = [];
 
-    for (const res of reservations) {
-      await this.releaseStock({ userId: 'SYSTEM', role: 'ADMIN' }, {
-        productId: res.inventory.productId,
-        orderId,
-      });
+      for (const reservation of reservations) {
+        const claimed = await tx.stockReservation.updateMany({
+          where: { id: reservation.id, status: 'RESERVED' },
+          data: { status: 'RELEASED', releasedAt: new Date() },
+        });
+        if (claimed.count === 0) continue;
 
-      releasedReservations.push({
-        reservationId: res.id,
-        productId: res.inventory.productId,
-        quantity: res.quantity,
-      });
-    }
+        await tx.inventory.update({
+          where: { id: reservation.inventoryId },
+          data: {
+            reservedStock: { decrement: reservation.quantity },
+            availableStock: { increment: reservation.quantity },
+          },
+        });
+        await inventoryRepository.createMovement(tx, {
+          inventoryId: reservation.inventoryId,
+          type: 'RELEASE',
+          quantity: reservation.quantity,
+          referenceType: 'ORDER',
+          referenceId: orderId,
+          note: `Released reservation for Order ${orderId}`,
+          createdBy: 'SYSTEM',
+        });
+        releasedReservations.push({
+          reservationId: reservation.id,
+          productId: reservation.inventory.productId,
+          quantity: reservation.quantity,
+        });
+      }
 
-    return releasedReservations;
+      if (releasedReservations.length > 0) {
+        await enqueueStockReleased(tx, { orderId, reservations: releasedReservations });
+      }
+      return releasedReservations;
+    });
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPost } from '@/lib/api/client';
+import { apiGet } from '@/lib/api/client';
 
 interface Review {
   id: string;
@@ -59,9 +59,6 @@ export default function ReviewsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [replyTexts, setReplyTexts] = useState<Record<string, string>>({});
-  const [replyingId, setReplyingId] = useState<string | null>(null);
-  const [expandedReply, setExpandedReply] = useState<string | null>(null);
 
   const fetchReviews = useCallback(async () => {
     if (!seller || !token) return;
@@ -75,7 +72,7 @@ export default function ReviewsPage() {
         ...(ratingFilter ? { rating: String(ratingFilter) } : {}),
       });
       const res = await apiGet<ReviewsResponse>(
-        `/api/v1/reviews?${params.toString()}`,
+        `/api/v1/reviews/seller/products?${params.toString()}`,
         token,
       );
       if (res.success) {
@@ -98,32 +95,10 @@ export default function ReviewsPage() {
   }, [seller, token, page, ratingFilter]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchReviews();
   }, [fetchReviews]);
-
-  async function handleReply(reviewId: string) {
-    const text = replyTexts[reviewId];
-    if (!text?.trim() || !token) return;
-    setReplyingId(reviewId);
-    try {
-      await apiPost(`/api/v1/reviews/${reviewId}/reply`, { reply: text }, token);
-      setReviews((prev) =>
-        prev.map((r) =>
-          r.id === reviewId ? { ...r, reply: text, sellerReply: text } : r,
-        ),
-      );
-      setReplyTexts((prev) => {
-        const next = { ...prev };
-        delete next[reviewId];
-        return next;
-      });
-      setExpandedReply(null);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Gagal mengirim balasan.');
-    } finally {
-      setReplyingId(null);
-    }
-  }
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
   const startItem = (page - 1) * LIMIT + 1;
@@ -236,7 +211,6 @@ export default function ReviewsPage() {
                     review.reviewer?.name ?? review.customerName ?? 'Anonim';
                   const comment = review.comment ?? review.content ?? '';
                   const existingReply = review.reply ?? review.sellerReply;
-                  const isExpanded = expandedReply === review.id;
 
                   return (
                     <tr
@@ -271,55 +245,8 @@ export default function ReviewsPage() {
                               {existingReply}
                             </p>
                           </div>
-                        ) : isExpanded ? (
-                          <div className="flex flex-col gap-2">
-                            <textarea
-                              value={replyTexts[review.id] ?? ''}
-                              onChange={(e) =>
-                                setReplyTexts((prev) => ({
-                                  ...prev,
-                                  [review.id]: e.target.value,
-                                }))
-                              }
-                              rows={3}
-                              placeholder="Tulis balasan Anda..."
-                              className="w-full px-3 py-2 bg-surface hairline rounded-sm text-xs text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleReply(review.id)}
-                                disabled={
-                                  replyingId === review.id ||
-                                  !replyTexts[review.id]?.trim()
-                                }
-                                className="px-3 py-1.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-[10px] font-bold uppercase rounded-sm transition-colors flex items-center gap-1"
-                              >
-                                {replyingId === review.id ? (
-                                  <span className="material-symbols-outlined text-sm animate-spin">
-                                    progress_activity
-                                  </span>
-                                ) : (
-                                  'Balas'
-                                )}
-                              </button>
-                              <button
-                                onClick={() => setExpandedReply(null)}
-                                className="px-3 py-1.5 hairline rounded-sm text-[10px] font-bold uppercase text-ink-secondary hover:bg-surface transition-colors"
-                              >
-                                Batal
-                              </button>
-                            </div>
-                          </div>
                         ) : (
-                          <button
-                            onClick={() => setExpandedReply(review.id)}
-                            className="px-3 py-1.5 hairline rounded-sm text-[10px] font-bold uppercase tracking-widest text-ink-secondary hover:text-primary hover:bg-surface transition-colors flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-sm">
-                              reply
-                            </span>
-                            Balas
-                          </button>
+                          <span className="text-[10px] text-ink-secondary">Balasan penjual belum tersedia.</span>
                         )}
                       </td>
                     </tr>

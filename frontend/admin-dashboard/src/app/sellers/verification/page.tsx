@@ -3,10 +3,13 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdminStore } from "@/lib/store/useAdminStore";
-import { apiGet, apiPut } from "@/lib/api/client";
+import { apiGet, apiPatch } from "@/lib/api/client";
 
 interface Seller {
   id: string;
+  userId: string;
+  storeName: string;
+  isVerified: boolean;
   shopName?: string;
   name: string;
   email: string;
@@ -17,11 +20,7 @@ interface Seller {
 
 interface SellersResponse {
   success: boolean;
-  data: Seller[] | { sellers?: Seller[]; users?: Seller[] };
-}
-
-interface VerifyPayload {
-  status: "APPROVED" | "REJECTED";
+  data: { items: Seller[]; total: number };
 }
 
 function formatDate(dateStr: string): string {
@@ -44,19 +43,19 @@ export default function VerificationPage() {
 
   const { data, isLoading, isError, refetch } = useQuery<SellersResponse>({
     queryKey: ["pending-sellers"],
-    queryFn: () => apiGet<SellersResponse>("/users/sellers/pending", token ?? undefined),
+    queryFn: () => apiGet<SellersResponse>("/users/seller-profiles?limit=100", token ?? undefined),
     enabled: !!token,
   });
 
   const mutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "APPROVED" | "REJECTED" }) =>
-      apiPut<unknown>(`/users/sellers/${id}/verify`, { status } as VerifyPayload, token ?? undefined),
+    mutationFn: ({ id, status }: { id: string; status: "ACTIVE" | "REJECTED" }) =>
+      apiPatch<unknown>(`/users/seller-profiles/${id}/status`, { status }, token ?? undefined),
     onSuccess: (_, { id, status }) => {
       qc.invalidateQueries({ queryKey: ["pending-sellers"] });
       setFeedback({
         id,
         type: "success",
-        message: status === "APPROVED" ? "Toko berhasil diverifikasi." : "Toko berhasil ditolak.",
+        message: status === "ACTIVE" ? "Toko berhasil diverifikasi." : "Pendaftaran toko ditolak.",
       });
       setTimeout(() => setFeedback(null), 3000);
     },
@@ -67,21 +66,16 @@ export default function VerificationPage() {
   });
 
   function getSellers(): Seller[] {
-    if (!data?.data) return [];
-    if (Array.isArray(data.data)) return data.data;
-    const d = data.data as { sellers?: Seller[]; users?: Seller[] };
-    return d.sellers ?? d.users ?? [];
+    return data?.data?.items ?? [];
   }
 
   const sellers = getSellers().filter((s) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      (s.shopName ?? s.name).toLowerCase().includes(q) ||
-      s.name.toLowerCase().includes(q) ||
-      s.email.toLowerCase().includes(q)
+      s.storeName.toLowerCase().includes(q) || s.userId.toLowerCase().includes(q)
     );
-  });
+  }).filter((s) => s.status === "PENDING");
 
   return (
     <div className="flex flex-col gap-6">
@@ -181,10 +175,10 @@ export default function VerificationPage() {
                     >
                       <td className="px-4 py-3 text-ink-secondary">{idx + 1}</td>
                       <td className="px-4 py-3 font-medium text-ink-primary">
-                        {seller.shopName ?? seller.name}
+                          {seller.storeName}
                       </td>
-                      <td className="px-4 py-3 text-ink-secondary">{seller.name}</td>
-                      <td className="px-4 py-3 text-ink-secondary text-xs">{seller.email}</td>
+                      <td className="px-4 py-3 text-ink-secondary">{seller.userId}</td>
+                      <td className="px-4 py-3 text-ink-secondary text-xs">—</td>
                       <td className="px-4 py-3 text-ink-secondary">{seller.category ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-secondary">{formatDate(seller.createdAt)}</td>
                       <td className="px-4 py-3">
@@ -199,7 +193,7 @@ export default function VerificationPage() {
                           ) : (
                             <>
                               <button
-                                onClick={() => mutation.mutate({ id: seller.id, status: "APPROVED" })}
+                                onClick={() => mutation.mutate({ id: seller.id, status: "ACTIVE" })}
                                 disabled={mutation.isPending}
                                 className="px-3 py-1 bg-green-50 text-green-700 hover:bg-green-100 transition-colors rounded-sm text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                               >

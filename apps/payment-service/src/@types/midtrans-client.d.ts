@@ -6,5 +6,8 @@ declare module 'midtrans-client' {
   export class CoreApi {
     constructor(options: { isProduction: boolean; serverKey: string; clientKey: string });
     charge(parameter: any): Promise<any>;
+    transaction: {
+      refund(transactionId: string, parameter: { refund_key: string; amount: number; reason: string }): Promise<any>;
+    };
   }
 }

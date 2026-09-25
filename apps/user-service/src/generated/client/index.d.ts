@@ -1960,6 +1960,7 @@ export namespace Prisma {
     storeBanner: string | null
     storeAddress: string | null
     isVerified: boolean | null
+    status: string | null
     verifiedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -1974,6 +1975,7 @@ export namespace Prisma {
     storeBanner: string | null
     storeAddress: string | null
     isVerified: boolean | null
+    status: string | null
     verifiedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -1988,6 +1990,7 @@ export namespace Prisma {
     storeBanner: number
     storeAddress: number
     isVerified: number
+    status: number
     verifiedAt: number
     createdAt: number
     updatedAt: number
@@ -2004,6 +2007,7 @@ export namespace Prisma {
     storeBanner?: true
     storeAddress?: true
     isVerified?: true
+    status?: true
     verifiedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -2018,6 +2022,7 @@ export namespace Prisma {
     storeBanner?: true
     storeAddress?: true
     isVerified?: true
+    status?: true
     verifiedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -2032,6 +2037,7 @@ export namespace Prisma {
     storeBanner?: true
     storeAddress?: true
     isVerified?: true
+    status?: true
     verifiedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -2119,6 +2125,7 @@ export namespace Prisma {
     storeBanner: string | null
     storeAddress: string | null
     isVerified: boolean
+    status: string
     verifiedAt: Date | null
     createdAt: Date
     updatedAt: Date
@@ -2150,6 +2157,7 @@ export namespace Prisma {
     storeBanner?: boolean
     storeAddress?: boolean
     isVerified?: boolean
+    status?: boolean
     verifiedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2164,6 +2172,7 @@ export namespace Prisma {
     storeBanner?: boolean
     storeAddress?: boolean
     isVerified?: boolean
+    status?: boolean
     verifiedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2178,6 +2187,7 @@ export namespace Prisma {
     storeBanner?: boolean
     storeAddress?: boolean
     isVerified?: boolean
+    status?: boolean
     verifiedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -2196,6 +2206,7 @@ export namespace Prisma {
       storeBanner: string | null
       storeAddress: string | null
       isVerified: boolean
+      status: string
       verifiedAt: Date | null
       createdAt: Date
       updatedAt: Date
@@ -2600,6 +2611,7 @@ export namespace Prisma {
     readonly storeBanner: FieldRef<"SellerProfile", 'String'>
     readonly storeAddress: FieldRef<"SellerProfile", 'String'>
     readonly isVerified: FieldRef<"SellerProfile", 'Boolean'>
+    readonly status: FieldRef<"SellerProfile", 'String'>
     readonly verifiedAt: FieldRef<"SellerProfile", 'DateTime'>
     readonly createdAt: FieldRef<"SellerProfile", 'DateTime'>
     readonly updatedAt: FieldRef<"SellerProfile", 'DateTime'>
@@ -3891,6 +3903,7 @@ export namespace Prisma {
     storeBanner: 'storeBanner',
     storeAddress: 'storeAddress',
     isVerified: 'isVerified',
+    status: 'status',
     verifiedAt: 'verifiedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -4082,6 +4095,7 @@ export namespace Prisma {
     storeBanner?: StringNullableFilter<"SellerProfile"> | string | null
     storeAddress?: StringNullableFilter<"SellerProfile"> | string | null
     isVerified?: BoolFilter<"SellerProfile"> | boolean
+    status?: StringFilter<"SellerProfile"> | string
     verifiedAt?: DateTimeNullableFilter<"SellerProfile"> | Date | string | null
     createdAt?: DateTimeFilter<"SellerProfile"> | Date | string
     updatedAt?: DateTimeFilter<"SellerProfile"> | Date | string
@@ -4096,6 +4110,7 @@ export namespace Prisma {
     storeBanner?: SortOrderInput | SortOrder
     storeAddress?: SortOrderInput | SortOrder
     isVerified?: SortOrder
+    status?: SortOrder
     verifiedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -4113,6 +4128,7 @@ export namespace Prisma {
     storeBanner?: StringNullableFilter<"SellerProfile"> | string | null
     storeAddress?: StringNullableFilter<"SellerProfile"> | string | null
     isVerified?: BoolFilter<"SellerProfile"> | boolean
+    status?: StringFilter<"SellerProfile"> | string
     verifiedAt?: DateTimeNullableFilter<"SellerProfile"> | Date | string | null
     createdAt?: DateTimeFilter<"SellerProfile"> | Date | string
     updatedAt?: DateTimeFilter<"SellerProfile"> | Date | string
@@ -4127,6 +4143,7 @@ export namespace Prisma {
     storeBanner?: SortOrderInput | SortOrder
     storeAddress?: SortOrderInput | SortOrder
     isVerified?: SortOrder
+    status?: SortOrder
     verifiedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -4147,6 +4164,7 @@ export namespace Prisma {
     storeBanner?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
     storeAddress?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
     isVerified?: BoolWithAggregatesFilter<"SellerProfile"> | boolean
+    status?: StringWithAggregatesFilter<"SellerProfile"> | string
     verifiedAt?: DateTimeNullableWithAggregatesFilter<"SellerProfile"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"SellerProfile"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"SellerProfile"> | Date | string
@@ -4332,6 +4350,7 @@ export namespace Prisma {
     storeBanner?: string | null
     storeAddress?: string | null
     isVerified?: boolean
+    status?: string
     verifiedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -4346,6 +4365,7 @@ export namespace Prisma {
     storeBanner?: string | null
     storeAddress?: string | null
     isVerified?: boolean
+    status?: string
     verifiedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -4360,6 +4380,7 @@ export namespace Prisma {
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
+    status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -4374,6 +4395,7 @@ export namespace Prisma {
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
+    status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -4388,6 +4410,7 @@ export namespace Prisma {
     storeBanner?: string | null
     storeAddress?: string | null
     isVerified?: boolean
+    status?: string
     verifiedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -4402,6 +4425,7 @@ export namespace Prisma {
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
+    status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -4416,6 +4440,7 @@ export namespace Prisma {
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
+    status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -4697,6 +4722,7 @@ export namespace Prisma {
     storeBanner?: SortOrder
     storeAddress?: SortOrder
     isVerified?: SortOrder
+    status?: SortOrder
     verifiedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -4711,6 +4737,7 @@ export namespace Prisma {
     storeBanner?: SortOrder
     storeAddress?: SortOrder
     isVerified?: SortOrder
+    status?: SortOrder
     verifiedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -4725,6 +4752,7 @@ export namespace Prisma {
     storeBanner?: SortOrder
     storeAddress?: SortOrder
     isVerified?: SortOrder
+    status?: SortOrder
     verifiedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder

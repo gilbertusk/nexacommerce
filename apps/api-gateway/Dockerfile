@@ -40,8 +40,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nexacommerce
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/packages/*/dist ./packages/*/dist
-COPY --from=builder /app/packages/*/package.json ./packages/*/
+COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/api-gateway/dist ./apps/api-gateway/dist
 COPY --from=builder /app/apps/api-gateway/package.json ./apps/api-gateway/
 

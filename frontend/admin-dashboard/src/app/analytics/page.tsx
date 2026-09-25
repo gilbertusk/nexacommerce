@@ -151,7 +151,7 @@ export default function AnalyticsPage() {
   const sellersQuery = useQuery<SellersAnalyticsResponse>({
     queryKey: ["analytics-sellers"],
     queryFn: () =>
-      apiGet<SellersAnalyticsResponse>("/analytics/sellers", token ?? undefined),
+      apiGet<SellersAnalyticsResponse>("/analytics/sellers/performance", token ?? undefined),
     enabled: !!token,
   });
 

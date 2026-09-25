@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdminStore } from "@/lib/store/useAdminStore";
-import { apiGet, apiPut } from "@/lib/api/client";
+import { apiGet, apiPatch, apiPost } from "@/lib/api/client";
 
 interface Notification {
   id: string;
@@ -21,15 +21,26 @@ interface NotificationsResponse {
     notifications?: Notification[];
     items?: Notification[];
     total?: number;
+    unreadCount?: number;
+    page?: number;
+    limit?: number;
   } | Notification[];
 }
 
 const TYPE_ICON: Record<string, string> = {
   ORDER: "receipt_long",
+  ORDER_CREATED: "receipt_long",
+  ORDER_SHIPPED: "local_shipping",
+  ORDER_DELIVERED: "inventory_2",
+  ORDER_COMPLETED: "task_alt",
   PAYMENT: "payments",
+  PAYMENT_SUCCESS: "payments",
+  PAYMENT_FAILED: "error",
   SELLER: "storefront",
   SYSTEM: "settings",
   REVIEW: "star",
+  REVIEW_RECEIVED: "star",
+  LOW_STOCK: "inventory",
   USER: "group",
 };
 
@@ -41,6 +52,18 @@ const TYPE_COLOR: Record<string, string> = {
   REVIEW: "text-yellow-500",
   USER: "text-indigo-500",
 };
+
+const NOTIFICATION_TYPES = [
+  "ORDER_CREATED",
+  "ORDER_SHIPPED",
+  "ORDER_DELIVERED",
+  "ORDER_COMPLETED",
+  "PAYMENT_SUCCESS",
+  "PAYMENT_FAILED",
+  "REVIEW_RECEIVED",
+  "LOW_STOCK",
+  "SYSTEM",
+];
 
 function formatDate(d: string) {
   try {
@@ -60,21 +83,28 @@ function formatDate(d: string) {
 
 export default function NotificationsPage() {
   const token = useAdminStore((s) => s.token);
+  const adminId = useAdminStore((s) => s.admin?.id);
   const qc = useQueryClient();
   const [typeFilter, setTypeFilter] = useState("");
   const [page, setPage] = useState(1);
   const limit = 20;
 
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (typeFilter) params.set("type", typeFilter);
 
   const { data, isLoading, isError, refetch } = useQuery<NotificationsResponse>({
-    queryKey: ["notifications", page],
+    queryKey: ["notifications", adminId ?? null, page, typeFilter],
     queryFn: () => apiGet<NotificationsResponse>(`/notifications?${params.toString()}`, token ?? undefined),
-    enabled: !!token,
+    enabled: Boolean(token && adminId),
   });
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) => apiPut<unknown>(`/notifications/${id}/read`, {}, token ?? undefined),
+    mutationFn: (id: string) => apiPatch<unknown>(`/notifications/${id}/read`, {}, token ?? undefined),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => apiPost<{ success: boolean; data: { count: number } }>("/notifications/read-all", {}, token ?? undefined),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
@@ -86,13 +116,16 @@ export default function NotificationsPage() {
   }
 
   const allNotifications = getNotifications();
-  const types = Array.from(new Set(allNotifications.map((n) => n.type).filter(Boolean)));
+  const notifications = allNotifications;
 
-  const notifications = typeFilter
-    ? allNotifications.filter((n) => n.type === typeFilter)
-    : allNotifications;
-
-  const unreadCount = allNotifications.filter((n) => !(n.isRead ?? n.read)).length;
+  const unreadCount = Array.isArray(data?.data)
+    ? allNotifications.filter((n) => !(n.isRead ?? n.read)).length
+    : data?.data?.unreadCount ?? allNotifications.filter((n) => !(n.isRead ?? n.read)).length;
+  const total = Array.isArray(data?.data)
+    ? allNotifications.length
+    : data?.data?.total ?? allNotifications.length;
+  const firstItem = total === 0 ? 0 : (page - 1) * limit + 1;
+  const lastItem = Math.min(page * limit, total);
 
   return (
     <div className="flex flex-col gap-6">
@@ -106,6 +139,15 @@ export default function NotificationsPage() {
             )}
           </p>
         </div>
+        {unreadCount > 0 && (
+          <button
+            onClick={() => markAllReadMutation.mutate()}
+            disabled={markAllReadMutation.isPending}
+            className="px-3 py-2 hairline rounded-sm text-xs font-bold text-primary hover:bg-surface disabled:opacity-50"
+          >
+            {markAllReadMutation.isPending ? "Menyimpan…" : "Tandai semua dibaca"}
+          </button>
+        )}
       </div>
 
       <div className="bg-white hairline rounded-sm flex flex-col">
@@ -117,16 +159,19 @@ export default function NotificationsPage() {
           >
             Semua
           </button>
-          {types.map((type) => (
+          {NOTIFICATION_TYPES.map((type) => (
             <button
               key={type}
-              onClick={() => setTypeFilter(type as string)}
+              onClick={() => {
+                setTypeFilter(typeFilter === type ? "" : type);
+                setPage(1);
+              }}
               className={`px-3 py-1.5 rounded-sm text-xs font-bold uppercase tracking-widest transition-colors hairline ${typeFilter === type ? "bg-ink-primary text-white border-ink-primary" : "text-ink-secondary hover:bg-surface"}`}
             >
               {type}
             </button>
           ))}
-          <span className="text-xs text-ink-secondary ml-auto">{notifications.length} notifikasi</span>
+          <span className="text-xs text-ink-secondary ml-auto">{total} notifikasi{typeFilter ? ` · ${typeFilter}` : ""}</span>
         </div>
 
         {isLoading && (
@@ -203,14 +248,15 @@ export default function NotificationsPage() {
           </div>
         )}
 
-        {/* Pagination placeholder */}
         <div className="p-4 hairline-t flex items-center justify-between">
-          <span className="text-xs text-ink-secondary">Halaman {page}</span>
+          <span className="text-xs text-ink-secondary">
+            Menampilkan {firstItem}–{lastItem} dari {total} notifikasi · Halaman {page}
+          </span>
           <div className="flex items-center gap-2">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 hairline rounded-sm text-xs font-medium text-ink-secondary hover:text-ink-primary hover:bg-surface disabled:opacity-40 transition-colors">
               Sebelumnya
             </button>
-            <button onClick={() => setPage((p) => p + 1)} disabled={notifications.length < limit} className="px-3 py-1.5 hairline rounded-sm text-xs font-medium text-ink-secondary hover:text-ink-primary hover:bg-surface disabled:opacity-40 transition-colors">
+            <button onClick={() => setPage((p) => p + 1)} disabled={page * limit >= total} className="px-3 py-1.5 hairline rounded-sm text-xs font-medium text-ink-secondary hover:text-ink-primary hover:bg-surface disabled:opacity-40 transition-colors">
               Berikutnya
             </button>
           </div>

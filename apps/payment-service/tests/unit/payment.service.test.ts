@@ -4,6 +4,23 @@ const mockPrisma: any = {
   payment: {
     create: jest.fn(),
     update: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  refund: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    aggregate: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  paymentLog: {
+    create: jest.fn(),
+  },
+  paymentWebhookLog: {
+    update: jest.fn(),
+  },
+  outboxEvent: {
+    create: jest.fn(),
   },
 };
 jest.mock('../../src/prisma/client', () => ({ prisma: mockPrisma }));
@@ -40,7 +57,12 @@ describe('PaymentService', () => {
         redirect_url: 'https://app.sandbox.midtrans.com/snap/test',
       }),
     }));
+    (midtransClient.CoreApi as jest.Mock).mockImplementation(() => ({
+      transaction: { refund: jest.fn().mockResolvedValue({ status_code: '200', transaction_status: 'refund' }) },
+    }));
     (mockPrisma.payment.create as jest.Mock).mockResolvedValue(mockPayment);
+    mockPrisma.paymentWebhookLog.update.mockResolvedValue({});
+    mockPrisma.outboxEvent.create.mockResolvedValue({});
   });
 
   describe('getPaymentByOrderId', () => {
@@ -100,6 +122,117 @@ describe('PaymentService', () => {
     });
   });
 
+  describe('requestRefund', () => {
+    const idempotencyKey = '89ac0ad1-e43f-4fab-8e7e-ffb12a550e63';
+
+    beforeEach(() => {
+      mockPaymentRepo.findByOrderId.mockResolvedValue({ ...mockPayment, status: 'PAID' } as any);
+      mockPrisma.refund.findUnique.mockResolvedValue(null);
+      mockPrisma.refund.findFirst.mockResolvedValue(null);
+      mockPrisma.refund.aggregate.mockResolvedValue({ _sum: { amount: null } });
+      mockPrisma.refund.create.mockResolvedValue({ id: idempotencyKey, paymentId: 'pay-1', orderId: 'order-1', amount: 115000, reason: 'Return approved', status: 'PENDING' });
+      mockPrisma.refund.update.mockResolvedValue({ id: idempotencyKey, status: 'FAILED' });
+      mockPrisma.payment.findUnique.mockResolvedValue({ ...mockPayment, status: 'PAID' });
+      mockPrisma.paymentLog.create.mockResolvedValue({ id: 'log-1' });
+      (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { id: 'order-1', customerId: 'user-1', status: 'RETURN_APPROVED' } }),
+      });
+    });
+
+    it('reserves and submits an approved-return refund using Midtrans refund_key', async () => {
+      const result = await service.requestRefund('order-1', 115000, 'Return approved', idempotencyKey);
+
+      expect(result).toMatchObject({ id: idempotencyKey, status: 'PENDING' });
+      expect(mockPrisma.refund.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ id: idempotencyKey, amount: expect.anything(), status: 'PENDING' }),
+      }));
+      const coreApi = (midtransClient.CoreApi as jest.Mock).mock.results[0].value;
+      expect(coreApi.transaction.refund).toHaveBeenCalledWith('ext-1', {
+        refund_key: idempotencyKey,
+        amount: 115000,
+        reason: 'Return approved',
+      });
+    });
+
+    it('refuses to submit a refund when return approval is absent', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { id: 'order-1', customerId: 'user-1', status: 'RETURN_REQUESTED' } }),
+      });
+
+      await expect(service.requestRefund('order-1', 115000, 'Return approved', idempotencyKey))
+        .rejects.toThrow('approved return');
+      expect(mockPrisma.refund.create).not.toHaveBeenCalled();
+    });
+
+    it('does not exceed the payment amount after existing refunds', async () => {
+      mockPrisma.refund.aggregate.mockResolvedValue({ _sum: { amount: 50000 } });
+
+      await expect(service.requestRefund('order-1', 70000, 'Return approved', idempotencyKey))
+        .rejects.toThrow('remaining refundable');
+      expect(mockPrisma.refund.create).not.toHaveBeenCalled();
+    });
+
+    it('requires a stable idempotency key and bounded reason', async () => {
+      await expect(service.requestRefund('order-1', 115000, 'Return approved', ''))
+        .rejects.toThrow('Idempotency-Key');
+      await expect(service.requestRefund('order-1', 115000, 'x'.repeat(256), idempotencyKey))
+        .rejects.toThrow('255 characters');
+    });
+
+    it('only completes a refund from a bank-confirmed Midtrans notification', async () => {
+      const refundKey = 'b6810000-0000-4000-8000-000000000001';
+      const grossAmount = '115000.00';
+      const signature = require('crypto').createHash('sha512')
+        .update(`order-1${'200'}${grossAmount}${config.midtransServerKey}`).digest('hex');
+      mockPaymentRepo.findWebhookLogByEventKey.mockResolvedValue(null);
+      mockPaymentRepo.createWebhookLog.mockResolvedValue({ id: 'webhook-refund', isProcessed: false } as any);
+      mockPaymentRepo.updateWebhookLog.mockResolvedValue({} as any);
+      mockPaymentRepo.findByOrderId.mockResolvedValue({ ...mockPayment, status: 'PAID' } as any);
+      mockPrisma.refund.findUnique.mockResolvedValue({ id: refundKey, paymentId: 'pay-1', orderId: 'order-1', status: 'PENDING' });
+      mockPrisma.refund.aggregate.mockResolvedValue({ _sum: { amount: 115000 } });
+      (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({ ok: true });
+
+      const result = await service.handleWebhook({
+        order_id: 'order-1', transaction_status: 'refund', status_code: '200', gross_amount: grossAmount,
+        signature_key: signature, transaction_id: 'transaction-1', merchant_id: 'test-merchant',
+        refund_key: refundKey, refund_amount: grossAmount,
+        refunds: [{ refund_key: refundKey, refund_amount: grossAmount, bank_confirmed_at: '2026-09-24T02:00:00Z' }],
+      });
+
+      expect(result).toEqual({ status: 'PROCESSED', paymentStatus: 'REFUNDED' });
+      expect(mockPrisma.refund.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: refundKey }, data: expect.objectContaining({ status: 'PROCESSED' }),
+      }));
+      expect(mockPrisma.payment.update).toHaveBeenCalledWith(expect.objectContaining({ data: { status: 'REFUNDED' } }));
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/refund-completed'), expect.objectContaining({ method: 'POST' }));
+    });
+
+    it('keeps a refund pending until the bank confirmation timestamp arrives', async () => {
+      const refundKey = 'b6810000-0000-4000-8000-000000000002';
+      const grossAmount = '115000.00';
+      const signature = require('crypto').createHash('sha512')
+        .update(`order-1${'200'}${grossAmount}${config.midtransServerKey}`).digest('hex');
+      mockPaymentRepo.findWebhookLogByEventKey.mockResolvedValue(null);
+      mockPaymentRepo.createWebhookLog.mockResolvedValue({ id: 'webhook-refund-pending', isProcessed: false } as any);
+      mockPaymentRepo.updateWebhookLog.mockResolvedValue({} as any);
+      mockPaymentRepo.findByOrderId.mockResolvedValue({ ...mockPayment, status: 'PAID' } as any);
+      mockPrisma.refund.findUnique.mockResolvedValue({ id: refundKey, paymentId: 'pay-1', orderId: 'order-1', status: 'PENDING' });
+      mockPrisma.refund.aggregate.mockResolvedValue({ _sum: { amount: null } });
+
+      const result = await service.handleWebhook({
+        order_id: 'order-1', transaction_status: 'refund', status_code: '200', gross_amount: grossAmount,
+        signature_key: signature, transaction_id: 'transaction-1', merchant_id: 'test-merchant',
+        refund_key: refundKey, refund_amount: grossAmount,
+      });
+
+      expect(result).toEqual({ status: 'REFUND_PENDING_PROVIDER_CONFIRMATION', paymentStatus: 'PAID' });
+      expect(mockPrisma.refund.update).not.toHaveBeenCalled();
+      expect(mockPrisma.payment.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('handleWebhook', () => {
     it('rejects a correctly signed notification for another merchant', async () => {
       const grossAmount = '115000.00';
@@ -147,6 +280,48 @@ describe('PaymentService', () => {
 
       expect(result).toEqual({ status: 'IGNORED', paymentStatus: 'PAID' });
       expect(mockPrisma.payment.update).not.toHaveBeenCalled();
+    });
+
+    it('stores a payment success event in the outbox in the status transaction', async () => {
+      const grossAmount = '115000.00';
+      const signature = require('crypto')
+        .createHash('sha512')
+        .update(`order-1${'200'}${grossAmount}${config.midtransServerKey}`)
+        .digest('hex');
+      mockPaymentRepo.findWebhookLogByEventKey.mockResolvedValue(null);
+      mockPaymentRepo.createWebhookLog.mockResolvedValue({ id: 'webhook-paid' } as any);
+      mockPaymentRepo.updateWebhookLog.mockResolvedValue({} as any);
+      mockPaymentRepo.findByOrderId.mockResolvedValue(mockPayment as any);
+
+      const result = await service.handleWebhook({
+        order_id: 'order-1',
+        transaction_status: 'settlement',
+        status_code: '200',
+        gross_amount: grossAmount,
+        signature_key: signature,
+        transaction_id: 'transaction-paid',
+        merchant_id: 'test-merchant',
+        settlement_time: '2026-09-24T03:00:00Z',
+      });
+
+      expect(result).toEqual({ status: 'PROCESSED', paymentStatus: 'PAID' });
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          aggregateType: 'Payment',
+          aggregateId: 'pay-1',
+          eventName: 'PaymentSuccess',
+          routingKey: 'payment.success',
+          eventPayload: expect.objectContaining({
+            eventId: expect.any(String),
+            eventName: 'PaymentSuccess',
+            payload: expect.objectContaining({ orderId: 'order-1', amount: 115000 }),
+          }),
+        }),
+      });
+      expect(mockPrisma.paymentWebhookLog.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'webhook-paid' },
+        data: expect.objectContaining({ isProcessed: true }),
+      }));
     });
 
     it('does not let an invalid signature reserve the valid callback event key', async () => {

@@ -11,13 +11,13 @@ function VerifyEmailContent() {
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const displayStatus = token ? status : "error";
+  const displayErrorMessage = token
+    ? errorMessage
+    : "Token verifikasi tidak ditemukan dalam URL.";
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setErrorMessage("Token verifikasi tidak ditemukan dalam URL.");
-      return;
-    }
+    if (!token) return;
 
     const verify = async () => {
       try {
@@ -46,7 +46,7 @@ function VerifyEmailContent() {
         </div>
 
         {/* Loading State */}
-        {status === "loading" && (
+        {displayStatus === "loading" && (
           <div className="flex flex-col items-center gap-6 text-center">
             <div className="w-20 h-20 rounded-full bg-paper border border-hairline flex items-center justify-center">
               <span className="material-symbols-outlined text-4xl text-ink-secondary animate-spin">sync</span>
@@ -70,7 +70,7 @@ function VerifyEmailContent() {
         )}
 
         {/* Success State */}
-        {status === "success" && (
+        {displayStatus === "success" && (
           <div className="flex flex-col items-center gap-6 text-center">
             <div
               className="w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center"
@@ -106,7 +106,7 @@ function VerifyEmailContent() {
         )}
 
         {/* Error State */}
-        {status === "error" && (
+        {displayStatus === "error" && (
           <div className="flex flex-col items-center gap-6 text-center">
             <div className="w-20 h-20 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center">
               <span className="material-symbols-outlined text-4xl text-rose-600" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -116,7 +116,7 @@ function VerifyEmailContent() {
             <div>
               <h1 className="font-serif text-2xl text-ink-primary mb-2">Verifikasi Gagal</h1>
               <p className="text-xs text-ink-secondary leading-relaxed max-w-sm">
-                {errorMessage || "Terjadi kesalahan saat memverifikasi email Anda."}
+                {displayErrorMessage || "Terjadi kesalahan saat memverifikasi email Anda."}
               </p>
             </div>
             <div className="bg-rose-50 border border-rose-100 rounded-xs px-6 py-4 w-full">

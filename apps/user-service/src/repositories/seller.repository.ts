@@ -42,7 +42,7 @@ export class SellerRepository {
     });
   }
 
-  async updateById(id: string, data: { storeName?: string; storeDescription?: string; storeLogo?: string; storeBanner?: string; storeAddress?: string; isVerified?: boolean; verifiedAt?: Date; status?: string }) {
+  async updateById(id: string, data: { storeName?: string; storeDescription?: string; storeLogo?: string; storeBanner?: string; storeAddress?: string; isVerified?: boolean; verifiedAt?: Date | null; status?: string }) {
     return prisma.sellerProfile.update({
       where: { id },
       data,

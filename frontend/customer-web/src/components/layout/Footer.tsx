@@ -1,21 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 export default function Footer() {
-  const [newsletterEmail, setNewsletterEmail] = useState("");
-  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newsletterEmail.trim()) {
-      setNewsletterSuccess(true);
-      setNewsletterEmail("");
-      setTimeout(() => setNewsletterSuccess(false), 5000);
-    }
-  };
-
   return (
     <footer className="bg-surface hairline-t mt-auto w-full pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 md:px-8">
@@ -75,19 +62,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-xs text-ink-secondary hover:text-primary transition-colors">
-                  Kebijakan Pengembalian
-                </a>
+                <span className="text-xs text-ink-secondary">Kebijakan pengembalian akan dipublikasikan setelah ditetapkan.</span>
               </li>
               <li>
-                <a href="#" className="text-xs text-ink-secondary hover:text-primary transition-colors">
-                  Panduan Perawatan Bahan
-                </a>
+                <span className="text-xs text-ink-secondary">Panduan perawatan bahan segera hadir.</span>
               </li>
               <li>
-                <a href="#" className="text-xs text-ink-secondary hover:text-primary transition-colors">
-                  Hubungi Kami
-                </a>
+                <span className="text-xs text-ink-secondary">Saluran kontak pelanggan belum tersedia.</span>
               </li>
             </ul>
           </div>
@@ -98,50 +79,14 @@ export default function Footer() {
               Kabar Berkala
             </h4>
             <p className="text-xs text-ink-secondary leading-relaxed">
-              Dapatkan pembaruan rilis terbatas koleksi kami dan jurnal editorial terpilih.
+              Pendaftaran newsletter belum tersedia. Kami tidak akan mengklaim alamat email tersimpan sebelum layanan ini aktif.
             </p>
-
-            <form onSubmit={handleSubscribe} className="flex flex-col gap-2 mt-2">
-              <div className="flex relative">
-                <input
-                  type="email"
-                  placeholder="Alamat Email Anda"
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  required
-                  className="w-full bg-paper text-xs text-ink-primary px-3 py-2.5 rounded-xs border border-transparent focus:border-outline-variant focus:outline-hidden transition-all placeholder:text-ink-secondary/60"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-primary hover:text-primary transition-colors flex items-center justify-center cursor-pointer"
-                  aria-label="Subscribe"
-                >
-                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
-                </button>
-              </div>
-
-              {newsletterSuccess && (
-                <span className="text-[10px] text-emerald-700 font-semibold mt-1">
-                  Pendaftaran berhasil! Jurnal pertama akan segera dikirim.
-                </span>
-              )}
-            </form>
           </div>
         </div>
 
         {/* Footer Bottom Separator */}
         <div className="hairline-t pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex gap-6">
-            <a href="#" className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary hover:text-primary transition-colors">
-              Instagram
-            </a>
-            <a href="#" className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary hover:text-primary transition-colors">
-              Pinterest
-            </a>
-            <a href="#" className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary hover:text-primary transition-colors">
-              Journal
-            </a>
-          </div>
+          <p className="text-[10px] text-ink-secondary">Kanal sosial dan jurnal belum dikonfigurasi.</p>
 
           <div className="flex gap-4 text-[10px] text-ink-secondary/60 font-mono">
             <span>Dibuat dengan dedikasi di Jakarta</span>

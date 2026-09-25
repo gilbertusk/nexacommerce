@@ -101,7 +101,7 @@ export class ReviewRepository {
       });
     }
 
-    return tx.review.findUnique({
+    return tx.review.findUniqueOrThrow({
       where: { id: review.id },
       include: { images: true },
     });

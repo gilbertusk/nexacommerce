@@ -1,7 +1,8 @@
 import { voucherRepository } from '../repositories/voucher.repository';
 import { prisma } from '../prisma/client';
-import { NotFoundError, ValidationError } from '@nexacommerce/common';
+import { NotFoundError, ValidationError, buildInternalServiceHeaders } from '@nexacommerce/common';
 import { Prisma } from '../generated/client';
+import { config } from '../config';
 
 export interface ValidateVoucherItem {
   price: number;
@@ -11,6 +12,80 @@ export interface ValidateVoucherItem {
 }
 
 export class VoucherService {
+  private async fetchInternalData<T>(baseUrl: string, path: string, method: string, body?: unknown): Promise<T> {
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildInternalServiceHeaders('voucher-service'),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch (error) {
+      throw new ValidationError(`Unable to load authoritative cart or catalog data: ${error instanceof Error ? error.message : 'service unavailable'}`);
+    }
+
+    let result: { success?: boolean; data?: T; message?: string };
+    try {
+      result = await response.json() as { success?: boolean; data?: T; message?: string };
+    } catch {
+      throw new ValidationError('Cart or catalog service returned an invalid response');
+    }
+    if (!response.ok || !result.success || result.data === undefined) {
+      throw new ValidationError(result.message || 'Unable to load authoritative cart or catalog data');
+    }
+    return result.data;
+  }
+
+  async validateCustomerVoucher(code: string, userId: string) {
+    const cart = await this.fetchInternalData<{ items: Array<{ productId: string; quantity: number }> }>(
+      config.cartServiceUrl,
+      `/cart/internal/cart/${encodeURIComponent(userId)}`,
+      'GET',
+    );
+    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+      throw new ValidationError('Cart is empty');
+    }
+
+    const ids = [...new Set(cart.items.map((item) => item.productId))];
+    const products = await this.fetchInternalData<Array<{
+      id: string;
+      status: string;
+      price: number | string;
+      categoryId: string;
+      sellerId: string;
+    }>>(config.productServiceUrl, '/internal/products/batch', 'POST', { ids });
+    if (!Array.isArray(products)) {
+      throw new ValidationError('Product service returned invalid catalog data');
+    }
+    const productsById = new Map(products.map((product) => [product.id, product]));
+
+    const items = cart.items.map((item) => {
+      const product = productsById.get(item.productId);
+      if (!product || product.status !== 'ACTIVE') {
+        throw new ValidationError('A cart product is no longer available');
+      }
+      if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) {
+        throw new ValidationError('Cart contains an invalid quantity');
+      }
+      const price = Number(product.price);
+      if (!Number.isFinite(price) || price < 0) {
+        throw new ValidationError('Catalog contains an invalid product price');
+      }
+      return {
+        price,
+        quantity: item.quantity,
+        categoryId: product.categoryId,
+        sellerId: product.sellerId,
+      };
+    });
+
+    return this.validateVoucher(code, userId, items);
+  }
+
   async createVoucher(data: any) {
     const existing = await voucherRepository.findByCode(data.code.toUpperCase());
     if (existing) {
@@ -165,10 +240,9 @@ export class VoucherService {
       discountAmount = valueNum;
     }
 
-    // Caps discount at total items subtotal
-    const totalSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    if (discountAmount > totalSubtotal) {
-      discountAmount = totalSubtotal;
+    // A scoped voucher must never discount purchases outside its eligible scope.
+    if (discountAmount > eligibleSubtotal) {
+      discountAmount = eligibleSubtotal;
     }
 
     return {

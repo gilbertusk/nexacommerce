@@ -159,9 +159,31 @@ exports.Prisma.StockReservationScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.OutboxEventScalarFieldEnum = {
+  id: 'id',
+  aggregateType: 'aggregateType',
+  aggregateId: 'aggregateId',
+  eventName: 'eventName',
+  routingKey: 'routingKey',
+  eventPayload: 'eventPayload',
+  status: 'status',
+  attempts: 'attempts',
+  availableAt: 'availableAt',
+  lockedAt: 'lockedAt',
+  lockToken: 'lockToken',
+  publishedAt: 'publishedAt',
+  lastError: 'lastError',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -174,11 +196,18 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
 
 exports.Prisma.ModelName = {
   Inventory: 'Inventory',
   StockMovement: 'StockMovement',
-  StockReservation: 'StockReservation'
+  StockReservation: 'StockReservation',
+  OutboxEvent: 'OutboxEvent'
 };
 
 /**

@@ -17,6 +17,10 @@ export interface NotificationsResponse {
   success: boolean;
   data: {
     notifications: ApiNotification[];
+    total: number;
+    unreadCount: number;
+    page: number;
+    limit: number;
   };
 }
 
@@ -24,11 +28,12 @@ export interface NotificationsResponse {
 
 export function useNotifications() {
   const token = useUserStore((s) => s.token);
+  const userId = useUserStore((s) => s.user?.id);
 
   return useQuery({
-    queryKey: ["notifications"],
+    queryKey: ["notifications", userId ?? null],
     queryFn: () => apiGet<NotificationsResponse>("/notifications", token ?? undefined),
-    enabled: Boolean(token),
+    enabled: Boolean(token && userId),
     staleTime: 1000 * 30,
     refetchInterval: 1000 * 60,
   });

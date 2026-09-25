@@ -50,4 +50,22 @@ describe('Payment Routes (integration)', () => {
       expect([400, 403, 500]).toContain(res.status);
     });
   });
+
+  describe('POST /payments/order/:orderId/refunds', () => {
+    it('requires an admin role before attempting a refund', async () => {
+      const res = await request(app)
+        .post('/payments/order/order-1/refunds')
+        .set(customerHeaders)
+        .set('Idempotency-Key', '89ac0ad1-e43f-4fab-8e7e-ffb12a550e63')
+        .send({ amount: 115000, reason: 'Approved return' });
+      expect(res.status).toBe(403);
+    });
+
+    it('requires authentication', async () => {
+      const res = await request(app)
+        .post('/payments/order/order-1/refunds')
+        .send({ amount: 115000, reason: 'Approved return' });
+      expect(res.status).toBe(401);
+    });
+  });
 });

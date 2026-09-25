@@ -149,6 +149,23 @@ export class ProductController {
     res.status(201).json(successResponse(image, 'Product image added successfully'));
   }
 
+  async uploadProductImage(req: Request, res: Response) {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ success: false, message: 'Image file is required' });
+      return;
+    }
+    const actor = {
+      userId: req.headers['x-user-id'] as string,
+      role: req.headers['x-user-role'] as string,
+    };
+    const image = await productService.uploadProductImage(req.params.id, actor, {
+      buffer: file.buffer,
+      size: file.size,
+    });
+    res.status(201).json(successResponse(image, 'Product image uploaded successfully'));
+  }
+
   async updateProductImage(req: Request, res: Response) {
     const userId = req.headers['x-user-id'] as string;
     const userRole = req.headers['x-user-role'] as string;

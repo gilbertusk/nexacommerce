@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdminStore } from "@/lib/store/useAdminStore";
-import { apiGet, apiPut } from "@/lib/api/client";
+import { apiGet, apiPatch } from "@/lib/api/client";
 
 interface User {
   id: string;
@@ -17,7 +17,7 @@ interface User {
 interface UsersResponse {
   success: boolean;
   data: {
-    users: User[];
+    items: User[];
     total: number;
     page: number;
     limit: number;
@@ -59,18 +59,17 @@ export default function UsersPage() {
     page: String(page),
     limit: String(limit),
     ...(role ? { role } : {}),
-    ...(search ? { search } : {}),
   });
 
   const { data, isLoading, isError, refetch } = useQuery<UsersResponse>({
-    queryKey: ["users", page, role, search],
+    queryKey: ["users", page, role],
     queryFn: () => apiGet<UsersResponse>(`/users?${params.toString()}`, token ?? undefined),
     enabled: !!token,
   });
 
   const mutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiPut<unknown>(`/users/${id}/status`, { status }, token ?? undefined),
+      apiPatch<unknown>(`/users/${id}/status`, { status }, token ?? undefined),
     onSuccess: (_, { status }) => {
       qc.invalidateQueries({ queryKey: ["users"] });
       setFeedback({ type: "success", message: status === "ACTIVE" ? "Pengguna diaktifkan." : "Pengguna ditangguhkan." });
@@ -82,7 +81,10 @@ export default function UsersPage() {
     },
   });
 
-  const users = data?.data?.users ?? [];
+  const users = data?.data?.items ?? [];
+  const visibleUsers = users.filter((user) =>
+    !search || `${user.name} ${user.email}`.toLowerCase().includes(search.toLowerCase()),
+  );
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
@@ -166,14 +168,14 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E7E3DC]">
-                {users.length === 0 ? (
+                {visibleUsers.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-sm text-ink-secondary">
                       Tidak ada pengguna ditemukan.
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => {
+                  visibleUsers.map((user) => {
                     const isProcessing = mutation.isPending && (mutation.variables as { id: string })?.id === user.id;
                     const canSuspend = user.status === "ACTIVE";
                     return (

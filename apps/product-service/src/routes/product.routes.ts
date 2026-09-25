@@ -1,8 +1,23 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { productController } from '../controllers/product.controller';
 import { asyncHandler, createInternalServiceGuard } from '@nexacommerce/common';
+import multer from 'multer';
+import { AppError } from '@nexacommerce/common';
 
 const router = Router();
+const parseProductImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 0, parts: 1 },
+}).single('image');
+const productImageUpload = (req: Request, res: Response, next: NextFunction) => {
+  parseProductImage(req, res, (error) => {
+    if (!error) return next();
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return next(new AppError('Image must not exceed 5 MB', 413));
+    }
+    return next(new AppError('Invalid image upload request', 400));
+  });
+};
 
 // Middleware to enforce role restrictions
 const restrictTo = (...roles: string[]) => {
@@ -23,6 +38,7 @@ const checkInternalService = createInternalServiceGuard([
     'user-service',
     'inventory-service',
     'order-service',
+    'voucher-service',
     'cart-service',
     'shipping-service',
     'review-service',
@@ -52,6 +68,7 @@ router.delete('/products/:id', restrictTo('SELLER', 'ADMIN'), asyncHandler((req,
 
 // --- Product Image Routes ---
 router.post('/products/:id/images', restrictTo('SELLER', 'ADMIN'), asyncHandler((req, res) => productController.addProductImage(req, res)));
+router.post('/products/:id/images/upload', restrictTo('SELLER', 'ADMIN'), productImageUpload, asyncHandler((req, res) => productController.uploadProductImage(req, res)));
 router.patch('/products/:id/images/:imageId', restrictTo('SELLER', 'ADMIN'), asyncHandler((req, res) => productController.updateProductImage(req, res)));
 router.delete('/products/:id/images/:imageId', restrictTo('SELLER', 'ADMIN'), asyncHandler((req, res) => productController.deleteProductImage(req, res)));
 

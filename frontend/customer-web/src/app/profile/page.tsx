@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useUserStore } from "@/lib/store/useUserStore";
-import { useUserProfile, useUpdateProfile } from "@/lib/api/hooks/useProfile";
+import { useAddresses, useUserProfile, useUpdateProfile } from "@/lib/api/hooks/useProfile";
 import EmptyState from "@/components/ui/EmptyState";
 
 export default function ProfilePage() {
@@ -12,6 +12,7 @@ export default function ProfilePage() {
   const { user, logout } = useUserStore();
 
   const { data: profileData, isLoading } = useUserProfile();
+  const { data: addressesData } = useAddresses();
   const updateProfile = useUpdateProfile();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   }
 
   const profile = profileData?.data?.user;
+  const addresses = addressesData?.data?.addresses ?? [];
 
   const handleStartEdit = () => {
     setEditName(profile?.name ?? user.name);
@@ -237,9 +239,9 @@ export default function ProfilePage() {
                 <div key={i} className="h-20 bg-paper animate-pulse rounded-xs" />
               ))}
             </div>
-          ) : profile?.addresses && profile.addresses.length > 0 ? (
+          ) : addresses.length > 0 ? (
             <div className="flex flex-col gap-4">
-              {profile.addresses.slice(0, 3).map((addr) => (
+              {addresses.slice(0, 3).map((addr) => (
                 <div key={addr.id} className="bg-surface p-4 border border-hairline rounded-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-xs uppercase font-bold text-ink-primary">{addr.label}</span>
@@ -254,9 +256,9 @@ export default function ProfilePage() {
                   </p>
                 </div>
               ))}
-              {profile.addresses.length > 3 && (
+              {addresses.length > 3 && (
                 <Link href="/addresses" className="text-xs text-primary hover:underline font-semibold">
-                  Lihat semua {profile.addresses.length} alamat →
+                  Lihat semua {addresses.length} alamat →
                 </Link>
               )}
             </div>

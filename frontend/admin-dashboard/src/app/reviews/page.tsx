@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAdminStore } from "@/lib/store/useAdminStore";
-import { apiGet, apiPut } from "@/lib/api/client";
+import { apiGet, apiPatch } from "@/lib/api/client";
 
 interface Review {
   id: string;
+  reviewId: string;
   productName?: string;
   product?: { name?: string };
   reviewer?: { name?: string };
@@ -20,7 +21,7 @@ interface Review {
 interface ReviewsResponse {
   success: boolean;
   data: {
-    reviews: Review[];
+    reports: Array<{ id: string; status: string; reason: string; description?: string; createdAt: string; review: Omit<Review, "id" | "reviewId" | "status" | "createdAt"> & { id: string; productId: string } }>;
     total: number;
     page: number;
     limit: number;
@@ -28,22 +29,21 @@ interface ReviewsResponse {
 }
 
 const STATUSES = [
-  { value: "", label: "Semua Status" },
   { value: "PENDING", label: "Menunggu" },
-  { value: "APPROVED", label: "Disetujui" },
-  { value: "REJECTED", label: "Ditolak" },
+  { value: "REVIEWED", label: "Ditinjau" },
+  { value: "DISMISSED", label: "Ditutup" },
 ];
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: "bg-yellow-50 text-yellow-700",
-  APPROVED: "bg-green-50 text-green-700",
-  REJECTED: "bg-red-50 text-red-700",
+  REVIEWED: "bg-green-50 text-green-700",
+  DISMISSED: "bg-surface text-ink-secondary",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Menunggu",
-  APPROVED: "Disetujui",
-  REJECTED: "Ditolak",
+  REVIEWED: "Ditinjau",
+  DISMISSED: "Ditutup",
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -82,23 +82,31 @@ export default function ReviewsPage() {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
-    ...(status ? { status } : {}),
+    status,
   });
 
   const { data, isLoading, isError, refetch } = useQuery<ReviewsResponse>({
     queryKey: ["reviews", page, status],
-    queryFn: () => apiGet<ReviewsResponse>(`/reviews?${params.toString()}`, token ?? undefined),
+    queryFn: async () => {
+      const response = await apiGet<ReviewsResponse>(`/reviews/reports?${params.toString()}`, token ?? undefined);
+      return { ...response, data: { ...response.data, reviews: response.data.reports.map(({ review, ...report }) => ({ ...review, id: report.id, reviewId: review.id, status: report.status, createdAt: report.createdAt })) } } as ReviewsResponse & { data: { reviews: Review[] } };
+    },
     enabled: !!token,
   });
 
   const mutation = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: "APPROVED" | "REJECTED" }) =>
-      apiPut<unknown>(`/reviews/${id}/moderate`, { status: action }, token ?? undefined),
+    mutationFn: async ({ id, reviewId, action }: { id: string; reviewId: string; action: "HIDE" | "DISMISS" }) => {
+      if (action === "HIDE") {
+        await apiPatch<unknown>(`/reviews/${reviewId}/moderate`, { moderationStatus: "HIDDEN", moderationNote: "Ditangani melalui laporan moderasi" }, token ?? undefined);
+        return apiPatch<unknown>(`/reviews/reports/${id}`, { status: "REVIEWED" }, token ?? undefined);
+      }
+      return apiPatch<unknown>(`/reviews/reports/${id}`, { status: "DISMISSED" }, token ?? undefined);
+    },
     onSuccess: (_, { action }) => {
       qc.invalidateQueries({ queryKey: ["reviews"] });
       setFeedback({
         type: "success",
-        message: action === "APPROVED" ? "Ulasan disetujui." : "Ulasan ditolak.",
+        message: action === "HIDE" ? "Ulasan disembunyikan dan laporan ditandai ditinjau." : "Laporan ditutup.",
       });
       setTimeout(() => setFeedback(null), 3000);
     },
@@ -108,7 +116,7 @@ export default function ReviewsPage() {
     },
   });
 
-  const reviews = data?.data?.reviews ?? [];
+  const reviews = (data?.data as (ReviewsResponse["data"] & { reviews?: Review[] }) | undefined)?.reviews ?? [];
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
@@ -209,18 +217,18 @@ export default function ReviewsPage() {
                           ) : review.status === "PENDING" ? (
                             <div className="flex items-center justify-end gap-2">
                               <button
-                                onClick={() => mutation.mutate({ id: review.id, action: "APPROVED" })}
+                                onClick={() => mutation.mutate({ id: review.id, reviewId: review.reviewId, action: "HIDE" })}
                                 disabled={mutation.isPending}
                                 className="px-3 py-1 bg-green-50 text-green-700 hover:bg-green-100 transition-colors rounded-sm text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                               >
-                                Setujui
+                                Sembunyikan ulasan
                               </button>
                               <button
-                                onClick={() => mutation.mutate({ id: review.id, action: "REJECTED" })}
+                                onClick={() => mutation.mutate({ id: review.id, reviewId: review.reviewId, action: "DISMISS" })}
                                 disabled={mutation.isPending}
                                 className="px-3 py-1 bg-red-50 text-red-700 hover:bg-red-100 transition-colors rounded-sm text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                               >
-                                Tolak
+                                Tutup laporan
                               </button>
                             </div>
                           ) : (

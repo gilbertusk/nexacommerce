@@ -99,6 +99,18 @@ export class OrderController {
     res.status(200).json(successResponse(order, 'Order retrieved'));
   };
 
+  internalMarkRefundCompleted = async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const result = await orderService.markRefundCompleted(orderId);
+    res.status(200).json(successResponse(result, 'Refund completion recorded'));
+  };
+
+  internalMarkRefundPartial = async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const result = await orderService.markRefundPartial(orderId);
+    res.status(200).json(successResponse(result, 'Partial refund recorded'));
+  };
+
   internalGetSellerOrders = async (req: Request, res: Response) => {
     const { sellerId } = req.params;
     const page = parseInt(req.query.page as string, 10) || 1;
@@ -144,17 +156,19 @@ export class OrderController {
 
     let eligible = false;
     let reason = 'No completed order found for this item';
+    let eligibleOrderId: string | null = null;
 
     for (const order of allOrders.orders) {
       const item = order.items?.find((i: any) => i.id === orderItemId && i.productId === productId);
       if (item) {
         eligible = true;
         reason = 'OK';
+        eligibleOrderId = order.id;
         break;
       }
     }
 
-    res.status(200).json(successResponse({ eligible, reason }, 'Eligibility checked'));
+    res.status(200).json(successResponse({ eligible, reason, orderId: eligibleOrderId }, 'Eligibility checked'));
   };
 
   adminListAllOrders = async (req: Request, res: Response) => {
@@ -193,6 +207,41 @@ export class OrderController {
 
     const order = await orderService.updateReturnRequest(id, { userId, role: userRole }, action, note);
     res.status(200).json(successResponse(order, `Return request ${action}d successfully`));
+  };
+
+  createComplaint = async (req: Request, res: Response) => {
+    const customerId = req.headers['x-user-id'] as string;
+    if (!customerId) throw new ValidationError('Authentication required: user ID missing');
+    const complaint = await orderService.createComplaint(req.params.id, customerId, req.body);
+    res.status(201).json(successResponse(complaint, 'Order complaint submitted successfully'));
+  };
+
+  getOrderComplaint = async (req: Request, res: Response) => {
+    const userId = req.headers['x-user-id'] as string;
+    const role = req.headers['x-user-role'] as string;
+    if (!userId || role !== 'CUSTOMER') throw new ValidationError('Customer authentication is required');
+    const complaint = await orderService.getOrderComplaint(req.params.id, { userId, role });
+    res.status(200).json(successResponse(complaint, 'Order complaint retrieved successfully'));
+  };
+
+  adminListComplaints = async (req: Request, res: Response) => {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+    const status = req.query.status as string | undefined;
+    const result = await orderService.adminListComplaints({ page, limit, status });
+    res.status(200).json(successResponse(result, 'Order complaints retrieved successfully'));
+  };
+
+  adminUpdateComplaint = async (req: Request, res: Response) => {
+    const { status, adminNote } = req.body;
+    if (!status || !['IN_REVIEW', 'RESOLVED', 'REJECTED'].includes(status)) {
+      throw new ValidationError('status must be IN_REVIEW, RESOLVED, or REJECTED');
+    }
+    if (adminNote !== undefined && typeof adminNote !== 'string') {
+      throw new ValidationError('adminNote must be a string');
+    }
+    const complaint = await orderService.adminUpdateComplaint(req.params.complaintId, { status, adminNote });
+    res.status(200).json(successResponse(complaint, 'Order complaint updated successfully'));
   };
 }
 

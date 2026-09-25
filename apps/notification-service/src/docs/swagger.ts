@@ -27,10 +27,11 @@ export const swaggerSpec = {
         tags: ['Notifications'], summary: 'List notifications for current user', security: [{ bearerAuth: [] }],
         parameters: [
           { in: 'query', name: 'isRead', schema: { type: 'boolean' } },
+          { in: 'query', name: 'type', schema: { type: 'string', minLength: 1, maxLength: 80 } },
           { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } },
           { in: 'query', name: 'limit', schema: { type: 'integer', default: 20 } },
         ],
-        responses: { 200: { description: 'Notification list', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Notification' } } } } } } }, 401: { description: 'Unauthorized' } },
+        responses: { 200: { description: 'Paginated notification list', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'object', properties: { notifications: { type: 'array', items: { $ref: '#/components/schemas/Notification' } }, total: { type: 'integer' }, unreadCount: { type: 'integer' }, page: { type: 'integer' }, limit: { type: 'integer' } } } } } } } }, 400: { description: 'Invalid query parameters' }, 401: { description: 'Unauthorized' } },
       },
     },
     '/notifications/unread-count': {
@@ -40,10 +41,10 @@ export const swaggerSpec = {
       },
     },
     '/notifications/{id}': {
-      get: {
-        tags: ['Notifications'], summary: 'Get notification detail', security: [{ bearerAuth: [] }],
+      delete: {
+        tags: ['Notifications'], summary: 'Delete notification for current user', security: [{ bearerAuth: [] }],
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
-        responses: { 200: { description: 'Notification detail' }, 404: { description: 'Not found' } },
+        responses: { 200: { description: 'Notification deleted' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
       },
     },
     '/notifications/{id}/read': {

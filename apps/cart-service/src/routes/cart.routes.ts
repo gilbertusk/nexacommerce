@@ -4,7 +4,7 @@ import { asyncHandler, createInternalServiceGuard } from '@nexacommerce/common';
 
 const router = Router();
 
-const checkInternalService = createInternalServiceGuard(['order-service', 'payment-service']);
+const checkInternalService = createInternalServiceGuard(['order-service', 'payment-service', 'voucher-service']);
 
 // Gateway / User Client Routes
 router.get('/', asyncHandler(cartController.getCart));

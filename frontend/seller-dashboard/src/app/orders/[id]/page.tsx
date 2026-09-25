@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPut } from '@/lib/api/client';
+import { apiGet, apiPatch } from '@/lib/api/client';
 
 interface OrderItem {
   id: string;
@@ -62,8 +62,21 @@ interface OrderResponse {
   message?: string;
 }
 
+interface ShippingOrder {
+  orderId: string;
+  trackingNumber?: string | null;
+  courierName?: string;
+  serviceName?: string;
+  status: string;
+}
+
+interface ShippingResponse {
+  success: boolean;
+  data: ShippingOrder;
+}
+
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Menunggu Pembayaran',
+  PENDING_PAYMENT: 'Menunggu Pembayaran',
   PAID: 'Pembayaran Diterima',
   PROCESSING: 'Sedang Diproses',
   SHIPPED: 'Dalam Pengiriman',
@@ -72,7 +85,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-stone-50 text-stone-600',
+  PENDING_PAYMENT: 'bg-stone-50 text-stone-600',
   PAID: 'bg-teal-50 text-teal-700',
   PROCESSING: 'bg-blue-50 text-blue-700',
   SHIPPED: 'bg-orange-50 text-orange-700',
@@ -80,7 +93,7 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'bg-red-50 text-red-700',
 };
 
-const STATUS_TIMELINE = ['PENDING', 'PROCESSING', 'SHIPPED', 'COMPLETED'];
+const STATUS_TIMELINE = ['PENDING_PAYMENT', 'PAID', 'PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'COMPLETED'];
 
 function formatRupiah(amount: number): string {
   return `Rp ${amount.toLocaleString('id-ID')}`;
@@ -102,6 +115,7 @@ export default function OrderDetailPage() {
   const { token } = useSellerStore();
 
   const [order, setOrder] = useState<Order | null>(null);
+  const [shipment, setShipment] = useState<ShippingOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -122,6 +136,15 @@ export default function OrderDetailPage() {
           const raw = res.data;
           const o: Order = 'id' in raw ? raw : (raw as { order: Order }).order;
           setOrder(o);
+          try {
+            const shippingRes = await apiGet<ShippingResponse>(
+              `/api/v1/shipping/${encodeURIComponent(orderId)}`,
+              token!,
+            );
+            setShipment(shippingRes.data);
+          } catch {
+            setShipment(null);
+          }
         }
       } catch (err: unknown) {
         setError(
@@ -140,7 +163,28 @@ export default function OrderDetailPage() {
     setIsUpdating(true);
     setActionError('');
     try {
-      await apiPut(
+      if (newStatus === 'SHIPPED') {
+        if (!shipment?.trackingNumber) {
+          throw new Error('Pesanan belum memiliki nomor tracking dari layanan pengiriman.');
+        }
+
+        if (shipment.status === 'WAITING_PICKUP') {
+          const shippingRes = await apiPatch<ShippingResponse>(
+            `/api/v1/shipping/${encodeURIComponent(orderId)}/status`,
+            {
+              status: 'PICKED_UP',
+              location: order.shippingAddress?.city,
+              note: 'Paket diserahkan ke kurir oleh penjual',
+            },
+            token,
+          );
+          setShipment(shippingRes.data);
+        } else if (!['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
+          throw new Error(`Shipment belum dapat dikirim dari status ${shipment.status}.`);
+        }
+      }
+
+      await apiPatch(
         `/api/v1/orders/${orderId}/status`,
         { status: newStatus },
         token,
@@ -202,6 +246,10 @@ export default function OrderDetailPage() {
   const subtotal = order.subtotal ?? order.items?.reduce((s, item) => s + (item.subtotal ?? item.price * item.quantity), 0) ?? 0;
   const shippingCost = order.shippingCost ?? 0;
   const discount = order.discount ?? 0;
+  const canHandOffShipment = Boolean(
+    shipment?.trackingNumber
+    && ['WAITING_PICKUP', 'PICKED_UP', 'IN_TRANSIT'].includes(shipment.status),
+  );
 
   const addr = order.shippingAddress;
   const addressStr = addr?.fullAddress ?? [
@@ -298,7 +346,7 @@ export default function OrderDetailPage() {
 
         {/* Action Buttons */}
         <div className="mt-5 flex gap-3 flex-wrap">
-          {order.status === 'PENDING' && (
+          {order.status === 'PAID' && (
             <button
               onClick={() => updateStatus('PROCESSING')}
               disabled={isUpdating}
@@ -317,9 +365,10 @@ export default function OrderDetailPage() {
             </button>
           )}
           {order.status === 'PROCESSING' && (
+            <>
             <button
               onClick={() => updateStatus('SHIPPED')}
-              disabled={isUpdating}
+              disabled={isUpdating || !canHandOffShipment}
               className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-bold rounded-sm transition-colors flex items-center gap-2"
             >
               {isUpdating ? (
@@ -331,8 +380,14 @@ export default function OrderDetailPage() {
                   local_shipping
                 </span>
               )}
-              Tandai Dikirim
+              Serahkan ke Kurir
             </button>
+            {!canHandOffShipment && (
+              <p role="status" className="self-center text-xs text-amber-900">
+                Shipment aktif dan nomor tracking diperlukan sebelum status pesanan dapat diubah.
+              </p>
+            )}
+            </>
           )}
         </div>
       </div>
@@ -386,29 +441,35 @@ export default function OrderDetailPage() {
           </div>
 
           {/* Shipping Info */}
-          {order.shipping && (
+          {(shipment || order.shipping) && (
             <div className="mt-4 pt-4 hairline-t flex flex-col gap-1.5 text-sm">
-              {order.shipping.courier && (
+              {(shipment?.courierName || order.shipping?.courier) && (
                 <div className="flex gap-3">
                   <span className="text-ink-secondary w-24 shrink-0">
                     Kurir
                   </span>
                   <span className="text-ink-primary">
-                    {order.shipping.courier}
-                    {order.shipping.service
-                      ? ` — ${order.shipping.service}`
+                    {shipment?.courierName ?? order.shipping?.courier}
+                    {(shipment?.serviceName ?? order.shipping?.service)
+                      ? ` — ${shipment?.serviceName ?? order.shipping?.service}`
                       : ''}
                   </span>
                 </div>
               )}
-              {order.shipping.trackingNumber && (
+              {(shipment?.trackingNumber ?? order.shipping?.trackingNumber) && (
                 <div className="flex gap-3">
                   <span className="text-ink-secondary w-24 shrink-0">
                     No. Resi
                   </span>
                   <span className="text-ink-primary font-mono">
-                    {order.shipping.trackingNumber}
+                    {shipment?.trackingNumber ?? order.shipping?.trackingNumber}
                   </span>
+                </div>
+              )}
+              {shipment?.status && (
+                <div className="flex gap-3">
+                  <span className="text-ink-secondary w-24 shrink-0">Status kirim</span>
+                  <span className="text-ink-primary">{shipment.status}</span>
                 </div>
               )}
             </div>

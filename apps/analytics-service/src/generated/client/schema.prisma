@@ -119,6 +119,7 @@ model CategoryPerformanceReport {
 
 model AnalyticsEvent {
   id          String    @id @default(uuid())
+  eventId     String?   @unique @map("event_id")
   eventName   String    @map("event_name")
   eventData   Json      @map("event_data")
   processedAt DateTime? @map("processed_at")

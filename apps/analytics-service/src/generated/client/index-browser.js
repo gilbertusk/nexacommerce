@@ -217,6 +217,7 @@ exports.Prisma.CategoryPerformanceReportScalarFieldEnum = {
 
 exports.Prisma.AnalyticsEventScalarFieldEnum = {
   id: 'id',
+  eventId: 'eventId',
   eventName: 'eventName',
   eventData: 'eventData',
   processedAt: 'processedAt',

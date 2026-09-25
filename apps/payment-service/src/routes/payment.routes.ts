@@ -44,6 +44,7 @@ router.get('/order/:orderId', restrictTo('CUSTOMER', 'ADMIN'), asyncHandler(paym
 // Admin endpoints
 router.get('/stats', restrictTo('ADMIN'), asyncHandler(paymentController.getPaymentStats));
 router.get('/', restrictTo('ADMIN'), asyncHandler(paymentController.listAllPayments));
+router.post('/order/:orderId/refunds', restrictTo('ADMIN'), asyncHandler(paymentController.requestRefund));
 
 // Internal endpoint
 router.post('/internal/payments/create', checkInternalService, asyncHandler(paymentController.createPaymentInternal));

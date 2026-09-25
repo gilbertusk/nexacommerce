@@ -106,6 +106,14 @@ export const swaggerSpec = {
         responses: { 201: { description: 'Image added', content: { 'application/json': { schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/ProductImage' } } } } } } },
       },
     },
+    '/products/products/{id}/images/upload': {
+      post: {
+        tags: ['Products'], summary: 'Upload a product image (SELLER owner or ADMIN)', security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', required: ['image'], properties: { image: { type: 'string', format: 'binary' } } } } } },
+        responses: { 201: { description: 'Image normalized to WebP and stored' }, 400: { description: 'Invalid image' }, 403: { description: 'Must be product owner or ADMIN' }, 413: { description: 'Upload exceeds 5 MB' }, 503: { description: 'Media storage is not configured' } },
+      },
+    },
     '/products/categories': {
       get: { tags: ['Categories'], summary: 'List all categories (public)', responses: { 200: { description: 'Category list', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'array', items: { $ref: '#/components/schemas/Category' } } } } } } } } },
       post: {

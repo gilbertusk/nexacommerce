@@ -1,6 +1,6 @@
 jest.mock('../../src/repositories/shipping.repository');
-jest.mock('../../src/prisma/client', () => ({ prisma: {} }));
-jest.mock('../../src/messaging/rabbitmq');
+const mockPrisma = { $transaction: jest.fn() };
+jest.mock('../../src/prisma/client', () => ({ prisma: mockPrisma }));
 
 import { ShippingService } from '../../src/services/shipping.service';
 import { shippingRepository } from '../../src/repositories/shipping.repository';
@@ -55,6 +55,26 @@ describe('ShippingService', () => {
         weight: 1000, courierCode: 'jne',
       });
       expect(result.length).toBeGreaterThan(0);
+      expect(result[0].cost).toBe(15000);
+    });
+
+    it('uses the configured total from the smallest sufficient weight bracket without recalculating it', async () => {
+      mockShippingRepo.findRates.mockResolvedValue([
+        { ...mockRate, id: 'rate-2kg', weight: 2000, cost: 30000 } as any,
+        { ...mockRate, id: 'rate-5kg', weight: 5000, cost: 67500 } as any,
+      ]);
+
+      const result = await service.getRates({
+        originCity: 'jakarta', destinationCity: 'bandung', weight: 1500,
+      });
+
+      expect(result).toEqual([expect.objectContaining({ serviceCode: 'REG', cost: 30000 })]);
+    });
+
+    it('rejects a zero or invalid package weight rather than returning a free quote', async () => {
+      await expect(service.getRates({ originCity: 'Jakarta', destinationCity: 'Bandung', weight: 0 }))
+        .rejects.toThrow('positive integer');
+      expect(mockShippingRepo.findRates).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundError when courier code does not exist', async () => {
@@ -64,6 +84,28 @@ describe('ShippingService', () => {
         originCity: 'jakarta', destinationCity: 'bandung',
         weight: 1000, courierCode: 'bad-courier',
       })).rejects.toThrow('Courier not found');
+    });
+  });
+
+  describe('createShippingOrder', () => {
+    it('does not invent a shipping fee when no configured rate matches', async () => {
+      mockShippingRepo.findShippingOrderByOrderId.mockResolvedValue(null);
+      mockShippingRepo.findCourierById.mockResolvedValue(mockCourier as any);
+      mockShippingRepo.findCourierByCode.mockResolvedValue(mockCourier as any);
+      mockShippingRepo.findRates.mockResolvedValue([]);
+
+      await expect(service.createShippingOrder({
+        orderId: 'order-1', courierId: 'courier-1', serviceCode: 'REG', weight: 1000,
+        originCity: 'Jakarta', destinationAddress: { city: 'Bandung' },
+      })).rejects.toThrow('No configured shipping rate');
+    });
+
+    it('rejects invalid weight and missing route before querying providers', async () => {
+      await expect(service.createShippingOrder({
+        orderId: 'order-1', courierId: 'courier-1', serviceCode: 'REG', weight: 0,
+        originCity: 'Jakarta', destinationAddress: { city: 'Bandung' },
+      })).rejects.toThrow('positive integer');
+      expect(mockShippingRepo.findShippingOrderByOrderId).not.toHaveBeenCalled();
     });
   });
 
@@ -112,6 +154,67 @@ describe('ShippingService', () => {
         { userId: 'seller-1', role: 'SELLER' },
         'NEW-TRACKING',
       )).rejects.toThrow('multi-seller');
+    });
+  });
+
+  describe('updateShippingStatus', () => {
+    const shippingOrder = {
+      ...mockTracking,
+      status: 'WAITING_PICKUP',
+      trackingNumber: 'JNE123456',
+      courierName: 'JNE',
+      serviceName: 'Regular',
+      estimatedDelivery: '2 days',
+      shippedAt: null,
+    };
+    const tx = { outboxEvent: { create: jest.fn() } };
+
+    beforeEach(() => {
+      tx.outboxEvent.create.mockResolvedValue({});
+      mockPrisma.$transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
+      mockShippingRepo.findShippingOrderByOrderId.mockResolvedValue(shippingOrder as any);
+      mockShippingRepo.claimShippingOrderStatus.mockResolvedValue({ count: 1 });
+      mockShippingRepo.createStatusHistory.mockResolvedValue({} as any);
+      jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { id: 'order-1', customerId: 'customer-1', items: [] } }),
+      } as Response);
+    });
+
+    it('claims the old status and writes OrderShipped to the same transaction', async () => {
+      await service.updateShippingStatus(
+        'order-1',
+        { userId: 'admin-1', role: 'ADMIN' },
+        { status: 'PICKED_UP', location: 'Jakarta' },
+      );
+
+      expect(mockShippingRepo.claimShippingOrderStatus).toHaveBeenCalledWith(
+        tx,
+        'track-1',
+        'WAITING_PICKUP',
+        expect.objectContaining({ status: 'PICKED_UP', shippedAt: expect.any(Date) }),
+      );
+      expect(tx.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          aggregateType: 'ShippingOrder',
+          aggregateId: 'order-1',
+          eventName: 'OrderShipped',
+          routingKey: 'order.shipped',
+        }),
+      });
+    });
+
+    it('rolls back the side effects when another request already changed the status', async () => {
+      mockShippingRepo.claimShippingOrderStatus.mockResolvedValueOnce({ count: 0 });
+
+      await expect(service.updateShippingStatus(
+        'order-1',
+        { userId: 'admin-1', role: 'ADMIN' },
+        { status: 'PICKED_UP' },
+      )).rejects.toThrow('changed concurrently');
+
+      expect(mockShippingRepo.createStatusHistory).not.toHaveBeenCalled();
+      expect(tx.outboxEvent.create).not.toHaveBeenCalled();
     });
   });
 });

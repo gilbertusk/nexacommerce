@@ -17,29 +17,33 @@ const logger = createLogger('auth-service');
 type AuthEmailType = 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
 
 export class AuthService {
-  private dispatchAuthEmail(options: {
+  private async dispatchAuthEmail(options: {
     type: AuthEmailType;
     email: string;
     name: string;
     token: string;
-  }): void {
-    void fetch(`${config.notificationServiceUrl}/notifications/internal/auth-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...buildInternalServiceHeaders('auth-service'),
-      },
-      body: JSON.stringify(options),
-      signal: AbortSignal.timeout(5000),
-    }).then((response) => {
+  }): Promise<boolean> {
+    try {
+      const response = await fetch(`${config.notificationServiceUrl}/notifications/internal/auth-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...buildInternalServiceHeaders('auth-service'),
+        },
+        body: JSON.stringify(options),
+        signal: AbortSignal.timeout(5000),
+      });
       if (!response.ok) {
         logger.error(`Notification service rejected ${options.type} delivery with status ${response.status}`);
+        return false;
       }
-    }).catch(() => {
-      // Public auth responses stay generic and do not leak account existence.
+      return true;
+    } catch {
+      // Do not return provider details or email tokens to the public client.
       // Durable retry/outbox delivery is introduced in Phase 3.
       logger.error(`Notification service unavailable while dispatching ${options.type}`);
-    });
+      return false;
+    }
   }
 
   async register(data: { name: string; email: string; password: string }) {
@@ -63,7 +67,7 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 1); // 24 hours
 
     await userRepository.createEmailVerificationToken(token, user.id, expiresAt);
-    this.dispatchAuthEmail({
+    const verificationEmailAccepted = await this.dispatchAuthEmail({
       type: 'EMAIL_VERIFICATION',
       email: user.email,
       name: user.name,
@@ -77,6 +81,7 @@ export class AuthService {
       role: user.role,
       status: user.status,
       emailVerified: user.emailVerified,
+      verificationEmailAccepted,
       createdAt: user.createdAt,
     };
   }

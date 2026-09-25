@@ -1,22 +1,41 @@
-name: Backend CI
+name: Workspace CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, main, develop]
     paths:
       - 'apps/**'
       - 'packages/**'
+      - 'frontend/**'
+      - 'scripts/**'
+      - '.github/workflows/backend-ci.yml'
       - 'package.json'
       - 'package-lock.json'
+      - 'tsconfig.base.json'
   pull_request:
-    branches: [main]
+    branches: [master, main, develop]
     paths:
       - 'apps/**'
       - 'packages/**'
+      - 'frontend/**'
+      - 'scripts/**'
+      - '.github/workflows/backend-ci.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.base.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workspace-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint-and-typecheck:
+  quality:
+    name: Lint and typecheck
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +43,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - name: Build packages
+      - name: Build shared packages
         run: |
           npm run build --workspace=packages/common --if-present
           npm run build --workspace=packages/types --if-present
@@ -32,14 +51,16 @@ jobs:
           npm run build --workspace=packages/logger --if-present
           npm run build --workspace=packages/validation --if-present
           npm run build --workspace=packages/event-contracts --if-present
-      - name: Type check all services
-        run: npm run typecheck --workspaces --if-present
-      - name: Lint all services
-        run: npm run lint --workspaces --if-present
+      - name: Typecheck every workspace
+        run: npm run typecheck
+      - name: Lint every workspace
+        run: npm run lint
 
   test:
+    name: Tests and migrations
     runs-on: ubuntu-latest
-    needs: lint-and-typecheck
+    needs: quality
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -64,11 +85,13 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://postgres:postgres123@localhost:5432/nexacommerce_test_db
+      CI: 'true'
+      NODE_ENV: test
+      TEST_DATABASE_BASE_URL: postgresql://postgres:postgres123@localhost:5432/nexacommerce_test_db
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: test-jwt-secret-ci
       JWT_REFRESH_SECRET: test-jwt-refresh-secret-ci
-      NODE_ENV: test
+      INTERNAL_SERVICE_TOKEN: test-internal-service-token-at-least-32-characters
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -76,7 +99,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - name: Build packages
+      - name: Build shared packages
         run: |
           npm run build --workspace=packages/common --if-present
           npm run build --workspace=packages/types --if-present
@@ -84,38 +107,51 @@ jobs:
           npm run build --workspace=packages/logger --if-present
           npm run build --workspace=packages/validation --if-present
           npm run build --workspace=packages/event-contracts --if-present
-      - name: Create test schemas
+      - name: Deploy migrations and test database services
+        shell: bash
         run: |
-          PGPASSWORD=postgres123 psql -h localhost -U postgres -d nexacommerce_test_db -c "
-            CREATE SCHEMA IF NOT EXISTS auth;
-            CREATE SCHEMA IF NOT EXISTS users;
-            CREATE SCHEMA IF NOT EXISTS products;
-            CREATE SCHEMA IF NOT EXISTS inventory;
-            CREATE SCHEMA IF NOT EXISTS orders;
-            CREATE SCHEMA IF NOT EXISTS payments;
-            CREATE SCHEMA IF NOT EXISTS vouchers;
-            CREATE SCHEMA IF NOT EXISTS shipping;
-            CREATE SCHEMA IF NOT EXISTS reviews;
-            CREATE SCHEMA IF NOT EXISTS notifications;
-            CREATE SCHEMA IF NOT EXISTS analytics;
-          "
-      - name: Run Prisma migrations (test)
-        run: |
-          for service in auth-service user-service product-service inventory-service order-service payment-service voucher-service shipping-service review-service notification-service analytics-service; do
-            schema="apps/$service/prisma/schema.prisma"
-            if [ -f "$schema" ]; then
-              npx prisma db push --schema="$schema" --skip-generate 2>/dev/null || true
-              npx prisma generate --schema="$schema" 2>/dev/null || true
-            fi
+          set -euo pipefail
+          services=(
+            'auth-service:auth_test'
+            'user-service:user_test'
+            'product-service:product_test'
+            'inventory-service:inventory_test'
+            'order-service:order_test'
+            'payment-service:payment_test'
+            'voucher-service:voucher_test'
+            'shipping-service:shipping_test'
+            'review-service:review_test'
+            'notification-service:notification_test'
+            'analytics-service:analytics_test'
+          )
+
+          for entry in "${services[@]}"; do
+            service="${entry%%:*}"
+            schema="${entry##*:}"
+            export DATABASE_URL="${TEST_DATABASE_BASE_URL}?schema=${schema}"
+            echo "Deploying and testing ${service} in schema ${schema}"
+            npx prisma migrate deploy --schema="apps/${service}/prisma/schema.prisma"
+            npx prisma generate --schema="apps/${service}/prisma/schema.prisma"
+            npm test --workspace="apps/${service}"
           done
-      - name: Run unit tests
-        run: npm run test:unit --workspaces --if-present
-      - name: Run integration tests
-        run: npm run test:integration --workspaces --if-present
+      - name: Test non-database workspaces
+        run: >-
+          npm test
+          --workspace=apps/api-gateway
+          --workspace=apps/cart-service
+          --workspace=apps/event-stream-service
+          --workspace=packages/common
+          --workspace=frontend/customer-web
+          --workspace=frontend/seller-dashboard
+          --if-present
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
   build:
+    name: Production build
     runs-on: ubuntu-latest
     needs: test
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -123,5 +159,5 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - name: Build all packages
-        run: npm run build --workspaces --if-present
+      - name: Build every workspace
+        run: npm run build

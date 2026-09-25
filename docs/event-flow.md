@@ -1,4 +1,4 @@
-# RabbitMQ Event-Driven Flow Topology
+# RabbitMQ Workflow and Kafka Business-Fact Flow
 
 This document describes the message broker architecture, exchange structure, event list, and consumer schemas of NexaCommerce.
 
@@ -36,7 +36,8 @@ Services bind distinct queues to this exchange using specific routing keys:
 | `OrderDelivered` | `order.delivered` | Shipping Service | Order, Notification | Courier delivers items | `{ orderId, deliveredAt }` | Updates order to `DELIVERED`; sends arrival alerts. |
 | `OrderCompleted` | `order.completed` | Order Service | Analytics, Notification | Customer accepts items, or auto-complete cron trigger (7 days) | `{ orderId, completedAt, total }` | Builds sales metrics; enables review eligibility for products. |
 | `ReviewCreated` | `review.created` | Review Service | Product, Analytics, Notification | Customer writes a review | `{ reviewId, productId, rating }` | Recalculates average rating and syncs to Product database. |
-| `LowStockDetected`| `low_stock` | Inventory Service | Notification | Stock falls below threshold | `{ productId, currentStock }` | Sends alert notification to the Seller. |
+| `LowStockDetected`| `stock.low_detected` | Inventory Service | Notification | Stock falls below threshold | `{ productId, currentStock }` | Sends alert notification to the Seller. |
+| All replayable facts | matching routing key | Domain outbox via RabbitMQ | Event Stream Service | RabbitMQ confirms the domain event | stable event envelope | Publishes a keyed schema-v1 record to the configured Kafka domain topic. |
 
 ---
 
@@ -76,7 +77,14 @@ sequenceDiagram
 
 ## 4. Error Handling & Dead Letter Queue (DLQ) Plan
 
-To ensure no events are lost due to transient errors (e.g., database timeout or network drop):
-1. **Compensating Retry:** Consumers catch runtime errors and reject the message with `requeue=true` up to 3 times (with incremental delays).
-2. **DLQ Routing:** If processing fails after 3 attempts, the message is routed to `nexacommerce.deadletter` exchange and stored in a DLQ queue (`deadletter.queue`) for manual audit.
-3. **Idempotency Check:** Every consumer verifies transaction IDs against processed lists before executing business actions.
+To prevent transient failures from becoming tight redelivery loops:
+1. **Confirmed delayed retry:** Consumers republish failures to `nexacommerce.events.retry`; a per-route queue waits 5 seconds before dead-lettering the delivery back to the main exchange. The default retry budget is 5 attempts and can be overridden per consumer.
+2. **Per-consumer DLQ:** Exhausted or malformed messages are broker-confirmed into `<consumer-queue>.dead` through `nexacommerce.events.dead`. The original delivery is acknowledged only after the retry/DLQ copy is confirmed.
+3. **Last-resort redelivery:** If RabbitMQ cannot confirm the retry/DLQ copy, the consumer nacks the original with `requeue=true` so the only copy is not lost.
+4. **Idempotency:** Durable consumers must claim `eventId` before side effects and treat an already-completed claim as a duplicate.
+
+---
+
+## 5. Kafka replay boundary
+
+RabbitMQ remains responsible for operational delivery. The durable `event-stream-service.business-facts` queue receives a copy of replayable facts, and the bridge only acknowledges each RabbitMQ message after Kafka acknowledges the corresponding keyed record. Kafka consumers build projections; they must not send workflow commands back into checkout/payment/inventory state during replay. See `docs/phase-4-kafka-streaming.md` for topic, key, retention, schema, consumer-group, and replay rules.

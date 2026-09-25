@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUserStore } from "@/lib/store/useUserStore";
 import { useOrders } from "@/lib/api/hooks/useOrders";
 import { formatIDR, formatDate } from "@/lib/utils/format";
@@ -12,7 +11,6 @@ import EmptyState from "@/components/ui/EmptyState";
 type TabKey = "ALL" | "PENDING" | "PAID" | "COMPLETED" | "CANCELLED";
 
 export default function OrdersHistoryPage() {
-  const router = useRouter();
   const { user } = useUserStore();
   const [activeTab, setActiveTab] = useState<TabKey>("ALL");
 
@@ -40,7 +38,10 @@ export default function OrdersHistoryPage() {
     if (activeTab === "CANCELLED") {
       return ["CANCELLED", "FAILED", "EXPIRED"].includes(order.status.toUpperCase());
     }
-    return order.status.toUpperCase() === activeTab;
+    const status = order.status.toUpperCase();
+    return activeTab === "PENDING"
+      ? ["PENDING", "PENDING_PAYMENT"].includes(status)
+      : status === activeTab;
   });
 
   if (isLoading) {

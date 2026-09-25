@@ -21,7 +21,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/*/node_modules ./packages/*/node_modules
 COPY . .
 
-RUN npx prisma generate --schema=apps/product-service/prisma/schema.prisma 2>/dev/null || true
+RUN npx prisma generate --schema=apps/product-service/prisma/schema.prisma
 
 RUN npm run build --workspace=packages/types --if-present
 RUN npm run build --workspace=packages/config --if-present
@@ -44,8 +44,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nexacommerce
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/packages/*/dist ./packages/*/dist
-COPY --from=builder /app/packages/*/package.json ./packages/*/
+COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/product-service/dist ./apps/product-service/dist
 COPY --from=builder /app/apps/product-service/package.json ./apps/product-service/
 COPY --from=builder /app/apps/product-service/prisma ./apps/product-service/prisma 2>/dev/null || true

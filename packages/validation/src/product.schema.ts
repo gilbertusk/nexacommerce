@@ -23,7 +23,7 @@ export const createProductSchema = z.object({
   sellerId: z.string().min(1, 'Seller ID is required'),
   brandId: z.string().uuid('Invalid brand ID').optional(),
   sku: z.string().optional(),
-  weight: z.number().int().positive('Weight must be positive').optional(),
+  weight: z.number().int().positive('Weight must be a positive integer in grams'),
   status: ProductStatusEnum.optional(),
 });
 

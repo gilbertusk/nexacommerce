@@ -1,8 +1,21 @@
 import app from './app';
 import { config } from './config/index';
-import { initRabbitMQ } from './messaging/rabbitmq';
+import { initRabbitMQ, stopRabbitMQ } from './messaging/rabbitmq';
+import { prisma } from './prisma/client';
 
-app.listen(config.port, async () => {
+const server = app.listen(config.port, async () => {
   console.log(`[Inventory Service] running on port ${config.port}`);
   await initRabbitMQ();
 });
+
+async function shutdown(signal: string) {
+  console.log(`[Inventory Service] ${signal} received; shutting down.`);
+  server.close(async () => {
+    await stopRabbitMQ();
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}
+
+process.once('SIGTERM', () => void shutdown('SIGTERM'));
+process.once('SIGINT', () => void shutdown('SIGINT'));

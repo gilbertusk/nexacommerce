@@ -79,15 +79,11 @@ export class VoucherController {
       throw new ValidationError('Authentication required: user ID missing');
     }
 
-    const { code, items } = req.body;
+    const { code } = req.body;
     if (!code) {
       throw new ValidationError('Voucher code is required');
     }
-    if (!items || !Array.isArray(items)) {
-      throw new ValidationError('Items array is required for validation');
-    }
-
-    const result = await voucherService.validateVoucher(code, userId, items);
+    const result = await voucherService.validateCustomerVoucher(code.trim().toUpperCase(), userId);
     return res.status(200).json({
       success: true,
       data: {

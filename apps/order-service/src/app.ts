@@ -53,27 +53,29 @@ app.get('/orders/docs/spec.json', (req, res) => res.json(swaggerSpec));
 app.use('/orders/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/orders', orderRoutes);
 
-// Cron: every 5 minutes — cancel expired orders + auto-complete delivered orders
-setInterval(() => {
-  logger.info('[Order Service] Running cron job...');
-  orderService.checkAndCancelExpiredOrders().catch((err) => {
-    logger.error('Error in checkAndCancelExpiredOrders:', err);
-  });
-  orderService.checkAndCompleteDeliveredOrders().catch((err) => {
-    logger.error('Error in checkAndCompleteDeliveredOrders:', err);
-  });
-}, 5 * 60 * 1000);
+if (process.env.NODE_ENV !== 'test') {
+  // Cron: every 5 minutes — cancel expired orders + auto-complete delivered orders
+  setInterval(() => {
+    logger.info('[Order Service] Running cron job...');
+    orderService.checkAndCancelExpiredOrders().catch((err) => {
+      logger.error('Error in checkAndCancelExpiredOrders:', err);
+    });
+    orderService.checkAndCompleteDeliveredOrders().catch((err) => {
+      logger.error('Error in checkAndCompleteDeliveredOrders:', err);
+    });
+  }, 5 * 60 * 1000);
 
-// Run once on startup after delay
-setTimeout(() => {
-  logger.info('[Order Service] Running startup cron checks...');
-  orderService.checkAndCancelExpiredOrders().catch((err) => {
-    logger.error('Error in startup expired orders check:', err);
-  });
-  orderService.checkAndCompleteDeliveredOrders().catch((err) => {
-    logger.error('Error in startup delivered orders check:', err);
-  });
-}, 10000);
+  // Run once on startup after delay
+  setTimeout(() => {
+    logger.info('[Order Service] Running startup cron checks...');
+    orderService.checkAndCancelExpiredOrders().catch((err) => {
+      logger.error('Error in startup expired orders check:', err);
+    });
+    orderService.checkAndCompleteDeliveredOrders().catch((err) => {
+      logger.error('Error in startup delivered orders check:', err);
+    });
+  }, 10000);
+}
 
 // Centralized error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

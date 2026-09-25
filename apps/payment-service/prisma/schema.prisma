@@ -18,7 +18,7 @@ model Payment {
   externalId     String?      @map("external_id")
   paymentUrl     String?      @map("payment_url")
   qrisString     String?      @map("qris_string")
-  status         String       @default("PENDING") // PENDING, PAID, FAILED, EXPIRED, REFUNDED
+  status         String       @default("PENDING") // PENDING, PAID, PARTIALLY_REFUNDED, FAILED, EXPIRED, REFUNDED
   paidAt         DateTime?    @map("paid_at")
   expiredAt      DateTime?    @map("expired_at")
   failedAt       DateTime?    @map("failed_at")
@@ -34,7 +34,7 @@ model PaymentLog {
   id         String   @id @default(uuid())
   paymentId  String   @map("payment_id")
   payment    Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  action     String   // CREATED, STATUS_CHECK, WEBHOOK_RECEIVED, STATUS_UPDATED, REFUND_REQUESTED
+  action     String // CREATED, STATUS_CHECK, WEBHOOK_RECEIVED, STATUS_UPDATED, REFUND_REQUESTED
   fromStatus String?  @map("from_status")
   toStatus   String?  @map("to_status")
   metadata   Json?
@@ -69,5 +69,30 @@ model Refund {
   processedAt DateTime? @map("processed_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 
+  @@index([paymentId, status])
+  @@index([orderId])
   @@map("refunds")
+}
+
+model OutboxEvent {
+  id            String    @id
+  aggregateType String    @map("aggregate_type")
+  aggregateId   String    @map("aggregate_id")
+  eventName     String    @map("event_name")
+  routingKey    String    @map("routing_key")
+  eventPayload  Json      @map("event_payload")
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  availableAt   DateTime  @default(now()) @map("available_at")
+  lockedAt      DateTime? @map("locked_at")
+  lockToken     String?   @map("lock_token")
+  publishedAt   DateTime? @map("published_at")
+  lastError     String?   @map("last_error") @db.VarChar(1000)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, availableAt])
+  @@index([lockedAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
 }

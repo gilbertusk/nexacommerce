@@ -3,6 +3,10 @@ import { productRepository } from '../repositories/product.repository';
 import { brandRepository } from '../repositories/brand.repository';
 import { ProductStatus } from '../generated/client';
 import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from '@nexacommerce/common';
+import { productMediaStorage } from './product-media-storage.service';
+import { createLogger } from '@nexacommerce/logger';
+
+const logger = createLogger('product-service');
 
 export class ProductService {
   // --- Category ---
@@ -133,7 +137,7 @@ export class ProductService {
     sellerId: string;
     brandId?: string;
     sku?: string;
-    weight?: number;
+    weight: number;
     status?: ProductStatus;
   }) {
     const category = await categoryRepository.findById(data.categoryId);
@@ -163,7 +167,7 @@ export class ProductService {
       sellerId: data.sellerId,
       brandId: data.brandId || null,
       sku: data.sku || null,
-      weight: data.weight || 0,
+      weight: data.weight,
       status: data.status || ProductStatus.DRAFT,
     });
   }
@@ -281,6 +285,19 @@ export class ProductService {
     actor: { userId: string; role: string },
     data: { url: string; alt?: string; sortOrder?: number; isMain?: boolean }
   ) {
+    if (data.url.length > 2048) {
+      throw new ValidationError('Product image URL must not exceed 2048 characters');
+    }
+    let imageUrl: URL;
+    try {
+      imageUrl = new URL(data.url);
+    } catch {
+      throw new ValidationError('Product image URL must be a valid HTTPS URL');
+    }
+    if (imageUrl.protocol !== 'https:' || !imageUrl.hostname || imageUrl.username || imageUrl.password) {
+      throw new ValidationError('Product image URL must be a valid HTTPS URL without embedded credentials');
+    }
+
     const product = await productRepository.findById(productId);
     if (!product) {
       throw new NotFoundError('Product not found');
@@ -304,6 +321,37 @@ export class ProductService {
     return productRepository.addImage(productId, data);
   }
 
+  async uploadProductImage(
+    productId: string,
+    actor: { userId: string; role: string },
+    file: { buffer: Buffer; size: number }
+  ) {
+    const product = await productRepository.findById(productId);
+    if (!product) throw new NotFoundError('Product not found');
+    if (actor.role !== 'ADMIN' && product.sellerId !== actor.userId) {
+      throw new ForbiddenError('You are not authorized to modify this product');
+    }
+
+    const uploaded = await productMediaStorage.uploadProductImage(productId, file);
+    try {
+      const totalImages = await productRepository.countImages(productId);
+      if (totalImages === 0) await productRepository.unsetMainImages(productId);
+      return await productRepository.addImage(productId, {
+        url: uploaded.url,
+        alt: product.name,
+        sortOrder: totalImages,
+        isMain: totalImages === 0,
+      });
+    } catch (error) {
+      try {
+        await productMediaStorage.deleteProductImageByUrl(uploaded.url);
+      } catch {
+        logger.error('Could not remove uploaded object after product image record failed');
+      }
+      throw error;
+    }
+  }
+
   async deleteProductImage(productId: string, imageId: string, actor: { userId: string; role: string }) {
     const product = await productRepository.findById(productId);
     if (!product) {
@@ -320,6 +368,14 @@ export class ProductService {
     }
 
     await productRepository.deleteImage(imageId);
+
+    try {
+      await productMediaStorage.deleteProductImageByUrl(image.url);
+    } catch {
+      // The database record is already deleted. Keep the API result successful and
+      // report an orphaned object for operational cleanup rather than restore a broken reference.
+      logger.error('Could not delete product image object from media storage');
+    }
 
     // If we deleted the main image, make the first remaining image main
     if (image.isMain) {

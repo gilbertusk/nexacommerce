@@ -20,49 +20,49 @@ describe('Analytics Routes (integration)', () => {
     });
   });
 
-  describe('GET /analytics/analytics/dashboard', () => {
+  describe('GET /analytics/dashboard', () => {
     it('returns 403 for non-ADMIN', async () => {
       const res = await request(app)
-        .get('/analytics/analytics/dashboard')
+        .get('/analytics/dashboard')
         .set(sellerHeaders);
       expect([403, 500]).toContain(res.status);
     });
 
     it('accepts ADMIN request', async () => {
       const res = await request(app)
-        .get('/analytics/analytics/dashboard')
+        .get('/analytics/dashboard')
         .set(adminHeaders);
       expect([200, 500]).toContain(res.status);
     });
   });
 
-  describe('GET /analytics/analytics/seller/dashboard', () => {
+  describe('GET /analytics/seller/dashboard', () => {
     it('accepts SELLER request', async () => {
       const res = await request(app)
-        .get('/analytics/analytics/seller/dashboard')
+        .get('/analytics/seller/dashboard')
         .set(sellerHeaders);
       expect([200, 500]).toContain(res.status);
     });
 
     it('returns 403 for CUSTOMER', async () => {
       const res = await request(app)
-        .get('/analytics/analytics/seller/dashboard')
+        .get('/analytics/seller/dashboard')
         .set({ 'x-user-id': 'u1', 'x-user-role': 'CUSTOMER', 'x-user-email': 'u@u.com' });
       expect([403, 500]).toContain(res.status);
     });
   });
 
-  describe('GET /analytics/analytics/revenue', () => {
+  describe('GET /analytics/revenue', () => {
     it('requires ADMIN role', async () => {
-      const res = await request(app).get('/analytics/analytics/revenue').set(adminHeaders);
+      const res = await request(app).get('/analytics/revenue').set(adminHeaders);
       expect([200, 500]).toContain(res.status);
     });
   });
 
-  describe('GET /analytics/analytics/products/top-selling', () => {
+  describe('GET /analytics/products/top-selling', () => {
     it('accessible by ADMIN', async () => {
       const res = await request(app)
-        .get('/analytics/analytics/products/top-selling')
+        .get('/analytics/products/top-selling')
         .set(adminHeaders);
       expect([200, 500]).toContain(res.status);
     });

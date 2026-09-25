@@ -2,7 +2,7 @@ import { profileRepository } from '../repositories/profile.repository';
 import { sellerRepository } from '../repositories/seller.repository';
 import { addressRepository } from '../repositories/address.repository';
 import { config } from '../config';
-import { NotFoundError, ValidationError, ConflictError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
+import { AppError, NotFoundError, ValidationError, ConflictError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
 
 export class UserService {
   // --- Profile ---
@@ -43,12 +43,13 @@ export class UserService {
 
       const resBody = await response.json() as any;
       if (!response.ok) {
-        throw new ValidationError(resBody.message || 'Internal call failed', resBody.errors);
+        const statusCode = response.status >= 500 ? 502 : response.status;
+        throw new AppError(resBody.message || 'Auth Service request failed', statusCode);
       }
       return resBody.data;
     } catch (err: any) {
-      if (err instanceof ValidationError) throw err;
-      throw new ValidationError(`Auth Service communication error: ${err.message}`);
+      if (err instanceof AppError) throw err;
+      throw new AppError('Auth Service unavailable', 502);
     }
   }
 
@@ -219,13 +220,16 @@ export class UserService {
       throw new NotFoundError('Seller profile not found');
     }
 
-    const updateData: any = { status };
-    if (status === 'ACTIVE') {
-      updateData.isVerified = true;
-      updateData.verifiedAt = new Date();
-    } else if (status === 'SUSPENDED') {
-      updateData.isVerified = false;
+    if (!['ACTIVE', 'REJECTED', 'SUSPENDED'].includes(status)) {
+      throw new ValidationError('Invalid seller profile status');
     }
+
+    const isVerified = status === 'ACTIVE';
+    const updateData = {
+      status,
+      isVerified,
+      verifiedAt: isVerified ? new Date() : null,
+    };
 
     return sellerRepository.updateById(id, updateData);
   }

@@ -143,6 +143,21 @@ export class ShippingRepository {
     });
   }
 
+  async claimShippingOrderStatus(tx: Prisma.TransactionClient, id: string, currentStatus: string, data: {
+    status: string;
+    shippedAt?: Date | null;
+    deliveredAt?: Date | null;
+  }) {
+    return tx.shippingOrder.updateMany({
+      where: { id, status: currentStatus },
+      data: {
+        status: data.status,
+        shippedAt: data.shippedAt,
+        deliveredAt: data.deliveredAt,
+      },
+    });
+  }
+
   async findRates(originCity: string, destinationCity: string, weight: number, courierId?: string) {
     const whereClause: any = {
       originCity: { equals: originCity, mode: 'insensitive' },

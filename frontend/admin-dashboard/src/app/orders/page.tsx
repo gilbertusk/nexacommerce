@@ -26,7 +26,7 @@ interface OrdersResponse {
 
 const STATUSES = [
   { value: "", label: "Semua Status" },
-  { value: "PENDING", label: "Menunggu" },
+  { value: "PENDING_PAYMENT", label: "Menunggu Pembayaran" },
   { value: "PAID", label: "Dibayar" },
   { value: "SHIPPED", label: "Dikirim" },
   { value: "COMPLETED", label: "Selesai" },
@@ -34,7 +34,7 @@ const STATUSES = [
 ];
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING: "bg-yellow-50 text-yellow-700",
+  PENDING_PAYMENT: "bg-yellow-50 text-yellow-700",
   PAID: "bg-blue-50 text-blue-700",
   SHIPPED: "bg-indigo-50 text-indigo-700",
   COMPLETED: "bg-green-50 text-green-700",
@@ -42,7 +42,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Menunggu",
+  PENDING_PAYMENT: "Menunggu Pembayaran",
   PAID: "Dibayar",
   SHIPPED: "Dikirim",
   COMPLETED: "Selesai",
@@ -89,8 +89,15 @@ export default function OrdersPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-serif text-ink-primary mb-1">Manajemen Pesanan</h1>
-        <p className="text-sm text-ink-secondary">Pantau seluruh transaksi dan status pesanan pelanggan.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-serif text-ink-primary mb-1">Manajemen Pesanan</h1>
+            <p className="text-sm text-ink-secondary">Pantau seluruh transaksi dan status pesanan pelanggan.</p>
+          </div>
+          <Link href="/orders/complaints" className="px-4 py-2 bg-ink-primary text-white text-xs font-bold uppercase tracking-widest rounded-sm">
+            Komplain Pelanggan
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white hairline rounded-sm flex flex-col">

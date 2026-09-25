@@ -17,7 +17,9 @@ export class ReviewController {
 
   createReview = async (req: Request, res: Response) => {
     const userId = req.headers['x-user-id'] as string;
-    const userName = req.headers['x-user-email'] as string || 'Verified Purchase'; // fallback or name
+    // Email is PII and this field is returned by public review endpoints.
+    // Until a public display-name contract is available, use a neutral label.
+    const userName = 'Customer';
     
     // Zod validation should be applied or simple check
     const { productId, orderId, orderItemId, rating, title, content, images } = req.body;

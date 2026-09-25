@@ -44,6 +44,7 @@ router.post(
 router.get('/', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(notificationController.getNotifications));
 router.get('/unread-count', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(notificationController.getUnreadCount));
 router.patch('/:id/read', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(notificationController.markAsRead));
+router.delete('/:id', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(notificationController.deleteNotification));
 router.post('/read-all', restrictTo('CUSTOMER', 'SELLER', 'ADMIN'), asyncHandler(notificationController.markAllAsRead));
 
 // --- Admin routes ---

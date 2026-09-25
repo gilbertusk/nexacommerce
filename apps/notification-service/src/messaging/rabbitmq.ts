@@ -84,7 +84,7 @@ async function fetchReview(reviewId: string): Promise<{ title: string; content: 
 export async function initRabbitMQ() {
   try {
     const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createChannel();
+    channel = await connection.createConfirmChannel();
 
     // Ensure exchange and queues topology exists
     await setupExchangeAndQueues(channel);
@@ -93,7 +93,7 @@ export async function initRabbitMQ() {
     await createConsumer(channel, QUEUES.NOTIFICATION_EVENTS, async (event: any) => {
       logger.info(`[Notification Service] Received event: ${event.eventName}`);
 
-      const { eventName, payload } = event;
+      const { eventId, eventName, payload } = event;
 
       try {
         switch (eventName) {
@@ -115,6 +115,7 @@ export async function initRabbitMQ() {
                 orderId,
                 totalAmount: `$${grandTotal}`,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -136,6 +137,7 @@ export async function initRabbitMQ() {
                 customerName: customer.name,
                 orderId,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -157,6 +159,7 @@ export async function initRabbitMQ() {
                 customerName: customer.name,
                 orderId,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -181,6 +184,7 @@ export async function initRabbitMQ() {
                 serviceCode: serviceName,
                 trackingNumber,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -202,6 +206,7 @@ export async function initRabbitMQ() {
                 customerName: customer.name,
                 orderId,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -226,6 +231,7 @@ export async function initRabbitMQ() {
                 currentStock,
                 threshold,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -251,6 +257,7 @@ export async function initRabbitMQ() {
                 title: review.title,
                 content: review.content,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -272,6 +279,7 @@ export async function initRabbitMQ() {
                 customerName: customer.name,
                 orderId,
               },
+              sourceEventId: eventId,
             });
             break;
           }
@@ -281,6 +289,9 @@ export async function initRabbitMQ() {
         }
       } catch (innerErr: any) {
         logger.error(`Error processing event payload for ${eventName}: ${innerErr.message}`, { stack: innerErr.stack });
+        // Propagate failures so the shared consumer can broker-confirm a retry
+        // (or route the event to the DLQ after the retry budget is exhausted).
+        throw innerErr;
       }
     });
 

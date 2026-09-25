@@ -20,34 +20,34 @@ describe('User Routes (integration)', () => {
     });
   });
 
-  describe('GET /users/users/me', () => {
+  describe('GET /users/me', () => {
     it('returns 401 without user context', async () => {
-      const res = await request(app).get('/users/users/me');
-      expect([401, 403]).toContain(res.status);
+      const res = await request(app).get('/users/me');
+      expect(res.status).toBe(401);
     });
 
     it('returns user profile for authenticated user', async () => {
-      const res = await request(app).get('/users/users/me').set(customerHeaders);
+      const res = await request(app).get('/users/me').set(customerHeaders);
       expect([200, 404, 500]).toContain(res.status);
     });
   });
 
-  describe('GET /users/users', () => {
+  describe('GET /users', () => {
     it('returns 403 for non-ADMIN', async () => {
-      const res = await request(app).get('/users/users').set(customerHeaders);
-      expect([403, 500]).toContain(res.status);
+      const res = await request(app).get('/users').set(customerHeaders);
+      expect(res.status).toBe(403);
     });
 
     it('accepts ADMIN request', async () => {
-      const res = await request(app).get('/users/users').set(adminHeaders);
-      expect([200, 500]).toContain(res.status);
+      const res = await request(app).get('/users').set(adminHeaders);
+      expect([200, 502]).toContain(res.status);
     });
   });
 
-  describe('GET /users/users/me/addresses', () => {
+  describe('GET /users/me/addresses', () => {
     it('returns address list for authenticated user', async () => {
       const res = await request(app)
-        .get('/users/users/me/addresses')
+        .get('/users/me/addresses')
         .set(customerHeaders);
       expect([200, 500]).toContain(res.status);
     });

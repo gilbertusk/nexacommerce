@@ -27,7 +27,14 @@ describe('Shipping Routes (integration)', () => {
   describe('GET /shipping/rates', () => {
     it('returns 400 without required params', async () => {
       const res = await request(app).get('/shipping/rates');
-      expect([400, 500]).toContain(res.status);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects non-integer weight before querying shipping data', async () => {
+      const res = await request(app)
+        .get('/shipping/rates')
+        .query({ originCity: 'jakarta', destinationCity: 'bandung', weight: '1000.5' });
+      expect(res.status).toBe(400);
     });
 
     it('accepts request with required params', async () => {

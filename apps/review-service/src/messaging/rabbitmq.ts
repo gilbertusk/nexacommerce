@@ -1,45 +1,121 @@
-import { Channel } from 'amqplib';
-import { connectRabbitMQ, setupExchangeAndQueues, createPublisher } from '@nexacommerce/common';
+import type { Channel, ChannelModel } from 'amqplib';
+import { connectRabbitMQ, createPublisher, setupExchangeAndQueues } from '@nexacommerce/common';
+import { EXCHANGE_NAME } from '@nexacommerce/event-contracts';
+import { createLogger } from '@nexacommerce/logger';
 import { config } from '../config';
-import { ROUTING_KEYS } from '@nexacommerce/event-contracts';
-import crypto from 'crypto';
+import {
+  claimReviewOutboxBatch,
+  markReviewOutboxPublished,
+  releaseReviewOutboxClaim,
+  rescheduleReviewOutbox,
+} from './outbox';
 
-let channel: Channel;
-let publish: ReturnType<typeof createPublisher>;
+const logger = createLogger('review-messaging');
 
-export async function initRabbitMQ() {
+let connection: ChannelModel | undefined;
+let channel: Channel | undefined;
+let publishEvent: ReturnType<typeof createPublisher> | undefined;
+let connectPromise: Promise<void> | undefined;
+let dispatcherTimer: NodeJS.Timeout | undefined;
+let dispatching = false;
+
+async function ensurePublisher(): Promise<void> {
+  if (publishEvent) return;
+  if (connectPromise) return connectPromise;
+
+  connectPromise = (async () => {
+    const nextConnection = await connectRabbitMQ(config.rabbitmqUrl);
+    let nextChannel: Channel | undefined;
+    try {
+      nextChannel = await nextConnection.createConfirmChannel();
+      await setupExchangeAndQueues(nextChannel);
+    } catch (error) {
+      if (nextChannel) await nextChannel.close().catch(() => undefined);
+      await nextConnection.close().catch(() => undefined);
+      throw error;
+    }
+
+    const resetPublisher = () => {
+      if (channel === nextChannel) {
+        channel = undefined;
+        connection = undefined;
+        publishEvent = undefined;
+      }
+    };
+    nextConnection.on('close', resetPublisher);
+    nextChannel.on('close', resetPublisher);
+
+    connection = nextConnection;
+    channel = nextChannel;
+    publishEvent = createPublisher(nextChannel, EXCHANGE_NAME);
+    logger.info('[RabbitMQ] Review publisher initialized successfully.');
+  })().finally(() => {
+    connectPromise = undefined;
+  });
+
+  return connectPromise;
+}
+
+export async function dispatchReviewOutboxOnce(): Promise<number> {
+  if (dispatching) return 0;
+  dispatching = true;
   try {
-    const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createChannel();
-    
-    // Ensure topology
-    await setupExchangeAndQueues(channel);
-    
-    publish = createPublisher(channel);
-  } catch (err: any) {
-    console.error('[Review Service] Failed to initialize RabbitMQ:', err.message);
-    throw err;
+    await ensurePublisher();
+    const events = await claimReviewOutboxBatch(config.outboxBatchSize, config.outboxLeaseMs);
+    let published = 0;
+
+    for (let index = 0; index < events.length; index += 1) {
+      const event = events[index];
+      const lockToken = event.lockToken;
+      if (!lockToken) continue;
+
+      try {
+        await publishEvent!(event.routingKey, event.eventPayload);
+        await markReviewOutboxPublished(event.id, lockToken);
+        published += 1;
+      } catch (error) {
+        await rescheduleReviewOutbox(event.id, lockToken, event.attempts, error);
+        await Promise.all(events.slice(index + 1).map((pending) => pending.lockToken
+          ? releaseReviewOutboxClaim(pending.id, pending.lockToken)
+          : Promise.resolve()));
+        throw error;
+      }
+    }
+
+    return published;
+  } finally {
+    dispatching = false;
   }
 }
 
-export async function publishReviewCreated(payload: {
-  reviewId: string;
-  productId: string;
-  customerId: string;
-  rating: number;
-  orderId: string;
-}) {
-  if (!publish) {
-    console.warn('[Review Service] Publisher not initialized. Queue message skipped.');
-    return;
+function startOutboxDispatcher(): void {
+  if (dispatcherTimer) return;
+  dispatcherTimer = setInterval(() => {
+    void dispatchReviewOutboxOnce().catch((error) => {
+      logger.error('[Outbox] Dispatch failed; pending events remain durable:', error);
+    });
+  }, config.outboxPollIntervalMs);
+  dispatcherTimer.unref();
+}
+
+export async function initRabbitMQ(): Promise<void> {
+  startOutboxDispatcher();
+  try {
+    await dispatchReviewOutboxOnce();
+  } catch (error) {
+    logger.error('[RabbitMQ] Initial connection failed; outbox dispatcher will retry:', error);
   }
+}
 
-  const event = {
-    eventId: crypto.randomUUID(),
-    eventName: 'ReviewCreated' as const,
-    timestamp: new Date().toISOString(),
-    payload,
-  };
-
-  await publish(ROUTING_KEYS.REVIEW_CREATED, event);
+export async function stopRabbitMQ(): Promise<void> {
+  if (dispatcherTimer) clearInterval(dispatcherTimer);
+  dispatcherTimer = undefined;
+  if (connectPromise) await connectPromise.catch(() => undefined);
+  publishEvent = undefined;
+  const activeChannel = channel;
+  const activeConnection = connection;
+  channel = undefined;
+  connection = undefined;
+  if (activeChannel) await activeChannel.close().catch(() => undefined);
+  if (activeConnection) await activeConnection.close().catch(() => undefined);
 }

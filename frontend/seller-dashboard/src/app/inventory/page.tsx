@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPut } from '@/lib/api/client';
+import { apiGet, apiPost } from '@/lib/api/client';
 
 interface InventoryItem {
   id: string;
@@ -14,9 +14,9 @@ interface InventoryItem {
   };
   productName?: string;
   currentStock?: number;
+  availableStock?: number;
   stock?: number;
   reservedStock?: number;
-  availableStock?: number;
 }
 
 interface InventoryResponse {
@@ -87,6 +87,8 @@ export default function InventoryPage() {
   }, [seller, token, page]);
 
   useEffect(() => {
+    // This effect starts an asynchronous API request; its callback owns loading/result state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchInventory();
   }, [fetchInventory]);
 
@@ -99,9 +101,19 @@ export default function InventoryPage() {
 
     setUpdatingId(itemId);
     try {
-      await apiPut(
-        `/api/v1/inventory/${itemId}`,
-        { stock: newStock },
+      const currentStock = item.currentStock ?? item.stock ?? 0;
+      const delta = newStock - currentStock;
+      if (delta === 0) {
+        setStockUpdates((prev) => {
+          const next = { ...prev };
+          delete next[itemId];
+          return next;
+        });
+        return;
+      }
+      await apiPost(
+        `/api/v1/inventory/${delta > 0 ? 'stock-in' : 'stock-out'}`,
+        { productId: itemId, quantity: Math.abs(delta), note: 'Perubahan stok dari dashboard penjual' },
         token,
       );
       setUpdateSuccess(itemId);

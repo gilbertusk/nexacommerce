@@ -1,7 +1,7 @@
 import { shippingRepository } from '../repositories/shipping.repository';
 import { prisma } from '../prisma/client';
 import { AppError, NotFoundError, ValidationError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
-import { publishOrderShipped, publishOrderDelivered } from '../messaging/rabbitmq';
+import { enqueueOrderDelivered, enqueueOrderShipped } from '../messaging/outbox';
 import { config } from '../config';
 import crypto from 'crypto';
 
@@ -53,6 +53,13 @@ export class ShippingService {
     weight: number;
     courierCode?: string;
   }) {
+    if (!params.originCity?.trim() || !params.destinationCity?.trim()) {
+      throw new ValidationError('Origin and destination cities are required');
+    }
+    if (!Number.isSafeInteger(params.weight) || params.weight <= 0) {
+      throw new ValidationError('Shipping weight must be a positive integer in grams');
+    }
+
     let courierId: string | undefined;
     if (params.courierCode) {
       const courier = await shippingRepository.findCourierByCode(params.courierCode);
@@ -74,19 +81,16 @@ export class ShippingService {
     for (const rate of rates) {
       const key = `${rate.courierId}-${rate.serviceCode}`;
       if (!grouped.has(key)) {
-        // Calculate cost based on weight scale (e.g. weight / 1000g, rounded up, times base cost per kg)
-        // Wait, the rate entries in database can represent cost per kg, or flat cost.
-        // Let's assume rate.cost is the base rate for this weight bracket.
-        const multiplier = Math.ceil(params.weight / rate.weight);
-        const totalCost = Number(rate.cost) * (rate.weight === 1000 ? multiplier : 1);
-        
+        // ShippingRate.cost is the configured total for this matching weight bracket.
+        // The repository returns the smallest sufficient bracket first; recomputing
+        // the amount here would make persisted courier rates ambiguous.
         const serviceInfo = (rate.courier.services as any[]).find((s: any) => s.code === rate.serviceCode);
 
         grouped.set(key, {
           courierName: rate.courier.name,
           serviceCode: rate.serviceCode,
           serviceName: serviceInfo ? serviceInfo.name : rate.serviceCode,
-          cost: totalCost,
+          cost: Number(rate.cost),
           estimatedDays: rate.estimatedDays,
         });
       }
@@ -104,6 +108,13 @@ export class ShippingService {
     destinationAddress: any;
     notes?: string;
   }) {
+    if (!Number.isSafeInteger(data.weight) || data.weight <= 0) {
+      throw new ValidationError('Shipping weight must be a positive integer in grams');
+    }
+    if (!data.originCity?.trim() || !data.destinationAddress?.city?.trim()) {
+      throw new ValidationError('Verified origin and destination cities are required');
+    }
+
     const existing = await shippingRepository.findShippingOrderByOrderId(data.orderId);
     if (existing) {
       return existing; // idempotent
@@ -113,6 +124,7 @@ export class ShippingService {
     if (!courier) {
       throw new NotFoundError('Courier not found');
     }
+    if (!courier.isActive) throw new ValidationError('Courier is inactive');
 
     const serviceInfo = (courier.services as any[]).find((s: any) => s.code === data.serviceCode);
     if (!serviceInfo) {
@@ -128,7 +140,10 @@ export class ShippingService {
     });
 
     const selectedRate = rates.find((r) => r.serviceCode === data.serviceCode);
-    const cost = selectedRate ? selectedRate.cost : 15000; // fallback cost
+    if (!selectedRate) {
+      throw new ValidationError('No configured shipping rate is available for this route, service, and weight');
+    }
+    const cost = selectedRate.cost;
 
     // Generate tracking number: format NXC-SHP-{YYYYMMDD}-{random 6 chars uppercase}
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -211,12 +226,15 @@ export class ShippingService {
     const shippedAt = nextStatus === 'PICKED_UP' ? new Date() : order.shippedAt;
     const deliveredAt = nextStatus === 'DELIVERED' ? new Date() : order.deliveredAt;
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const ord = await shippingRepository.updateShippingOrderStatus(tx, order.id, {
+    await prisma.$transaction(async (tx) => {
+      const claim = await shippingRepository.claimShippingOrderStatus(tx, order.id, currentStatus, {
         status: nextStatus,
         shippedAt,
         deliveredAt,
       });
+      if (claim.count !== 1) {
+        throw new ValidationError('Shipping status changed concurrently; reload and retry');
+      }
 
       await shippingRepository.createStatusHistory(tx, {
         shippingOrderId: order.id,
@@ -227,27 +245,23 @@ export class ShippingService {
         updatedBy: actor.userId,
       });
 
-      return ord;
+      if (nextStatus === 'PICKED_UP') {
+        await enqueueOrderShipped(tx, {
+          orderId: order.orderId,
+          customerId: authoritativeOrder.customerId,
+          trackingNumber: order.trackingNumber || '',
+          courierName: order.courierName,
+          serviceName: order.serviceName,
+          estimatedDelivery: order.estimatedDelivery || undefined,
+        });
+      } else if (nextStatus === 'DELIVERED') {
+        await enqueueOrderDelivered(tx, {
+          orderId: order.orderId,
+          customerId: authoritativeOrder.customerId,
+          deliveredAt: deliveredAt!.toISOString(),
+        });
+      }
     });
-
-    const customerId = authoritativeOrder.customerId;
-
-    if (nextStatus === 'PICKED_UP' || nextStatus === 'IN_TRANSIT') {
-      await publishOrderShipped({
-        orderId: order.orderId,
-        customerId,
-        trackingNumber: order.trackingNumber || '',
-        courierName: order.courierName,
-        serviceName: order.serviceName,
-        estimatedDelivery: order.estimatedDelivery || undefined,
-      }).catch((e) => console.error('[Shipping Service] Publish OrderShipped failed:', e.message));
-    } else if (nextStatus === 'DELIVERED') {
-      await publishOrderDelivered({
-        orderId: order.orderId,
-        customerId,
-        deliveredAt: deliveredAt!.toISOString(),
-      }).catch((e) => console.error('[Shipping Service] Publish OrderDelivered failed:', e.message));
-    }
 
     return this.getShippingOrder(orderId);
   }
@@ -310,6 +324,9 @@ export class ShippingService {
   }
 
   async seedData() {
+    if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SHIPPING_RATES !== 'true') {
+      throw new ValidationError('Synthetic shipping data is disabled; configure verified courier and rate data explicitly');
+    }
     console.log('[Shipping Service] Starting data seeding...');
     
     // Seed Couriers

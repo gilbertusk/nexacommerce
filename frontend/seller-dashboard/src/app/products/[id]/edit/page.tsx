@@ -4,7 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPut, apiDelete } from '@/lib/api/client';
+import { apiGet, apiPatch, apiDelete, apiPost, apiUpload } from '@/lib/api/client';
 
 interface Category {
   id: string;
@@ -22,9 +22,18 @@ interface Product {
   description?: string;
   price: number;
   stock: number;
+  weight: number;
   categoryId?: string;
   brandId?: string;
-  images?: string[];
+  images?: ProductImage[];
+}
+
+interface ProductImage {
+  id: string;
+  url: string;
+  alt?: string | null;
+  sortOrder: number;
+  isMain: boolean;
 }
 
 interface ProductResponse {
@@ -48,6 +57,7 @@ interface FormState {
   description: string;
   price: string;
   stock: string;
+  weight: string;
   categoryId: string;
   brandId: string;
   images: string;
@@ -55,11 +65,22 @@ interface FormState {
 
 function validateForm(form: FormState): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!form.name.trim()) errors.name = 'Nama produk wajib diisi.';
-  if (!form.price || isNaN(Number(form.price)) || Number(form.price) < 0)
-    errors.price = 'Harga harus berupa angka positif.';
-  if (!form.stock || isNaN(Number(form.stock)) || Number(form.stock) < 0)
-    errors.stock = 'Stok harus berupa angka tidak negatif.';
+  if (form.name.trim().length < 2) errors.name = 'Nama produk minimal 2 karakter.';
+  if (!form.price || !Number.isFinite(Number(form.price)) || Number(form.price) <= 0)
+    errors.price = 'Harga harus lebih besar dari nol.';
+  if (!form.stock || !Number.isSafeInteger(Number(form.stock)) || Number(form.stock) < 0)
+    errors.stock = 'Stok harus berupa bilangan bulat tidak negatif.';
+  if (!Number.isSafeInteger(Number(form.weight)) || Number(form.weight) <= 0)
+    errors.weight = 'Berat harus berupa bilangan bulat positif dalam gram.';
+  if (!form.categoryId) errors.categoryId = 'Kategori wajib dipilih.';
+  const imageUrls = form.images.split('\n').map((url) => url.trim()).filter(Boolean);
+  if (new Set(imageUrls).size !== imageUrls.length) errors.images = 'URL gambar tidak boleh duplikat.';
+  if (imageUrls.some((url) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol !== 'https:' || Boolean(parsed.username || parsed.password) || url.length > 2048;
+    } catch { return true; }
+  })) errors.images = 'Setiap URL gambar harus berupa URL HTTPS yang valid.';
   return errors;
 }
 
@@ -74,6 +95,7 @@ export default function EditProductPage() {
     description: '',
     price: '',
     stock: '',
+    weight: '',
     categoryId: '',
     brandId: '',
     images: '',
@@ -84,9 +106,11 @@ export default function EditProductPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [savedImages, setSavedImages] = useState<ProductImage[]>([]);
 
   useEffect(() => {
     if (!token || !productId) return;
@@ -100,7 +124,7 @@ export default function EditProductPage() {
             token!,
           ),
           apiGet<CategoryListResponse>('/api/v1/products/categories', token!),
-          apiGet<BrandListResponse>('/api/v1/brands', token!),
+          apiGet<BrandListResponse>('/api/v1/products/brands', token!),
         ]);
 
         if (productRes.success) {
@@ -113,10 +137,12 @@ export default function EditProductPage() {
             description: product.description ?? '',
             price: String(product.price),
             stock: String(product.stock),
+            weight: String(product.weight ?? ''),
             categoryId: product.categoryId ?? '',
             brandId: product.brandId ?? '',
-            images: (product.images ?? []).join('\n'),
+            images: (product.images ?? []).map((image) => image.url).join('\n'),
           });
+          setSavedImages(product.images ?? []);
         }
 
         if (catRes.success) {
@@ -182,18 +208,51 @@ export default function EditProductPage() {
         description: form.description.trim(),
         price: Number(form.price),
         stock: Number(form.stock),
-        images: imageUrls,
+        weight: Number(form.weight),
+        categoryId: form.categoryId,
       };
-      if (form.categoryId) payload.categoryId = form.categoryId;
       if (form.brandId) payload.brandId = form.brandId;
 
-      const res = await apiPut<{ success: boolean; message?: string }>(
+      const res = await apiPatch<{ success: boolean; message?: string }>(
         `/api/v1/products/products/${productId}`,
         payload,
         token!,
       );
 
       if (res.success) {
+        const desired = new Set(imageUrls);
+        const currentByUrl = new Map(savedImages.map((image) => [image.url, image]));
+        try {
+          for (const image of savedImages) {
+            if (!desired.has(image.url)) {
+              await apiDelete(`/api/v1/products/products/${productId}/images/${image.id}`, token!);
+            }
+          }
+          for (const [sortOrder, url] of imageUrls.entries()) {
+            const existing = currentByUrl.get(url);
+            if (existing) {
+              await apiPatch(`/api/v1/products/products/${productId}/images/${existing.id}`, {
+                sortOrder,
+                isMain: sortOrder === 0,
+              }, token!);
+            } else {
+              await apiPost(`/api/v1/products/products/${productId}/images`, {
+                url,
+                alt: form.name.trim(),
+                sortOrder,
+                isMain: sortOrder === 0,
+              }, token!);
+            }
+          }
+          for (const file of imageFiles) {
+            const upload = new FormData();
+            upload.append('image', file);
+            await apiUpload(`/api/v1/products/products/${productId}/images/upload`, upload);
+          }
+        } catch (imageError) {
+          setServerError(`Informasi produk tersimpan, tetapi sinkronisasi gambar gagal: ${imageError instanceof Error ? imageError.message : 'kesalahan tidak diketahui'}. Muat ulang halaman untuk memeriksa kondisi gambar.`);
+          return;
+        }
         router.push('/products');
       } else {
         setServerError(res.message ?? 'Gagal memperbarui produk.');
@@ -341,10 +400,26 @@ export default function EditProductPage() {
             </div>
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
+              Berat produk (gram) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="weight"
+              value={form.weight}
+              onChange={handleChange}
+              min="1"
+              step="1"
+              className={`w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all ${errors.weight ? 'border-red-400' : ''}`}
+            />
+            {errors.weight && <p className="text-xs text-red-600">{errors.weight}</p>}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
-                Kategori
+                Kategori <span className="text-red-500">*</span>
               </label>
               <select
                 name="categoryId"
@@ -359,6 +434,7 @@ export default function EditProductPage() {
                   </option>
                 ))}
               </select>
+              {errors.categoryId && <p className="text-xs text-red-600">{errors.categoryId}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -382,17 +458,34 @@ export default function EditProductPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
-              URL Gambar
+            <label htmlFor="product-image-files" className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
+              Upload Gambar Produk
+            </label>
+            <input
+              id="product-image-files"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(event) => setImageFiles(Array.from(event.target.files ?? []))}
+              className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary"
+            />
+            {imageFiles.length > 0 && (
+              <p className="text-[10px] text-ink-secondary">{imageFiles.length} gambar dipilih: {imageFiles.map((file) => file.name).join(', ')}</p>
+            )}
+            <label htmlFor="product-image-urls" className="text-xs font-bold uppercase tracking-widest text-ink-secondary mt-3">
+              Atau Sinkronkan URL HTTPS
             </label>
             <textarea
+              id="product-image-urls"
               name="images"
               value={form.images}
               onChange={handleChange}
               rows={3}
-              placeholder="Satu URL per baris"
+              placeholder="Satu URL HTTPS per baris"
               className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all resize-none font-mono"
             />
+            <p className="text-[10px] text-ink-secondary">Upload menerima JPEG, PNG, atau WebP maksimal 5 MB per gambar; backend memvalidasi konten dan menyimpan hasil normalisasi ke object storage.</p>
+            {errors.images && <p className="text-xs text-red-600">{errors.images}</p>}
           </div>
         </div>
 

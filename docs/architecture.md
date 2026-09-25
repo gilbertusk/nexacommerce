@@ -4,7 +4,7 @@ This document details the architectural layout, core design decisions, communica
 
 ## 1. Architectural Overview
 
-NexaCommerce is an enterprise-grade e-commerce microservices engine built using **Node.js, Express.js, TypeScript, PostgreSQL, Redis, and RabbitMQ**. It uses a monorepo structure with npm workspaces to coordinate the development of 13 separate microservices and 7 shared library packages.
+NexaCommerce is an e-commerce microservices engine built using **Node.js, Express.js, TypeScript, PostgreSQL, Redis, RabbitMQ, and Kafka**. It uses a monorepo structure with npm workspaces to coordinate application services and shared packages.
 
 ```
                                 ┌──────────────────┐
@@ -24,8 +24,8 @@ NexaCommerce is an enterprise-grade e-commerce microservices engine built using 
         └──────────────┼─────────────────┼────────────────┼──────────────┘
                        │                 │                │
                 ┌──────▼──────┐   ┌──────▼──────┐  ┌──────▼──────┐
-                │ PostgreSQL  │   │ Redis Cache │  │  RabbitMQ   │
-                │ (Port 5445) │   │ (Port 6379) │  │ (Port 5672) │
+                │ PostgreSQL  │   │ Redis Cache │  │  RabbitMQ   │──durable bridge──▶ Kafka
+                │ (Port 5445) │   │ (Port 6379) │  │ (Port 5672) │                  (Port 9092)
                 └─────────────┘   └─────────────┘  └─────────────┘
 ```
 
@@ -57,6 +57,10 @@ NexaCommerce is an enterprise-grade e-commerce microservices engine built using 
 - **Decision:** Organize components under `apps/` and shared modules under `packages/` in a single monorepo.
 - **Rationale:** Allows sharing common libraries (schemas, validation blocks, custom logger configurations) without publishing packages to a private npm registry.
 
+### 2.7 Why Kafka in addition to RabbitMQ?
+- **Decision:** RabbitMQ remains the operational workflow broker; Kafka stores replayable business facts for projections, audit, indexing, and future recommendations.
+- **Rationale:** Checkout and other business workflows need bounded acknowledgement/retry queues, while analytical consumers need independent offsets and retained replay. Services publish once through their transactional outbox/RabbitMQ path; Event Stream Service bridges the durable fact queue into Kafka.
+
 ---
 
 ## 3. Communication Patterns
@@ -67,8 +71,9 @@ NexaCommerce is an enterprise-grade e-commerce microservices engine built using 
 - **Internal Orchestration:** During checkout, the Order Service performs synchronous HTTP REST requests (using `X-Internal-Service` security headers) to product, inventory, user, and voucher services to validate constraints.
 
 ### 3.2 Asynchronous Communication
-- **Event-Driven Broker:** All async operations occur via RabbitMQ.
-- **Topic Exchange:** Services publish events to the `nexacommerce.events` topic exchange. Named queues bind to routing keys (e.g., `order.paid`, `review.created`) to process notifications and build reports.
+- **Operational broker:** RabbitMQ routes workflow events through durable named queues with confirmation, retry, and DLQ behavior.
+- **Replay stream:** Event Stream Service consumes a dedicated RabbitMQ fact queue and publishes keyed, versioned records to Kafka. Kafka is downstream-only and cannot block or drive checkout correctness.
+- **No independent dual publish:** Domain services do not separately publish the same mutation to both brokers.
 
 ---
 

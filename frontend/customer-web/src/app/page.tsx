@@ -2,82 +2,47 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { fetchProducts, categories, Product } from "@/lib/api/mockData";
+import { useCategories, useProducts } from "@/lib/api/hooks/useProducts";
 import ProductCard from "@/components/ui/ProductCard";
 import { ProductGridSkeleton } from "@/components/ui/LoadingSkeleton";
 
+const carouselSlides = [
+  {
+    title: "Koleksi Tanah Liat Jingga",
+    subtitle: "Sentuhan Bumi di Ruang Saji Anda",
+    image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&q=80&w=1200",
+    link: "/shop?category=Home%20Goods",
+  },
+  {
+    title: "Sandang Linen Ringan",
+    subtitle: "Napas Longgar Sepanjang Hari",
+    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=1200",
+    link: "/shop?category=Apparel",
+  },
+  {
+    title: "Aroma Terapi Nusantara",
+    subtitle: "Menenangkan Jiwa yang Sibuk",
+    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
+    link: "/shop?category=Apothecary",
+  },
+];
+
 export default function HomePage() {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: productsResponse, isLoading: loading, isError: productsFailed } = useProducts({ limit: 20 });
+  const { data: categoriesResponse, isError: categoriesFailed } = useCategories();
+  const featuredProducts = productsResponse?.data.products ?? [];
+  const categories = categoriesResponse?.data ?? [];
 
   // Carousel State
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const carouselSlides = [
-    {
-      title: "Koleksi Tanah Liat Jingga",
-      subtitle: "Sentuhan Bumi di Ruang Saji Anda",
-      image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&q=80&w=1200",
-      link: "/shop?category=Home%20Goods",
-    },
-    {
-      title: "Sandang Linen Ringan",
-      subtitle: "Napas Longgar Sepanjang Hari",
-      image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=1200",
-      link: "/shop?category=Apparel",
-    },
-    {
-      title: "Aroma Terapi Nusantara",
-      subtitle: "Menenangkan Jiwa yang Sibuk",
-      image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200",
-      link: "/shop?category=Apothecary",
-    },
-  ];
-
-  // Flash Sale Timer State
-  const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 34, seconds: 12 });
-
   useEffect(() => {
-    // Load products
-    const load = async () => {
-      try {
-        const data = await fetchProducts();
-        setFeaturedProducts(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-
     // Carousel Timer
     const carouselTimer = setInterval(() => {
       setCarouselIndex((prev) => (prev + 1) % carouselSlides.length);
     }, 5000);
 
-    // Countdown Timer
-    const countdownTimer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else {
-          clearInterval(countdownTimer);
-          return prev;
-        }
-      });
-    }, 1000);
-
-    return () => {
-      clearInterval(carouselTimer);
-      clearInterval(countdownTimer);
-    };
+    return () => clearInterval(carouselTimer);
   }, []);
-
-  const formatNumber = (num: number) => String(num).padStart(2, "0");
 
   return (
     <div className="flex flex-col gap-16 md:gap-24 pb-20">
@@ -122,7 +87,7 @@ export default function HomePage() {
               Sudut Inspirasi
             </span>
             <span className="font-serif text-sm text-ink-primary italic">
-              "Ketenangan didapatkan melalui penyederhanaan bentuk dan kepatuhan pada alam."
+              &ldquo;Ketenangan didapatkan melalui penyederhanaan bentuk dan kepatuhan pada alam.&rdquo;
             </span>
           </div>
         </div>
@@ -132,18 +97,20 @@ export default function HomePage() {
       <section className="hairline-y bg-surface/50 py-6">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           <div className="flex items-center justify-between gap-4 overflow-x-auto no-scrollbar scroll-smooth">
-            {categories.map((cat, idx) => (
+            {categoriesFailed && (
+              <p role="status" className="text-sm text-ink-secondary">
+                Kategori belum dapat dimuat.
+              </p>
+            )}
+            {categories.map((cat) => (
               <Link
                 key={cat.id}
                 href={`/shop?category=${encodeURIComponent(cat.name)}`}
                 className="flex items-center gap-4 shrink-0 px-6 py-2 hover:bg-paper/50 transition-colors rounded-xs border-r border-hairline last:border-0"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-10 h-10 rounded-full object-cover hairline shrink-0"
-                />
+                <span className="w-10 h-10 rounded-full bg-paper hairline shrink-0 flex items-center justify-center text-primary" aria-hidden="true">
+                  <span className="material-symbols-outlined">category</span>
+                </span>
                 <div className="flex flex-col">
                   <span className="text-xs uppercase font-bold tracking-widest text-ink-primary">
                     {cat.name}
@@ -269,23 +236,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Flash Sale (Countdown Timer + Scroll Items) */}
+      {/* 5. Product catalog highlights */}
       <section className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="bg-paper hairline p-6 md:p-8 rounded-sm">
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div className="flex items-center gap-4">
               <h2 className="font-serif text-2xl md:text-3xl text-ink-primary">
-                Tawaran Terbatas
+                Produk dari Katalog
               </h2>
-              {/* Countdown Frame */}
-              <div className="flex items-center gap-1.5 bg-surface px-3 py-1.5 hairline rounded-xs text-xs font-mono text-ink-primary font-bold tabular-nums">
-                <span>{formatNumber(timeLeft.hours)}</span>
-                <span className="animate-pulse">:</span>
-                <span>{formatNumber(timeLeft.minutes)}</span>
-                <span className="animate-pulse">:</span>
-                <span className="text-primary">{formatNumber(timeLeft.seconds)}</span>
-              </div>
             </div>
             <Link
               href="/shop"
@@ -295,26 +254,29 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Flash Sale Product Row */}
+          {/* Product row */}
           {loading ? (
             <ProductGridSkeleton count={4} />
+          ) : productsFailed ? (
+            <p role="status" className="py-8 text-center text-sm text-ink-secondary">
+              Katalog belum dapat dimuat. Silakan coba lagi beberapa saat.
+            </p>
+          ) : featuredProducts.length === 0 ? (
+            <p role="status" className="py-8 text-center text-sm text-ink-secondary">
+              Belum ada produk yang tersedia.
+            </p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {featuredProducts
-                .filter((p) => p.discountPercentage && p.discountPercentage > 0)
-                .slice(0, 4)
-                .map((product) => (
+              {featuredProducts.slice(0, 4).map((product) => (
                   <ProductCard
                     key={product.id}
                     id={product.id}
                     name={product.name}
                     price={product.price}
-                    originalPrice={product.originalPrice}
-                    discountPercentage={product.discountPercentage}
-                    image={product.images[0]}
+                    image={product.images[0] ?? "/images/product-placeholder.svg"}
                     brand={product.brand}
                     stock={product.stock}
-                    sellerName={product.sellerName}
+                    sellerName={product.sellerName ?? ""}
                   />
                 ))}
             </div>
@@ -322,12 +284,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Best Selling / New Arrivals */}
+      {/* 6. Additional catalog products */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 flex flex-col gap-12">
         <div>
           <div className="flex justify-between items-end mb-6">
             <h2 className="font-serif text-3xl text-ink-primary">
-              Koleksi Terbaik Musim Ini
+              Produk Lainnya
             </h2>
             <Link
               href="/shop"
@@ -339,20 +301,22 @@ export default function HomePage() {
 
           {loading ? (
             <ProductGridSkeleton count={4} />
+          ) : productsFailed ? null : featuredProducts.length <= 4 ? (
+            <p role="status" className="py-4 text-center text-sm text-ink-secondary">
+              Belum ada produk lainnya.
+            </p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {featuredProducts.slice(0, 4).map((product) => (
+              {featuredProducts.slice(4, 8).map((product) => (
                 <ProductCard
                   key={product.id}
                   id={product.id}
                   name={product.name}
                   price={product.price}
-                  originalPrice={product.originalPrice}
-                  discountPercentage={product.discountPercentage}
-                  image={product.images[0]}
+                  image={product.images[0] ?? "/images/product-placeholder.svg"}
                   brand={product.brand}
                   stock={product.stock}
-                  sellerName={product.sellerName}
+                  sellerName={product.sellerName ?? ""}
                 />
               ))}
             </div>

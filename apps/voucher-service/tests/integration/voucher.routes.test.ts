@@ -20,35 +20,35 @@ describe('Voucher Routes (integration)', () => {
     });
   });
 
-  describe('GET /vouchers/vouchers', () => {
-    it('returns 401 without user context', async () => {
-      const res = await request(app).get('/vouchers/vouchers');
-      expect([401, 403]).toContain(res.status);
+  describe('GET /vouchers', () => {
+    it('serves the public voucher catalog', async () => {
+      const res = await request(app).get('/vouchers');
+      expect([200, 500]).toContain(res.status);
     });
 
-    it('accepts ADMIN request', async () => {
-      const res = await request(app).get('/vouchers/vouchers').set(adminHeaders);
+    it('accepts an authenticated catalog request', async () => {
+      const res = await request(app).get('/vouchers').set(adminHeaders);
       expect([200, 500]).toContain(res.status);
     });
   });
 
-  describe('POST /vouchers/vouchers', () => {
+  describe('POST /vouchers', () => {
     it('returns 403 for non-ADMIN users', async () => {
       const res = await request(app)
-        .post('/vouchers/vouchers')
+        .post('/vouchers')
         .set(customerHeaders)
         .send({ code: 'TEST10', type: 'PERCENTAGE', value: 10 });
-      expect([403, 500]).toContain(res.status);
+      expect(res.status).toBe(403);
     });
   });
 
-  describe('POST /vouchers/vouchers/validate', () => {
+  describe('POST /vouchers/validate', () => {
     it('returns 400 for missing required fields', async () => {
       const res = await request(app)
-        .post('/vouchers/vouchers/validate')
+        .post('/vouchers/validate')
         .set(customerHeaders)
         .send({});
-      expect([400, 500]).toContain(res.status);
+      expect(res.status).toBe(400);
     });
   });
 });

@@ -52,6 +52,20 @@ describe('Notification Routes (integration)', () => {
         .set(customerHeaders);
       expect([200, 500]).toContain(res.status);
     });
+
+    it('rejects invalid pagination and read filters before storage access', async () => {
+      const res = await request(app)
+        .get('/notifications?page=1.5&limit=1000&isRead=sometimes')
+        .set(customerHeaders);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects an empty type filter before storage access', async () => {
+      const res = await request(app)
+        .get('/notifications?type=%20%20')
+        .set(customerHeaders);
+      expect(res.status).toBe(400);
+    });
   });
 
   describe('GET /notifications/unread-count', () => {
@@ -67,6 +81,30 @@ describe('Notification Routes (integration)', () => {
     it('requires authentication', async () => {
       const res = await request(app).post('/notifications/read-all');
       expect([401, 403]).toContain(res.status);
+    });
+  });
+
+  describe('PATCH /notifications/:id/read', () => {
+    it('rejects unauthenticated requests', async () => {
+      const res = await request(app).patch('/notifications/n-1/read');
+      expect([401, 403]).toContain(res.status);
+    });
+
+    it('does not accept the stale POST method used by older clients', async () => {
+      const res = await request(app).post('/notifications/n-1/read');
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('DELETE /notifications/:id', () => {
+    it('rejects unauthenticated requests', async () => {
+      const res = await request(app).delete('/notifications/n-1');
+      expect([401, 403]).toContain(res.status);
+    });
+
+    it('exposes the owner-scoped deletion operation to an authenticated customer', async () => {
+      const res = await request(app).delete('/notifications/n-1').set(customerHeaders);
+      expect([200, 404, 500]).toContain(res.status);
     });
   });
 });

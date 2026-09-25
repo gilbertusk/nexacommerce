@@ -69,21 +69,112 @@ export interface SingleOrderResponse {
 }
 
 export interface CreateOrderPayload {
-  items: OrderItem[];
-  addressId: string;
-  shippingCourierId: string;
-  voucherId?: string;
+  shippingAddressId: string;
+  courierName?: string;
+  courierService?: string;
+  shippingCost?: number;
+  voucherCode?: string;
+  notes?: string;
 }
 
 export interface CreateOrderResponse {
   success: boolean;
   data: {
-    order: {
-      id: string;
-      status: string;
-      total: number;
-      items: OrderItem[];
-    };
+    order: ApiOrder;
+    payment: { id: string; status: string; paymentUrl?: string | null; expiresAt?: string };
+  };
+}
+
+export interface RawOrderItem {
+  productId: string;
+  productName: string;
+  productPrice: number | string;
+  quantity: number;
+  productImage?: string | null;
+  sellerId?: string;
+}
+
+export interface RawOrder {
+  id: string;
+  status: string;
+  grandTotal: number | string;
+  subtotal: number | string;
+  shippingCost: number | string;
+  discount: number | string;
+  items: RawOrderItem[];
+  shippingAddress?: {
+    recipientName?: string;
+    receiverName?: string;
+    phone?: string;
+    phoneNumber?: string;
+    street: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    label?: string;
+  } | null;
+  courierName?: string | null;
+  courierService?: string | null;
+  createdAt?: string;
+  statusHistory?: { id: string; toStatus: string; note?: string | null; createdAt: string }[];
+}
+
+export function normalizeOrder(order: RawOrder): ApiOrder {
+  return {
+    id: order.id,
+    status: order.status,
+    total: Number(order.grandTotal),
+    subtotal: Number(order.subtotal),
+    shippingCost: Number(order.shippingCost),
+    discount: Number(order.discount),
+    items: order.items.map((item) => ({
+      productId: item.productId,
+      name: item.productName,
+      price: Number(item.productPrice),
+      qty: item.quantity,
+      image: item.productImage ?? "",
+      sellerId: item.sellerId,
+    })),
+    address: order.shippingAddress ? {
+      receiverName: order.shippingAddress.recipientName ?? order.shippingAddress.receiverName ?? "",
+      phoneNumber: order.shippingAddress.phone ?? order.shippingAddress.phoneNumber ?? "",
+      street: order.shippingAddress.street,
+      city: order.shippingAddress.city,
+      province: order.shippingAddress.province,
+      postalCode: order.shippingAddress.postalCode,
+      label: order.shippingAddress.label,
+    } : undefined,
+    shippingInfo: order.courierName || order.courierService ? {
+      courier: order.courierName ?? "",
+      service: order.courierService ?? "",
+      cost: Number(order.shippingCost),
+    } : undefined,
+    timeline: order.statusHistory?.map((event, index, events) => ({
+      id: event.id,
+      title: event.toStatus,
+      description: event.note ?? undefined,
+      date: event.createdAt,
+      isActive: index === events.length - 1,
+    })),
+    createdAt: order.createdAt,
+  };
+}
+
+interface RawOrdersResponse {
+  success: boolean;
+  data: { orders: RawOrder[] };
+}
+
+interface RawOrderResponse {
+  success: boolean;
+  data: RawOrder;
+}
+
+interface RawCheckoutResponse {
+  success: boolean;
+  data: {
+    order: RawOrder;
+    payment: { id: string; status: string; paymentUrl?: string | null; expiresAt?: string };
   };
 }
 
@@ -94,7 +185,10 @@ export function useOrders() {
 
   return useQuery({
     queryKey: ["orders"],
-    queryFn: () => apiGet<OrdersListResponse>("/orders", token ?? undefined),
+    queryFn: async (): Promise<OrdersListResponse> => {
+      const raw = await apiGet<RawOrdersResponse>("/orders", token ?? undefined);
+      return { success: raw.success, data: { orders: raw.data.orders.map(normalizeOrder) } };
+    },
     enabled: Boolean(token),
     staleTime: 1000 * 30,
   });
@@ -105,7 +199,10 @@ export function useOrder(id: string) {
 
   return useQuery({
     queryKey: ["order", id],
-    queryFn: () => apiGet<SingleOrderResponse>(`/orders/${id}`, token ?? undefined),
+    queryFn: async (): Promise<SingleOrderResponse> => {
+      const raw = await apiGet<RawOrderResponse>(`/orders/${id}`, token ?? undefined);
+      return { success: raw.success, data: { order: normalizeOrder(raw.data) } };
+    },
     enabled: Boolean(id) && Boolean(token),
     staleTime: 1000 * 30,
   });
@@ -116,8 +213,13 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: CreateOrderPayload) =>
-      apiPost<CreateOrderResponse>("/orders", payload, token ?? undefined),
+    mutationFn: async (payload: CreateOrderPayload): Promise<CreateOrderResponse> => {
+      const raw = await apiPost<RawCheckoutResponse>("/orders/checkout", payload, token ?? undefined);
+      return {
+        success: raw.success,
+        data: { order: normalizeOrder(raw.data.order), payment: raw.data.payment },
+      };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },

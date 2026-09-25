@@ -77,7 +77,52 @@ describe('Product Routes (integration)', () => {
         .set(sellerHeaders)
         .send({ name: 'Missing required fields' });
 
-      expect([400, 500]).toContain(res.status);
+      expect(res.status).toBe(400);
+    });
+
+    it('requires positive integer weight in grams before database access', async () => {
+      const basePayload = {
+        name: 'Weighted product',
+        slug: 'weighted-product',
+        price: 1000,
+        categoryId: '00000000-0000-4000-8000-000000000001',
+      };
+
+      const missingWeight = await request(app)
+        .post('/products')
+        .set(sellerHeaders)
+        .send(basePayload);
+      const fractionalWeight = await request(app)
+        .post('/products')
+        .set(sellerHeaders)
+        .send({ ...basePayload, weight: 10.5 });
+
+      expect(missingWeight.status).toBe(400);
+      expect(fractionalWeight.status).toBe(400);
+    });
+  });
+
+  describe('POST /products/:id/images/upload', () => {
+    it('rejects requests without seller/admin identity before parsing the upload', async () => {
+      const res = await request(app).post('/products/00000000-0000-4000-8000-000000000001/images/upload');
+      expect(res.status).toBe(401);
+    });
+
+    it('requires an image file when the caller is authorized by role', async () => {
+      const res = await request(app)
+        .post('/products/00000000-0000-4000-8000-000000000001/images/upload')
+        .set(sellerHeaders);
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Image file is required');
+    });
+
+    it('rejects files larger than 5 MB before image processing', async () => {
+      const res = await request(app)
+        .post('/products/00000000-0000-4000-8000-000000000001/images/upload')
+        .set(sellerHeaders)
+        .attach('image', Buffer.alloc(5 * 1024 * 1024 + 1), { filename: 'large.png', contentType: 'image/png' });
+      expect(res.status).toBe(413);
+      expect(res.body.message).toBe('Image must not exceed 5 MB');
     });
   });
 

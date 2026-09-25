@@ -349,9 +349,11 @@ export const analyticsRepository = {
   },
 
   // ── Analytics Events ───────────────────────────────────────────────────
-  async saveEvent(eventName: string, eventData: any) {
-    return prisma.analyticsEvent.create({
-      data: { eventName, eventData, isProcessed: false },
+  async saveEvent(eventId: string, eventName: string, eventData: any) {
+    return prisma.analyticsEvent.upsert({
+      where: { eventId },
+      update: {},
+      create: { eventId, eventName, eventData, isProcessed: false },
     });
   },
 

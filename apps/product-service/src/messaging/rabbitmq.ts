@@ -32,7 +32,7 @@ async function fetchReviewSummary(productId: string): Promise<{ averageRating: n
 export async function initRabbitMQ() {
   try {
     const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createChannel();
+    channel = await connection.createConfirmChannel();
 
     await setupExchangeAndQueues(channel);
 

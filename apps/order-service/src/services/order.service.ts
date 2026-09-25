@@ -1,9 +1,10 @@
 import { orderRepository } from '../repositories/order.repository';
 import { prisma } from '../prisma/client';
-import { NotFoundError, ValidationError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError, buildInternalServiceHeaders } from '@nexacommerce/common';
 import { config } from '../config';
 import { Prisma } from '../generated/client';
-import { publishOrderCreated, publishOrderCancelled, publishOrderPaid, publishOrderCompleted } from '../messaging/rabbitmq';
+import { publishOrderCreated } from '../messaging/rabbitmq';
+import { enqueueOrderCancelled, enqueueOrderCompleted, enqueueOrderPaid } from '../messaging/outbox';
 
 export class OrderService {
   private async makeRequest(serviceUrl: string, path: string, method: string, body?: any) {
@@ -42,6 +43,10 @@ export class OrderService {
       notes?: string | null;
     }
   ) {
+    // Never trust a browser-supplied shipping price. Checkout must remain closed
+    // until a server-issued quote is implemented and can be revalidated here.
+    throw new ValidationError('Checkout is unavailable until a trusted shipping quote is implemented');
+
     const { shippingAddressId, voucherCode, courierName, courierService, notes } = body;
     const shippingCostVal = body.shippingCost || 0;
 
@@ -123,6 +128,9 @@ export class OrderService {
     let subtotal = 0;
     const itemsData = cart.items.map((item: any) => {
       const prod = products.find((p: any) => p.id === item.productId);
+      if (!Number.isSafeInteger(prod.weight) || prod.weight <= 0) {
+        throw new ValidationError(`Product "${prod.name}" has no valid shipping weight`);
+      }
       const priceNum = Number(prod.price);
       const itemSubtotal = priceNum * item.quantity;
       subtotal += itemSubtotal;
@@ -133,6 +141,7 @@ export class OrderService {
         productImage: prod.images && prod.images.length > 0 ? prod.images[0].url : null,
         productPrice: new Prisma.Decimal(priceNum),
         quantity: item.quantity,
+        weight: prod.weight,
         subtotal: new Prisma.Decimal(itemSubtotal),
         sellerId: prod.sellerId,
         sellerName: prod.brand ? prod.brand.name : 'Seller', // fallback
@@ -304,15 +313,18 @@ export class OrderService {
   private async cancelOrderInDb(orderId: string, reason: string) {
     const existing = await orderRepository.findById(orderId);
     if (!existing) return;
+    if (existing.status === 'CANCELLED') return;
 
+    const cancelledAt = new Date();
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: orderId },
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: existing.status },
         data: {
           status: 'CANCELLED',
-          cancelledAt: new Date(),
+          cancelledAt,
         },
       });
+      if (claimed.count !== 1) throw new ConflictError('Order rollback cancellation was already processed');
 
       await tx.orderStatusHistory.create({
         data: {
@@ -322,6 +334,12 @@ export class OrderService {
           note: reason,
           changedBy: 'SYSTEM',
         },
+      });
+      await enqueueOrderCancelled(tx, {
+        orderId: existing.id,
+        customerId: existing.customerId,
+        reason,
+        cancelledAt: cancelledAt.toISOString(),
       });
     });
   }
@@ -411,14 +429,16 @@ export class OrderService {
       throw new ValidationError(`Order cannot be cancelled in its current state: ${order.status}`);
     }
 
+    const cancelledAt = new Date();
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id },
+      const claimed = await tx.order.updateMany({
+        where: { id, status: 'PENDING_PAYMENT' },
         data: {
           status: 'CANCELLED',
-          cancelledAt: new Date(),
+          cancelledAt,
         },
       });
+      if (claimed.count !== 1) throw new ConflictError('Order cancellation was already processed');
 
       await tx.orderStatusHistory.create({
         data: {
@@ -429,6 +449,12 @@ export class OrderService {
           changedBy: actor.userId,
         },
       });
+      await enqueueOrderCancelled(tx, {
+        orderId: order.id,
+        customerId: order.customerId,
+        reason,
+        cancelledAt: cancelledAt.toISOString(),
+      });
     });
 
     // compensation release of voucher
@@ -437,9 +463,6 @@ export class OrderService {
         orderId: order.id,
       }).catch((e) => console.error(`Failed to release voucher on order cancel: ${e.message}`));
     }
-
-    // publish event order cancelled (this will trigger stock release in inventory service)
-    await publishOrderCancelled(order.id, order.customerId, reason);
 
     return this.getOrderById(id, actor);
   }
@@ -450,18 +473,34 @@ export class OrderService {
       throw new NotFoundError('Order not found');
     }
 
-    if (order.status === 'PAID') {
+    const paidOrLaterStatuses = [
+      'PAID',
+      'PROCESSING',
+      'PACKED',
+      'SHIPPED',
+      'DELIVERED',
+      'COMPLETED',
+      'RETURN_REQUESTED',
+      'RETURN_APPROVED',
+      'PARTIALLY_REFUNDED',
+      'REFUNDED',
+    ];
+    if (paidOrLaterStatuses.includes(order.status)) {
       return order; // already processed
+    }
+    if (order.status !== 'PENDING_PAYMENT') {
+      throw new ConflictError(`Payment success cannot transition order from ${order.status} to PAID`);
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      const o = await tx.order.update({
-        where: { id: orderId },
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: 'PENDING_PAYMENT' },
         data: {
           status: 'PAID',
           paidAt: new Date(paidAt),
         },
       });
+      if (claimed.count !== 1) throw new ConflictError('Payment success was already processed');
 
       await tx.orderStatusHistory.create({
         data: {
@@ -472,12 +511,16 @@ export class OrderService {
           changedBy: 'SYSTEM',
         },
       });
+      await enqueueOrderPaid(tx, {
+        orderId: order.id,
+        customerId: order.customerId,
+        paidAt,
+        amount,
+      });
 
-      return o;
+      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
     });
 
-    // publish order paid event
-    await publishOrderPaid(order.id, order.customerId, paidAt, amount);
     return updated;
   }
 
@@ -490,18 +533,23 @@ export class OrderService {
     if (order.status === 'CANCELLED') {
       return order; // already processed
     }
+    if (order.status !== 'PENDING_PAYMENT') {
+      throw new ConflictError(`Payment ${status.toLowerCase()} cannot cancel an order in ${order.status}`);
+    }
 
     const targetStatus = 'CANCELLED';
     const note = status === 'EXPIRED' ? 'Payment period expired' : 'Payment failed';
+    const cancelledAt = new Date();
 
     const updated = await prisma.$transaction(async (tx) => {
-      const o = await tx.order.update({
-        where: { id: orderId },
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: 'PENDING_PAYMENT' },
         data: {
           status: targetStatus,
-          cancelledAt: new Date(),
+          cancelledAt,
         },
       });
+      if (claimed.count !== 1) throw new ConflictError(`Payment ${status.toLowerCase()} was already processed`);
 
       await tx.orderStatusHistory.create({
         data: {
@@ -512,8 +560,14 @@ export class OrderService {
           changedBy: 'SYSTEM',
         },
       });
+      await enqueueOrderCancelled(tx, {
+        orderId: order.id,
+        customerId: order.customerId,
+        reason: note,
+        cancelledAt: cancelledAt.toISOString(),
+      });
 
-      return o;
+      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
     });
 
     // release voucher
@@ -523,8 +577,6 @@ export class OrderService {
       }).catch((e) => console.error(`Failed to release voucher on payment cancellation: ${e.message}`));
     }
 
-    // publish order cancelled
-    await publishOrderCancelled(order.id, order.customerId, note);
     return updated;
   }
 
@@ -535,9 +587,27 @@ export class OrderService {
       throw new ForbiddenError('Seller cannot update a multi-seller order');
     }
 
-    const allowedStatuses = ['PROCESSING', 'PACKED', 'SHIPPED', 'DELIVERED', 'COMPLETED'];
-    if (!allowedStatuses.includes(toStatus)) {
-      throw new ValidationError(`Invalid order status transition: ${toStatus}`);
+    const allowedNextStatuses: Record<string, string[]> = {
+      PAID: ['PROCESSING'],
+      PROCESSING: ['PACKED', 'SHIPPED'],
+      PACKED: ['SHIPPED'],
+    };
+    if (!allowedNextStatuses[order.status]?.includes(toStatus)) {
+      throw new ValidationError(`Order cannot transition from ${order.status} to ${toStatus}`);
+    }
+
+    if (toStatus === 'SHIPPED') {
+      const shipment = await this.makeRequest(
+        config.shippingServiceUrl,
+        `/shipping/internal/shipping/${encodeURIComponent(id)}`,
+        'GET',
+      );
+      if (!shipment?.trackingNumber) {
+        throw new ValidationError('Order cannot be marked shipped without a registered tracking number');
+      }
+      if (!['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
+        throw new ValidationError('Shipment must be handed to the courier before the order can be marked shipped');
+      }
     }
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -612,15 +682,21 @@ export class OrderService {
     }
 
     const completedAt = new Date();
+    const eventItems = order.items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: Number(item.productPrice),
+    }));
 
     const updated = await prisma.$transaction(async (tx) => {
-      const o = await tx.order.update({
-        where: { id: orderId },
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: 'DELIVERED' },
         data: {
           status: 'COMPLETED',
           completedAt,
         },
       });
+      if (claimed.count !== 1) throw new ConflictError('Order completion was already processed');
 
       await tx.orderStatusHistory.create({
         data: {
@@ -631,19 +707,15 @@ export class OrderService {
           changedBy: actor,
         },
       });
+      await enqueueOrderCompleted(tx, {
+        orderId: order.id,
+        customerId: order.customerId,
+        completedAt: completedAt.toISOString(),
+        items: eventItems,
+      });
 
-      return o;
+      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
     });
-
-    const eventItems = order.items.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      price: Number(item.productPrice),
-    }));
-
-    await publishOrderCompleted(order.id, order.customerId, eventItems).catch((err) =>
-      console.error(`[Order Service] Failed to publish OrderCompleted: ${err.message}`)
-    );
 
     return updated;
   }
@@ -687,7 +759,7 @@ export class OrderService {
       throw new ValidationError(`Return can only be requested for DELIVERED or COMPLETED orders. Current status: ${order.status}`);
     }
 
-    if (order.status === 'RETURN_REQUESTED' as any) {
+    if (order.status === 'RETURN_REQUESTED') {
       throw new ValidationError('A return request has already been submitted for this order');
     }
 
@@ -727,20 +799,29 @@ export class OrderService {
       throw new ValidationError(`Order is not in RETURN_REQUESTED status. Current status: ${order.status}`);
     }
 
-    const toStatus = action === 'approve' ? 'REFUNDED' : order.status;
-    const noteText = note || (action === 'approve' ? 'Return request approved' : 'Return request rejected');
+    const previousFulfillmentStatus = order.statusHistory.find(
+      (entry) => entry.toStatus === 'RETURN_REQUESTED',
+    )?.fromStatus;
+    if (action === 'reject' && !['DELIVERED', 'COMPLETED'].includes(previousFulfillmentStatus ?? '')) {
+      throw new ValidationError('Could not determine the fulfillment state to restore after rejecting this return');
+    }
+
+    // Approval is not proof that money has been returned. Keep the order in an
+    // explicit approved-but-unrefunded state until a provider refund succeeds.
+    const toStatus = action === 'approve' ? 'RETURN_APPROVED' : previousFulfillmentStatus!;
+    const noteText = note || (action === 'approve' ? 'Return request approved; refund remains pending' : 'Return request rejected');
 
     await prisma.$transaction(async (tx) => {
       await tx.order.update({
         where: { id: orderId },
-        data: { status: action === 'approve' ? 'REFUNDED' : 'COMPLETED' },
+        data: { status: toStatus },
       });
 
       await tx.orderStatusHistory.create({
         data: {
           orderId,
           fromStatus: order.status,
-          toStatus: action === 'approve' ? 'REFUNDED' : 'COMPLETED',
+          toStatus,
           note: noteText,
           changedBy: actor.userId,
         },
@@ -748,6 +829,125 @@ export class OrderService {
     });
 
     return orderRepository.findById(orderId);
+  }
+
+  async markRefundCompleted(orderId: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found');
+    if (order.status === 'REFUNDED') return order;
+    if (!['RETURN_APPROVED', 'PARTIALLY_REFUNDED'].includes(order.status)) {
+      throw new ValidationError(`Refund completion requires an approved return. Current status: ${order.status}`);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: orderId }, data: { status: 'REFUNDED' } });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: order.status,
+          toStatus: 'REFUNDED',
+          note: 'Midtrans confirmed the refund with the payment provider',
+          changedBy: 'SYSTEM',
+        },
+      });
+    });
+
+    return orderRepository.findById(orderId);
+  }
+
+  async markRefundPartial(orderId: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found');
+    if (order.status === 'PARTIALLY_REFUNDED') return order;
+    if (order.status !== 'RETURN_APPROVED') {
+      throw new ValidationError(`Partial refund requires RETURN_APPROVED order. Current status: ${order.status}`);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: orderId }, data: { status: 'PARTIALLY_REFUNDED' } });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: order.status,
+          toStatus: 'PARTIALLY_REFUNDED',
+          note: 'Midtrans confirmed a partial refund; remaining amount is still due',
+          changedBy: 'SYSTEM',
+        },
+      });
+    });
+    return orderRepository.findById(orderId);
+  }
+
+  async createComplaint(orderId: string, customerId: string, input: { category: string; description: string }) {
+    const order = await this.getOrderById(orderId, { userId: customerId, role: 'CUSTOMER' });
+    if (!['DELIVERED', 'COMPLETED'].includes(order.status)) {
+      throw new ValidationError(`A complaint can only be opened for a delivered order. Current status: ${order.status}`);
+    }
+
+    const category = input.category?.trim();
+    const description = input.description?.trim();
+    const allowedCategories = ['DAMAGED', 'MISSING_ITEM', 'WRONG_ITEM', 'QUALITY', 'OTHER'];
+    if (!allowedCategories.includes(category)) throw new ValidationError('Invalid complaint category');
+    if (!description || description.length < 5 || description.length > 2000) {
+      throw new ValidationError('Complaint description must contain 5 to 2000 characters');
+    }
+
+    const existing = await prisma.orderComplaint.findUnique({ where: { orderId_customerId: { orderId, customerId } } });
+    if (existing) throw new ValidationError('A complaint has already been submitted for this order');
+    try {
+      return await prisma.orderComplaint.create({
+        data: { orderId, customerId, category, description },
+        include: { order: { select: { orderNumber: true, status: true } } },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') throw new ConflictError('A complaint has already been submitted for this order');
+      throw error;
+    }
+  }
+
+  async getOrderComplaint(orderId: string, actor: { userId: string; role: string }) {
+    await this.getOrderById(orderId, actor);
+    return prisma.orderComplaint.findUnique({
+      where: { orderId_customerId: { orderId, customerId: actor.userId } },
+    });
+  }
+
+  async adminListComplaints(query: { page: number; limit: number; status?: string }) {
+    const where = query.status ? { status: query.status } : {};
+    const [complaints, total] = await Promise.all([
+      prisma.orderComplaint.findMany({
+        where,
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+        orderBy: { createdAt: 'desc' },
+        include: { order: { select: { orderNumber: true, status: true, customerName: true, customerEmail: true } } },
+      }),
+      prisma.orderComplaint.count({ where }),
+    ]);
+    return { complaints, total, page: query.page, limit: query.limit, totalPages: Math.ceil(total / query.limit) };
+  }
+
+  async adminUpdateComplaint(id: string, input: { status: string; adminNote?: string }) {
+    const current = await prisma.orderComplaint.findUnique({ where: { id } });
+    if (!current) throw new NotFoundError('Complaint not found');
+    const allowedNext: Record<string, string[]> = {
+      OPEN: ['IN_REVIEW', 'REJECTED'],
+      IN_REVIEW: ['RESOLVED', 'REJECTED'],
+    };
+    if (!allowedNext[current.status]?.includes(input.status)) {
+      throw new ValidationError(`Complaint cannot transition from ${current.status} to ${input.status}`);
+    }
+    const adminNote = input.adminNote?.trim();
+    if (adminNote && adminNote.length > 1000) throw new ValidationError('Admin note cannot exceed 1000 characters');
+    return prisma.orderComplaint.update({
+      where: { id },
+      data: {
+        status: input.status,
+        adminNote: adminNote || null,
+        resolvedAt: ['RESOLVED', 'REJECTED'].includes(input.status) ? new Date() : null,
+      },
+      include: { order: { select: { orderNumber: true, status: true, customerName: true, customerEmail: true } } },
+    });
   }
 }
 

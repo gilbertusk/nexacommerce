@@ -57,6 +57,19 @@ export async function apiPost<T>(
   return request<T>(path, { method: 'POST', body: JSON.stringify(body) }, token);
 }
 
+export async function apiPostWithHeaders<T>(
+  path: string,
+  body: unknown,
+  extraHeaders: Record<string, string>,
+  token?: string,
+): Promise<T> {
+  return request<T>(path, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: extraHeaders,
+  }, token);
+}
+
 export async function apiPut<T>(
   path: string,
   body: unknown,

@@ -12,7 +12,7 @@ model Courier {
   id        String          @id @default(uuid())
   name      String          @unique
   code      String          @unique
-  services  Json            // Array of service options: [{ code: "REG", name: "Regular", estimatedDays: "2-3" }]
+  services  Json // Array of service options: [{ code: "REG", name: "Regular", estimatedDays: "2-3" }]
   isActive  Boolean         @default(true) @map("is_active")
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
@@ -29,7 +29,7 @@ model ShippingRate {
   originCity      String   @map("origin_city")
   destinationCity String   @map("destination_city")
   serviceCode     String   @map("service_code")
-  weight          Int      // weight in grams
+  weight          Int // weight in grams
   cost            Decimal  @db.Decimal(12, 2)
   estimatedDays   String   @map("estimated_days")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -38,26 +38,26 @@ model ShippingRate {
 }
 
 model ShippingOrder {
-  id                  String                  @id @default(uuid())
-  orderId             String                  @unique @map("order_id")
-  courierId           String                  @map("courier_id")
-  courier             Courier                 @relation(fields: [courierId], references: [id])
-  courierName         String                  @map("courier_name")
-  serviceCode         String                  @map("service_code")
-  serviceName         String                  @map("service_name")
-  trackingNumber      String?                 @unique @map("tracking_number")
-  originAddress       Json                    @map("origin_address") // { city, province }
-  destinationAddress  Json                    @map("destination_address") // { recipientName, phone, street, city, province, postalCode }
-  weight              Int
-  cost                Decimal                 @db.Decimal(12, 2)
-  status              String                  @default("WAITING_PICKUP") // WAITING_PICKUP, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED, RETURNED
-  estimatedDelivery   String?                 @map("estimated_delivery")
-  notes               String?
-  shippedAt           DateTime?               @map("shipped_at")
-  deliveredAt         DateTime?               @map("delivered_at")
-  createdAt           DateTime                @default(now()) @map("created_at")
-  updatedAt           DateTime                @updatedAt @map("updated_at")
-  history             ShippingStatusHistory[]
+  id                 String                  @id @default(uuid())
+  orderId            String                  @unique @map("order_id")
+  courierId          String                  @map("courier_id")
+  courier            Courier                 @relation(fields: [courierId], references: [id])
+  courierName        String                  @map("courier_name")
+  serviceCode        String                  @map("service_code")
+  serviceName        String                  @map("service_name")
+  trackingNumber     String?                 @unique @map("tracking_number")
+  originAddress      Json                    @map("origin_address") // { city, province }
+  destinationAddress Json                    @map("destination_address") // { recipientName, phone, street, city, province, postalCode }
+  weight             Int
+  cost               Decimal                 @db.Decimal(12, 2)
+  status             String                  @default("WAITING_PICKUP") // WAITING_PICKUP, PICKED_UP, IN_TRANSIT, DELIVERED, FAILED, RETURNED
+  estimatedDelivery  String?                 @map("estimated_delivery")
+  notes              String?
+  shippedAt          DateTime?               @map("shipped_at")
+  deliveredAt        DateTime?               @map("delivered_at")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+  history            ShippingStatusHistory[]
 
   @@map("shipping_orders")
 }
@@ -74,4 +74,27 @@ model ShippingStatusHistory {
   createdAt       DateTime      @default(now()) @map("created_at")
 
   @@map("shipping_status_histories")
+}
+
+model OutboxEvent {
+  id            String    @id
+  aggregateType String    @map("aggregate_type")
+  aggregateId   String    @map("aggregate_id")
+  eventName     String    @map("event_name")
+  routingKey    String    @map("routing_key")
+  eventPayload  Json      @map("event_payload")
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  availableAt   DateTime  @default(now()) @map("available_at")
+  lockedAt      DateTime? @map("locked_at")
+  lockToken     String?   @map("lock_token")
+  publishedAt   DateTime? @map("published_at")
+  lastError     String?   @map("last_error") @db.VarChar(1000)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, availableAt])
+  @@index([lockedAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
 }

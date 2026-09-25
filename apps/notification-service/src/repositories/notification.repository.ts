@@ -6,15 +6,30 @@ export class NotificationRepository {
     return prisma.notification.create({ data });
   }
 
-  async getNotificationsByUserId(userId: string, isRead?: boolean) {
+  async findBySourceEventId(sourceEventId: string) {
+    return prisma.notification.findUnique({ where: { sourceEventId } });
+  }
+
+  async getNotificationsByUserId(userId: string, isRead: boolean | undefined, type: string | undefined, page: number, limit: number) {
     const where: Prisma.NotificationWhereInput = { userId };
     if (isRead !== undefined) {
       where.isRead = isRead;
     }
-    return prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
+    if (type !== undefined) {
+      where.type = type;
+    }
+    const [notifications, total, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.notification.count({ where }),
+      prisma.notification.count({ where: { userId, isRead: false } }),
+    ]);
+
+    return { notifications, total, unreadCount, page, limit };
   }
 
   async markAsRead(id: string, userId: string) {
@@ -27,6 +42,10 @@ export class NotificationRepository {
     });
   }
 
+  async deleteForUser(id: string, userId: string) {
+    return prisma.notification.deleteMany({ where: { id, userId } });
+  }
+
   async markAllAsRead(userId: string) {
     return prisma.notification.updateMany({
       where: { userId, isRead: false },
@@ -35,6 +54,10 @@ export class NotificationRepository {
         readAt: new Date(),
       },
     });
+  }
+
+  async countUnreadByUserId(userId: string) {
+    return prisma.notification.count({ where: { userId, isRead: false } });
   }
 
   async getNotificationById(id: string, userId: string) {

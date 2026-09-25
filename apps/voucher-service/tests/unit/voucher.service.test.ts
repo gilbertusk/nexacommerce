@@ -94,5 +94,58 @@ describe('VoucherService', () => {
       await expect(service.validateVoucher('BAD', 'u', []))
         .rejects.toThrow();
     });
+
+    it('caps a seller-scoped fixed discount at that seller eligible subtotal', async () => {
+      mockVoucherRepo.findByCode.mockResolvedValue({
+        ...mockVoucher,
+        type: 'FIXED_AMOUNT',
+        value: new Prisma.Decimal(400000),
+        minPurchase: new Prisma.Decimal(0),
+        maxDiscount: null,
+        scope: 'SELLER',
+        scopeReferenceId: 'seller-1',
+      } as any);
+      mockVoucherRepo.countUsageByUser.mockResolvedValue(0);
+
+      const result = await service.validateVoucher('SAVE10', 'user-1', [
+        { price: 100000, quantity: 1, categoryId: 'c-1', sellerId: 'seller-1' },
+        { price: 900000, quantity: 1, categoryId: 'c-1', sellerId: 'seller-2' },
+      ]);
+
+      expect(result.discountAmount).toBe(100000);
+    });
+  });
+
+  describe('validateCustomerVoucher', () => {
+    it('loads cart quantity and current product price/scope from trusted services', async () => {
+      mockVoucherRepo.findByCode.mockResolvedValue(mockVoucher as any);
+      mockVoucherRepo.countUsageByUser.mockResolvedValue(0);
+      const fetchMock = jest.spyOn(global, 'fetch')
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: { items: [{ productId: 'p-1', quantity: 2 }] } }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ success: true, data: [{ id: 'p-1', status: 'ACTIVE', price: '250000', categoryId: 'cat-live', sellerId: 'seller-live' }] }),
+        } as Response);
+
+      const result = await service.validateCustomerVoucher('SAVE10', 'user-1');
+
+      expect(result.discountAmount).toBe(20000);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[0][0]).toContain('/cart/internal/cart/user-1');
+      expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ ids: ['p-1'] });
+    });
+
+    it('rejects an empty server-side cart', async () => {
+      jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { items: [] } }),
+      } as Response);
+
+      await expect(service.validateCustomerVoucher('SAVE10', 'user-1')).rejects.toThrow('Cart is empty');
+      expect(mockVoucherRepo.findByCode).not.toHaveBeenCalled();
+    });
   });
 });

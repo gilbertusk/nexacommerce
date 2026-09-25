@@ -31,7 +31,7 @@ export interface LoginResponse {
 
 export interface RegisterResponse {
   success: boolean;
-  data: AuthUser;
+  data: AuthUser & { verificationEmailAccepted?: boolean };
 }
 
 // ------- Hooks -------

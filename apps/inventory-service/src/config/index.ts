@@ -12,6 +12,9 @@ const inventoryEnvSchema = z.object({
   DATABASE_URL: z.string(),
   PRODUCT_SERVICE_URL: z.string().default('http://localhost:3003'),
   RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672'),
+  INVENTORY_OUTBOX_POLL_INTERVAL_MS: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().int().positive().default(5000)),
+  INVENTORY_OUTBOX_BATCH_SIZE: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().int().positive().max(500).default(50)),
+  INVENTORY_OUTBOX_LEASE_MS: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().int().positive().default(60000)),
 });
 
 const env = validateEnv(inventoryEnvSchema);
@@ -22,6 +25,9 @@ export const config = {
   databaseUrl: env.DATABASE_URL,
   productServiceUrl: env.PRODUCT_SERVICE_URL,
   rabbitmqUrl: env.RABBITMQ_URL,
+  outboxPollIntervalMs: env.INVENTORY_OUTBOX_POLL_INTERVAL_MS,
+  outboxBatchSize: env.INVENTORY_OUTBOX_BATCH_SIZE,
+  outboxLeaseMs: env.INVENTORY_OUTBOX_LEASE_MS,
 };
 
 export default config;

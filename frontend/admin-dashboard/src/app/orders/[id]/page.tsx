@@ -45,12 +45,15 @@ interface OrderResponse {
   data: OrderDetail;
 }
 
-const STATUS_TIMELINE = ["PENDING", "PAID", "SHIPPED", "COMPLETED"];
+const STATUS_TIMELINE = ["PENDING_PAYMENT", "PAID", "PROCESSING", "PACKED", "SHIPPED", "DELIVERED", "COMPLETED"];
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Menunggu Pembayaran",
+  PENDING_PAYMENT: "Menunggu Pembayaran",
+  PROCESSING: "Sedang Diproses",
+  PACKED: "Dikemas",
   PAID: "Dibayar",
   SHIPPED: "Dikirim",
+  DELIVERED: "Terkirim",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
 };

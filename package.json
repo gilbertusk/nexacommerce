@@ -23,6 +23,7 @@
     "dev:review": "npm run dev --workspace=apps/review-service",
     "dev:notification": "npm run dev --workspace=apps/notification-service",
     "dev:analytics": "npm run dev --workspace=apps/analytics-service",
+    "dev:event-stream": "npm run dev --workspace=apps/event-stream-service",
     "dev:customer": "npm run dev --workspace=frontend/customer-web",
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",

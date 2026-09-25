@@ -8,6 +8,7 @@ export const QUEUES = {
   SHIPPING_ORDER_EVENTS: 'shipping-service.order-events',
   ORDER_SHIPPING_EVENTS: 'order-service.shipping-events',
   PRODUCT_REVIEW_EVENTS: 'product-service.review-events',
+  EVENT_STREAM_BUSINESS_FACTS: 'event-stream-service.business-facts',
 } as const;
 
 export const QUEUE_BINDINGS = [
@@ -55,5 +56,26 @@ export const QUEUE_BINDINGS = [
   {
     queue: QUEUES.PRODUCT_REVIEW_EVENTS,
     routingKeys: ['review.created']
+  },
+  {
+    queue: QUEUES.EVENT_STREAM_BUSINESS_FACTS,
+    routingKeys: [
+      'order.created',
+      'order.paid',
+      'order.cancelled',
+      'order.completed',
+      'payment.created',
+      'payment.success',
+      'payment.failed',
+      'payment.expired',
+      'stock.reserved',
+      'stock.reservation_failed',
+      'stock.confirmed',
+      'stock.released',
+      'stock.low_detected',
+      'order.shipped',
+      'order.delivered',
+      'review.created'
+    ]
   }
 ];

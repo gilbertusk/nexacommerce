@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "main": "src/index.ts",
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
-    "jsonwebtoken": "^9.0.1",
-    "@nexacommerce/types": "*"
+    "@nexacommerce/types": "*",
+    "jsonwebtoken": "^9.0.1"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.2",

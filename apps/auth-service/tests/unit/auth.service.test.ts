@@ -44,6 +44,7 @@ describe('AuthService', () => {
       const result = await service.register({ name: 'Test', email: 'test@test.com', password: 'pass123' });
 
       expect(result.email).toBe('test@test.com');
+      expect(result.verificationEmailAccepted).toBe(true);
       expect(result).not.toHaveProperty('emailVerificationToken');
       expect(mockUserRepo.create).toHaveBeenCalledTimes(1);
       expect(mockUserRepo.create).toHaveBeenCalledWith(expect.objectContaining({ role: 'CUSTOMER' }));
@@ -51,6 +52,20 @@ describe('AuthService', () => {
         expect.stringContaining('/notifications/internal/auth-email'),
         expect.objectContaining({ method: 'POST' }),
       );
+    });
+
+    it('creates the account but reports when verification email delivery was not accepted', async () => {
+      mockUserRepo.findByEmail.mockResolvedValue(null);
+      mockUserRepo.create.mockResolvedValue(mockUser);
+      mockUserRepo.createEmailVerificationToken.mockResolvedValue({} as any);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+      mockFetch.mockResolvedValue({ ok: false, status: 503 } as Response);
+
+      const result = await service.register({ name: 'Test', email: 'test@test.com', password: 'pass123' });
+
+      expect(result.id).toBe('user-1');
+      expect(result.verificationEmailAccepted).toBe(false);
+      expect(result).not.toHaveProperty('emailVerificationToken');
     });
 
     it('throws ValidationError when email already exists', async () => {

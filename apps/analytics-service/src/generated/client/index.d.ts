@@ -7515,6 +7515,7 @@ export namespace Prisma {
 
   export type AnalyticsEventMinAggregateOutputType = {
     id: string | null
+    eventId: string | null
     eventName: string | null
     processedAt: Date | null
     isProcessed: boolean | null
@@ -7523,6 +7524,7 @@ export namespace Prisma {
 
   export type AnalyticsEventMaxAggregateOutputType = {
     id: string | null
+    eventId: string | null
     eventName: string | null
     processedAt: Date | null
     isProcessed: boolean | null
@@ -7531,6 +7533,7 @@ export namespace Prisma {
 
   export type AnalyticsEventCountAggregateOutputType = {
     id: number
+    eventId: number
     eventName: number
     eventData: number
     processedAt: number
@@ -7542,6 +7545,7 @@ export namespace Prisma {
 
   export type AnalyticsEventMinAggregateInputType = {
     id?: true
+    eventId?: true
     eventName?: true
     processedAt?: true
     isProcessed?: true
@@ -7550,6 +7554,7 @@ export namespace Prisma {
 
   export type AnalyticsEventMaxAggregateInputType = {
     id?: true
+    eventId?: true
     eventName?: true
     processedAt?: true
     isProcessed?: true
@@ -7558,6 +7563,7 @@ export namespace Prisma {
 
   export type AnalyticsEventCountAggregateInputType = {
     id?: true
+    eventId?: true
     eventName?: true
     eventData?: true
     processedAt?: true
@@ -7640,6 +7646,7 @@ export namespace Prisma {
 
   export type AnalyticsEventGroupByOutputType = {
     id: string
+    eventId: string | null
     eventName: string
     eventData: JsonValue
     processedAt: Date | null
@@ -7666,6 +7673,7 @@ export namespace Prisma {
 
   export type AnalyticsEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    eventId?: boolean
     eventName?: boolean
     eventData?: boolean
     processedAt?: boolean
@@ -7675,6 +7683,7 @@ export namespace Prisma {
 
   export type AnalyticsEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    eventId?: boolean
     eventName?: boolean
     eventData?: boolean
     processedAt?: boolean
@@ -7684,6 +7693,7 @@ export namespace Prisma {
 
   export type AnalyticsEventSelectScalar = {
     id?: boolean
+    eventId?: boolean
     eventName?: boolean
     eventData?: boolean
     processedAt?: boolean
@@ -7697,6 +7707,7 @@ export namespace Prisma {
     objects: {}
     scalars: $Extensions.GetPayloadResult<{
       id: string
+      eventId: string | null
       eventName: string
       eventData: Prisma.JsonValue
       processedAt: Date | null
@@ -8096,6 +8107,7 @@ export namespace Prisma {
    */ 
   interface AnalyticsEventFieldRefs {
     readonly id: FieldRef<"AnalyticsEvent", 'String'>
+    readonly eventId: FieldRef<"AnalyticsEvent", 'String'>
     readonly eventName: FieldRef<"AnalyticsEvent", 'String'>
     readonly eventData: FieldRef<"AnalyticsEvent", 'Json'>
     readonly processedAt: FieldRef<"AnalyticsEvent", 'DateTime'>
@@ -8516,6 +8528,7 @@ export namespace Prisma {
 
   export const AnalyticsEventScalarFieldEnum: {
     id: 'id',
+    eventId: 'eventId',
     eventName: 'eventName',
     eventData: 'eventData',
     processedAt: 'processedAt',
@@ -9216,6 +9229,7 @@ export namespace Prisma {
     OR?: AnalyticsEventWhereInput[]
     NOT?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
     id?: StringFilter<"AnalyticsEvent"> | string
+    eventId?: StringNullableFilter<"AnalyticsEvent"> | string | null
     eventName?: StringFilter<"AnalyticsEvent"> | string
     eventData?: JsonFilter<"AnalyticsEvent">
     processedAt?: DateTimeNullableFilter<"AnalyticsEvent"> | Date | string | null
@@ -9225,6 +9239,7 @@ export namespace Prisma {
 
   export type AnalyticsEventOrderByWithRelationInput = {
     id?: SortOrder
+    eventId?: SortOrderInput | SortOrder
     eventName?: SortOrder
     eventData?: SortOrder
     processedAt?: SortOrderInput | SortOrder
@@ -9234,6 +9249,7 @@ export namespace Prisma {
 
   export type AnalyticsEventWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    eventId?: string
     AND?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
     OR?: AnalyticsEventWhereInput[]
     NOT?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
@@ -9242,10 +9258,11 @@ export namespace Prisma {
     processedAt?: DateTimeNullableFilter<"AnalyticsEvent"> | Date | string | null
     isProcessed?: BoolFilter<"AnalyticsEvent"> | boolean
     createdAt?: DateTimeFilter<"AnalyticsEvent"> | Date | string
-  }, "id">
+  }, "id" | "eventId">
 
   export type AnalyticsEventOrderByWithAggregationInput = {
     id?: SortOrder
+    eventId?: SortOrderInput | SortOrder
     eventName?: SortOrder
     eventData?: SortOrder
     processedAt?: SortOrderInput | SortOrder
@@ -9261,6 +9278,7 @@ export namespace Prisma {
     OR?: AnalyticsEventScalarWhereWithAggregatesInput[]
     NOT?: AnalyticsEventScalarWhereWithAggregatesInput | AnalyticsEventScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"AnalyticsEvent"> | string
+    eventId?: StringNullableWithAggregatesFilter<"AnalyticsEvent"> | string | null
     eventName?: StringWithAggregatesFilter<"AnalyticsEvent"> | string
     eventData?: JsonWithAggregatesFilter<"AnalyticsEvent">
     processedAt?: DateTimeNullableWithAggregatesFilter<"AnalyticsEvent"> | Date | string | null
@@ -9921,6 +9939,7 @@ export namespace Prisma {
 
   export type AnalyticsEventCreateInput = {
     id?: string
+    eventId?: string | null
     eventName: string
     eventData: JsonNullValueInput | InputJsonValue
     processedAt?: Date | string | null
@@ -9930,6 +9949,7 @@ export namespace Prisma {
 
   export type AnalyticsEventUncheckedCreateInput = {
     id?: string
+    eventId?: string | null
     eventName: string
     eventData: JsonNullValueInput | InputJsonValue
     processedAt?: Date | string | null
@@ -9939,6 +9959,7 @@ export namespace Prisma {
 
   export type AnalyticsEventUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    eventId?: NullableStringFieldUpdateOperationsInput | string | null
     eventName?: StringFieldUpdateOperationsInput | string
     eventData?: JsonNullValueInput | InputJsonValue
     processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9948,6 +9969,7 @@ export namespace Prisma {
 
   export type AnalyticsEventUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    eventId?: NullableStringFieldUpdateOperationsInput | string | null
     eventName?: StringFieldUpdateOperationsInput | string
     eventData?: JsonNullValueInput | InputJsonValue
     processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9957,6 +9979,7 @@ export namespace Prisma {
 
   export type AnalyticsEventCreateManyInput = {
     id?: string
+    eventId?: string | null
     eventName: string
     eventData: JsonNullValueInput | InputJsonValue
     processedAt?: Date | string | null
@@ -9966,6 +9989,7 @@ export namespace Prisma {
 
   export type AnalyticsEventUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
+    eventId?: NullableStringFieldUpdateOperationsInput | string | null
     eventName?: StringFieldUpdateOperationsInput | string
     eventData?: JsonNullValueInput | InputJsonValue
     processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9975,6 +9999,7 @@ export namespace Prisma {
 
   export type AnalyticsEventUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
+    eventId?: NullableStringFieldUpdateOperationsInput | string | null
     eventName?: StringFieldUpdateOperationsInput | string
     eventData?: JsonNullValueInput | InputJsonValue
     processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -10629,6 +10654,7 @@ export namespace Prisma {
 
   export type AnalyticsEventCountOrderByAggregateInput = {
     id?: SortOrder
+    eventId?: SortOrder
     eventName?: SortOrder
     eventData?: SortOrder
     processedAt?: SortOrder
@@ -10638,6 +10664,7 @@ export namespace Prisma {
 
   export type AnalyticsEventMaxOrderByAggregateInput = {
     id?: SortOrder
+    eventId?: SortOrder
     eventName?: SortOrder
     processedAt?: SortOrder
     isProcessed?: SortOrder
@@ -10646,6 +10673,7 @@ export namespace Prisma {
 
   export type AnalyticsEventMinOrderByAggregateInput = {
     id?: SortOrder
+    eventId?: SortOrder
     eventName?: SortOrder
     processedAt?: SortOrder
     isProcessed?: SortOrder

@@ -14,10 +14,14 @@ export class ShippingController {
       throw new ValidationError('originCity, destinationCity, and weight are required query params');
     }
 
+    if (typeof weight !== 'string' || !/^\d+$/.test(weight)) {
+      throw new ValidationError('weight must be a positive integer in grams');
+    }
+
     const result = await shippingService.getRates({
       originCity: originCity as string,
       destinationCity: destinationCity as string,
-      weight: parseInt(weight as string, 10),
+      weight: Number(weight),
       courierCode: courierCode ? (courierCode as string) : undefined,
     });
 

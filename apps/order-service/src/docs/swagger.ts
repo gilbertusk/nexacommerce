@@ -7,12 +7,12 @@ export const swaggerSpec = {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
     schemas: {
       CheckoutBody: {
-        type: 'object', required: ['shippingAddressId', 'courierName', 'courierService', 'shippingCost'],
+        type: 'object', required: ['shippingAddressId'],
         properties: {
           shippingAddressId: { type: 'string', description: 'Address ID from User Service' },
           courierName: { type: 'string', example: 'JNE' },
           courierService: { type: 'string', example: 'REG' },
-          shippingCost: { type: 'number', example: 18000 },
+          shippingCost: { type: 'number', deprecated: true, description: 'Untrusted client value; ignored. Checkout is disabled until a server-issued quote can be validated.' },
           voucherCode: { type: 'string', nullable: true },
           notes: { type: 'string', nullable: true },
         },
@@ -49,8 +49,7 @@ export const swaggerSpec = {
         tags: ['Orders'], summary: 'Checkout cart and create order (CUSTOMER)', security: [{ bearerAuth: [] }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckoutBody' } } } },
         responses: {
-          201: { description: 'Order and payment created', content: { 'application/json': { schema: { type: 'object', properties: { data: { $ref: '#/components/schemas/CheckoutResponse' } } } } } },
-          400: { description: 'Cart empty, stock insufficient, or validation error' },
+          400: { description: 'Checkout is unavailable until a trusted server-issued shipping quote is implemented' },
           403: { description: 'CUSTOMER only' },
         },
       },
@@ -64,6 +63,34 @@ export const swaggerSpec = {
           { in: 'query', name: 'limit', schema: { type: 'integer', default: 10 } },
         ],
         responses: { 200: { description: 'Paginated order list', content: { 'application/json': { schema: { type: 'object', properties: { data: { type: 'object', properties: { orders: { type: 'array', items: { $ref: '#/components/schemas/Order' } } } } } } } } } },
+      },
+    },
+    '/orders/{id}/complaints': {
+      post: {
+        tags: ['Orders'], summary: 'Open one complaint for a delivered order (CUSTOMER)', security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['category', 'description'], properties: { category: { type: 'string', enum: ['DAMAGED', 'MISSING_ITEM', 'WRONG_ITEM', 'QUALITY', 'OTHER'] }, description: { type: 'string', minLength: 5, maxLength: 2000 } } } } } },
+        responses: { 201: { description: 'Complaint opened' }, 400: { description: 'Order is not delivered or request is invalid' }, 403: { description: 'Order belongs to another customer' } },
+      },
+      get: {
+        tags: ['Orders'], summary: 'Get this order complaint (CUSTOMER)', security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Complaint detail or null' }, 403: { description: 'Order belongs to another customer' } },
+      },
+    },
+    '/orders/admin/complaints': {
+      get: {
+        tags: ['Orders'], summary: 'List and filter order complaints (ADMIN)', security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'query', name: 'status', schema: { type: 'string', enum: ['OPEN', 'IN_REVIEW', 'RESOLVED', 'REJECTED'] } }, { in: 'query', name: 'page', schema: { type: 'integer', default: 1 } }, { in: 'query', name: 'limit', schema: { type: 'integer', default: 20, maximum: 100 } }],
+        responses: { 200: { description: 'Paginated complaint queue' }, 403: { description: 'ADMIN only' } },
+      },
+    },
+    '/orders/admin/complaints/{complaintId}': {
+      patch: {
+        tags: ['Orders'], summary: 'Moderate an order complaint (ADMIN)', security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'complaintId', required: true, schema: { type: 'string' } }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['status'], properties: { status: { type: 'string', enum: ['IN_REVIEW', 'RESOLVED', 'REJECTED'] }, adminNote: { type: 'string', maxLength: 1000 } } } } } },
+        responses: { 200: { description: 'Complaint updated' }, 400: { description: 'Invalid state transition' }, 403: { description: 'ADMIN only' }, 404: { description: 'Complaint not found' } },
       },
     },
     '/orders/{id}': {

@@ -12,15 +12,19 @@ let channel: Channel;
 export async function initRabbitMQ() {
   try {
     const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createChannel();
+    channel = await connection.createConfirmChannel();
     await setupExchangeAndQueues(channel);
 
     await createConsumer(channel, QUEUES.ANALYTICS_EVENTS, async (event: any) => {
-      const { eventName, payload } = event;
+      const { eventId, eventName, payload } = event;
       logger.info(`[Analytics] Received event: ${eventName}`);
 
       // Always save raw event for audit/replay
-      const saved = await analyticsRepository.saveEvent(eventName, payload);
+      const saved = await analyticsRepository.saveEvent(eventId, eventName, payload);
+      if (saved.isProcessed) {
+        logger.info(`[Analytics] Skipping duplicate event: ${eventId}`);
+        return;
+      }
 
       try {
         switch (eventName) {
@@ -55,6 +59,9 @@ export async function initRabbitMQ() {
         await analyticsRepository.markEventProcessed(saved.id);
       } catch (err: any) {
         logger.error(`[Analytics] Error processing ${eventName}: ${err.message}`);
+        // Do not acknowledge failed analytics updates. The shared consumer
+        // owns retry/DLQ routing and only ACKs after the handler resolves.
+        throw err;
       }
     });
 

@@ -65,6 +65,23 @@ export function apiPost<T>(
   );
 }
 
+export function apiPostWithHeaders<T>(
+  path: string,
+  body: unknown,
+  extraHeaders: Record<string, string>,
+  token?: string
+): Promise<T> {
+  return request<T>(
+    path,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: extraHeaders,
+    },
+    token
+  );
+}
+
 export function apiPut<T>(
   path: string,
   body: unknown,
@@ -74,6 +91,21 @@ export function apiPut<T>(
     path,
     {
       method: "PUT",
+      body: JSON.stringify(body),
+    },
+    token
+  );
+}
+
+export function apiPatch<T>(
+  path: string,
+  body: unknown,
+  token?: string
+): Promise<T> {
+  return request<T>(
+    path,
+    {
+      method: "PATCH",
       body: JSON.stringify(body),
     },
     token

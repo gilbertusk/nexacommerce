@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWishlistStore } from "@/lib/store/useWishlistStore";
-import { useCartStore } from "@/lib/store/useCartStore";
+import { useAddCartItem } from "@/lib/api/hooks/useCart";
+import { useUserStore } from "@/lib/store/useUserStore";
 import EmptyState from "@/components/ui/EmptyState";
 import { formatIDR } from "@/lib/utils/format";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useHydrated } from "@/lib/hooks/useHydrated";
 
 export default function WishlistPage() {
+  const router = useRouter();
   const { items, toggleWishlist } = useWishlistStore();
-  const { addItem } = useCartStore();
-  const [mounted, setMounted] = useState(false);
+  const { user } = useUserStore();
+  const addCartItem = useAddCartItem();
+  const mounted = useHydrated();
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [cartError, setCartError] = useState("");
 
   if (!mounted) {
     return (
@@ -28,19 +30,18 @@ export default function WishlistPage() {
     );
   }
 
-  const handleAddToCart = (item: typeof items[0]) => {
-    addItem(
-      {
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        image: item.image,
-        stock: item.stock,
-        sellerId: "",
-        sellerName: item.sellerName,
-      },
-      1
-    );
+  const handleAddToCart = async (item: typeof items[0]) => {
+    setCartError("");
+    if (!user) {
+      router.push(`/auth/login?redirect=${encodeURIComponent("/wishlist")}`);
+      return;
+    }
+    try {
+      await addCartItem.mutateAsync({ productId: item.id, quantity: 1 });
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Produk gagal ditambahkan ke keranjang.");
+      return;
+    }
     setAddedIds((prev) => new Set(prev).add(item.id));
     setTimeout(() => {
       setAddedIds((prev) => {
@@ -77,6 +78,7 @@ export default function WishlistPage() {
         </div>
       ) : (
         <>
+          {cartError && <p role="alert" className="text-xs text-rose-800 mb-4">{cartError}</p>}
           <div className="flex items-center justify-between mb-6">
             <p className="text-xs text-ink-secondary font-mono">
               <span className="font-semibold text-ink-primary font-sans">{items.length}</span> produk tersimpan
@@ -151,7 +153,7 @@ export default function WishlistPage() {
                     <div className="flex flex-col gap-2">
                       <button
                         onClick={() => handleAddToCart(item)}
-                        disabled={isOutOfStock}
+                        disabled={addCartItem.isPending || isOutOfStock}
                         className={`w-full text-[10px] uppercase font-bold tracking-widest py-2.5 rounded-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                           isAdded
                             ? "bg-emerald-50 text-emerald-800 border border-emerald-200"

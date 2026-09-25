@@ -16,6 +16,8 @@ const corsOrigins = assertProductionSecret(
   'CORS_ORIGINS',
   process.env.CORS_ORIGINS,
 ).split(',').map((origin) => origin.trim()).filter(Boolean);
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+assertProductionSecret('REDIS_URL', redisUrl, ['redis://localhost:6379']);
 
 export const config = {
   port: parseInt(process.env.PORT_API_GATEWAY || '3000', 10),
@@ -32,6 +34,7 @@ export const config = {
   notificationServiceUrl: process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3011',
   analyticsServiceUrl: process.env.ANALYTICS_SERVICE_URL || 'http://localhost:3012',
   jwtSecret,
+  redisUrl,
   allowedOrigins: corsOrigins.length > 0
     ? corsOrigins
     : ['http://localhost:3020', 'http://localhost:3021', 'http://localhost:3022'],

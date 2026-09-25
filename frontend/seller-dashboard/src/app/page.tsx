@@ -10,8 +10,9 @@ interface SellerAnalytics {
   totalRevenue?: number;
   orders?: number;
   totalOrders?: number;
-  conversionRate?: number;
   productsSold?: number;
+  averageRating?: number;
+  totalReviews?: number;
   topProducts?: Array<{
     id: string;
     name: string;
@@ -37,7 +38,26 @@ interface OrdersResponse {
 
 interface AnalyticsResponse {
   success: boolean;
-  data: SellerAnalytics;
+  data: {
+    overview: { totalRevenue: number; totalOrders: number; totalItemsSold: number; averageRating: number; totalReviews: number };
+    topProducts: Array<{ productId: string; productName: string; revenue: number; unitsSold: number }>;
+  };
+}
+
+function normalizeAnalytics(data: AnalyticsResponse['data']): SellerAnalytics {
+  return {
+    totalRevenue: data.overview.totalRevenue,
+    totalOrders: data.overview.totalOrders,
+    productsSold: data.overview.totalItemsSold,
+    averageRating: data.overview.averageRating,
+    totalReviews: data.overview.totalReviews,
+    topProducts: data.topProducts.map((product) => ({
+      id: product.productId,
+      name: product.productName,
+      revenue: product.revenue,
+      sold: product.unitsSold,
+    })),
+  };
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -95,29 +115,13 @@ export default function SellerDashboardHome() {
       setIsLoadingAnalytics(true);
       setAnalyticsError('');
       try {
-        const res = await apiGet<AnalyticsResponse>(
-          `/api/v1/analytics/seller/${seller!.id}`,
-          token!,
-        );
-        if (res.success) {
-          setAnalytics(res.data);
-        }
-      } catch {
-        // Try fallback endpoint
-        try {
-          const res2 = await apiGet<AnalyticsResponse>(
-            `/api/v1/analytics/sellers?sellerId=${seller!.id}`,
-            token!,
-          );
-          if (res2.success) {
-            setAnalytics(res2.data);
-          }
-        } catch (err2: unknown) {
-          if (err2 instanceof Error) {
-            setAnalyticsError(err2.message);
-          } else {
-            setAnalyticsError('Gagal memuat analitik.');
-          }
+        const res = await apiGet<AnalyticsResponse>('/api/v1/analytics/seller/dashboard', token!);
+        if (res.success) setAnalytics(normalizeAnalytics(res.data));
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setAnalyticsError(err.message);
+        } else {
+          setAnalyticsError('Gagal memuat analitik.');
         }
       } finally {
         setIsLoadingAnalytics(false);
@@ -155,8 +159,9 @@ export default function SellerDashboardHome() {
 
   const revenue = analytics?.revenue ?? analytics?.totalRevenue ?? 0;
   const orders = analytics?.orders ?? analytics?.totalOrders ?? 0;
-  const conversionRate = analytics?.conversionRate ?? 0;
   const productsSold = analytics?.productsSold ?? 0;
+  const averageRating = analytics?.averageRating ?? 0;
+  const totalReviews = analytics?.totalReviews ?? 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -165,7 +170,7 @@ export default function SellerDashboardHome() {
           Selamat Datang, {seller?.name ?? 'Penjual'}
         </h1>
         <p className="text-sm text-ink-secondary">
-          Berikut adalah ringkasan performa toko Anda hari ini.
+          Berikut adalah ringkasan performa toko Anda berdasarkan data sepanjang waktu.
         </p>
       </div>
 
@@ -214,7 +219,7 @@ export default function SellerDashboardHome() {
                 shopping_bag
               </span>
               <span className="text-xs uppercase font-bold tracking-widest text-white/80">
-                Pesanan Baru
+                Total Pesanan
               </span>
             </div>
             {isLoadingAnalytics ? (
@@ -231,14 +236,14 @@ export default function SellerDashboardHome() {
           </Link>
         </div>
 
-        {/* Small Stat — Conversion */}
+        {/* Small Stat — Rating */}
         <div className="md:col-span-4 bg-white hairline rounded-sm p-6 flex flex-col justify-between h-32">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase font-bold tracking-widest text-ink-secondary">
-              Konversi
+              Rating Rata-rata
             </span>
             <span className="material-symbols-outlined text-ink-secondary text-sm">
-              analytics
+              star
             </span>
           </div>
           <div>
@@ -246,11 +251,11 @@ export default function SellerDashboardHome() {
               <div className="h-7 w-16 bg-paper animate-pulse rounded-xs" />
             ) : (
               <div className="text-2xl font-serif text-ink-primary">
-                {conversionRate.toFixed(1)}%
+                {totalReviews > 0 ? averageRating.toFixed(1) : '—'}
               </div>
             )}
             <div className="text-[10px] text-ink-secondary mt-1">
-              Rata-rata industri: 2.1%
+              {totalReviews > 0 ? `${totalReviews} ulasan` : 'Belum ada ulasan'}
             </div>
           </div>
         </div>
@@ -274,7 +279,7 @@ export default function SellerDashboardHome() {
               </div>
             )}
             <div className="text-[10px] text-ink-secondary mt-1">
-              Dalam 30 hari terakhir
+              Seluruh waktu
             </div>
           </div>
         </div>

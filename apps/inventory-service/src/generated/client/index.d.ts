@@ -15,23 +15,28 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 /**
  * Model Inventory
- * 
+ *
  */
 export type Inventory = $Result.DefaultSelection<Prisma.$InventoryPayload>
 /**
  * Model StockMovement
- * 
+ *
  */
 export type StockMovement = $Result.DefaultSelection<Prisma.$StockMovementPayload>
 /**
  * Model StockReservation
- * 
+ *
  */
 export type StockReservation = $Result.DefaultSelection<Prisma.$StockReservationPayload>
+/**
+ * Model OutboxEvent
+ *
+ */
+export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
 
 /**
  * ##  Prisma Client ʲˢ
- * 
+ *
  * Type-safe database client for TypeScript & Node.js
  * @example
  * ```
@@ -40,7 +45,7 @@ export type StockReservation = $Result.DefaultSelection<Prisma.$StockReservation
  * const inventories = await prisma.inventory.findMany()
  * ```
  *
- * 
+ *
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
  */
 export class PrismaClient<
@@ -52,7 +57,7 @@ export class PrismaClient<
 
     /**
    * ##  Prisma Client ʲˢ
-   * 
+   *
    * Type-safe database client for TypeScript & Node.js
    * @example
    * ```
@@ -61,7 +66,7 @@ export class PrismaClient<
    * const inventories = await prisma.inventory.findMany()
    * ```
    *
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
    */
 
@@ -91,7 +96,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRaw`UPDATE User SET cool = ${true} WHERE email = ${'user@email.com'};`
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -103,7 +108,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRawUnsafe('UPDATE User SET cool = $1 WHERE email = $2 ;', true, 'user@email.com')
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -114,7 +119,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRaw`SELECT * FROM User WHERE id = ${1} OR email = ${'user@email.com'};`
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -126,7 +131,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRawUnsafe('SELECT * FROM User WHERE id = $1 OR email = $2;', 1, 'user@email.com')
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -142,7 +147,7 @@ export class PrismaClient<
    *   prisma.user.create({ data: { name: 'Alice' } }),
    * ])
    * ```
-   * 
+   *
    * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
@@ -181,6 +186,16 @@ export class PrismaClient<
     * ```
     */
   get stockReservation(): Prisma.StockReservationDelegate<ExtArgs>;
+
+  /**
+   * `prisma.outboxEvent`: Exposes CRUD operations for the **OutboxEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more OutboxEvents
+    * const outboxEvents = await prisma.outboxEvent.findMany()
+    * ```
+    */
+  get outboxEvent(): Prisma.OutboxEventDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -222,7 +237,7 @@ export namespace Prisma {
   export type DecimalJsLike = runtime.DecimalJsLike
 
   /**
-   * Metrics 
+   * Metrics
    */
   export type Metrics = runtime.Metrics
   export type Metric<T> = runtime.Metric<T>
@@ -247,7 +262,7 @@ export namespace Prisma {
     client: string
   }
 
-  export const prismaVersion: PrismaVersion 
+  export const prismaVersion: PrismaVersion
 
   /**
    * Utility Types
@@ -263,15 +278,15 @@ export namespace Prisma {
 
   /**
    * Types of the values used to represent different kinds of `null` values when working with JSON fields.
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   namespace NullTypes {
     /**
     * Type of `Prisma.DbNull`.
-    * 
+    *
     * You cannot use other instances of this class. Please use the `Prisma.DbNull` value.
-    * 
+    *
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class DbNull {
@@ -281,9 +296,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.JsonNull`.
-    * 
+    *
     * You cannot use other instances of this class. Please use the `Prisma.JsonNull` value.
-    * 
+    *
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class JsonNull {
@@ -293,9 +308,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.AnyNull`.
-    * 
+    *
     * You cannot use other instances of this class. Please use the `Prisma.AnyNull` value.
-    * 
+    *
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class AnyNull {
@@ -306,21 +321,21 @@ export namespace Prisma {
 
   /**
    * Helper for filtering JSON entries that have `null` on the database (empty on the db)
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const DbNull: NullTypes.DbNull
 
   /**
    * Helper for filtering JSON entries that have JSON `null` values (not empty on the db)
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const JsonNull: NullTypes.JsonNull
 
   /**
    * Helper for filtering JSON entries that are `Prisma.DbNull` or `Prisma.JsonNull`
-   * 
+   *
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const AnyNull: NullTypes.AnyNull
@@ -624,7 +639,8 @@ export namespace Prisma {
   export const ModelName: {
     Inventory: 'Inventory',
     StockMovement: 'StockMovement',
-    StockReservation: 'StockReservation'
+    StockReservation: 'StockReservation',
+    OutboxEvent: 'OutboxEvent'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -640,7 +656,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "inventory" | "stockMovement" | "stockReservation"
+      modelProps: "inventory" | "stockMovement" | "stockReservation" | "outboxEvent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -854,6 +870,76 @@ export namespace Prisma {
           }
         }
       }
+      OutboxEvent: {
+        payload: Prisma.$OutboxEventPayload<ExtArgs>
+        fields: Prisma.OutboxEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.OutboxEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.OutboxEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          findFirst: {
+            args: Prisma.OutboxEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.OutboxEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          findMany: {
+            args: Prisma.OutboxEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>[]
+          }
+          create: {
+            args: Prisma.OutboxEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          createMany: {
+            args: Prisma.OutboxEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.OutboxEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>[]
+          }
+          delete: {
+            args: Prisma.OutboxEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          update: {
+            args: Prisma.OutboxEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.OutboxEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.OutboxEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.OutboxEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$OutboxEventPayload>
+          }
+          aggregate: {
+            args: Prisma.OutboxEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateOutboxEvent>
+          }
+          groupBy: {
+            args: Prisma.OutboxEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<OutboxEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.OutboxEventCountArgs<ExtArgs>
+            result: $Utils.Optional<OutboxEventCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -899,7 +985,7 @@ export namespace Prisma {
      * ```
      * // Defaults to stdout
      * log: ['query', 'info', 'warn', 'error']
-     * 
+     *
      * // Emit as events
      * log: [
      *   { emit: 'stdout', level: 'query' },
@@ -1182,55 +1268,55 @@ export namespace Prisma {
     where?: InventoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Inventories to fetch.
      */
     orderBy?: InventoryOrderByWithRelationInput | InventoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: InventoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Inventories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Inventories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned Inventories
     **/
     _count?: true | InventoryCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: InventoryAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: InventorySumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: InventoryMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: InventoryMaxAggregateInputType
@@ -1365,7 +1451,7 @@ export namespace Prisma {
 
   type InventoryGetPayload<S extends boolean | null | undefined | InventoryDefaultArgs> = $Result.GetResult<Prisma.$InventoryPayload, S>
 
-  type InventoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type InventoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<InventoryFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: InventoryCountAggregateInputType | true
     }
@@ -1386,7 +1472,7 @@ export namespace Prisma {
     findUnique<T extends InventoryFindUniqueArgs>(args: SelectSubset<T, InventoryFindUniqueArgs<ExtArgs>>): Prisma__InventoryClient<$Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one Inventory that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one Inventory that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {InventoryFindUniqueOrThrowArgs} args - Arguments to find a Inventory
      * @example
@@ -1438,13 +1524,13 @@ export namespace Prisma {
      * @example
      * // Get all Inventories
      * const inventories = await prisma.inventory.findMany()
-     * 
+     *
      * // Get first 10 Inventories
      * const inventories = await prisma.inventory.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const inventoryWithIdOnly = await prisma.inventory.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends InventoryFindManyArgs>(args?: SelectSubset<T, InventoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "findMany">>
 
@@ -1458,7 +1544,7 @@ export namespace Prisma {
      *     // ... data to create a Inventory
      *   }
      * })
-     * 
+     *
      */
     create<T extends InventoryCreateArgs>(args: SelectSubset<T, InventoryCreateArgs<ExtArgs>>): Prisma__InventoryClient<$Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -1472,7 +1558,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends InventoryCreateManyArgs>(args?: SelectSubset<T, InventoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1486,9 +1572,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many Inventories and only return the `id`
-     * const inventoryWithIdOnly = await prisma.inventory.createManyAndReturn({ 
+     * const inventoryWithIdOnly = await prisma.inventory.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -1496,7 +1582,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends InventoryCreateManyAndReturnArgs>(args?: SelectSubset<T, InventoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -1510,7 +1596,7 @@ export namespace Prisma {
      *     // ... filter to delete one Inventory
      *   }
      * })
-     * 
+     *
      */
     delete<T extends InventoryDeleteArgs>(args: SelectSubset<T, InventoryDeleteArgs<ExtArgs>>): Prisma__InventoryClient<$Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -1527,7 +1613,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends InventoryUpdateArgs>(args: SelectSubset<T, InventoryUpdateArgs<ExtArgs>>): Prisma__InventoryClient<$Result.GetResult<Prisma.$InventoryPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -1541,7 +1627,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends InventoryDeleteManyArgs>(args?: SelectSubset<T, InventoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1560,7 +1646,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends InventoryUpdateManyArgs>(args: SelectSubset<T, InventoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1649,7 +1735,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends InventoryGroupByArgs,
@@ -1752,7 +1838,7 @@ export namespace Prisma {
 
   /**
    * Fields of the Inventory model
-   */ 
+   */
   interface InventoryFieldRefs {
     readonly id: FieldRef<"Inventory", 'String'>
     readonly productId: FieldRef<"Inventory", 'String'>
@@ -1765,7 +1851,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Inventory", 'DateTime'>
     readonly updatedAt: FieldRef<"Inventory", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -1822,31 +1908,31 @@ export namespace Prisma {
     where?: InventoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Inventories to fetch.
      */
     orderBy?: InventoryOrderByWithRelationInput | InventoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Inventories.
      */
     cursor?: InventoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Inventories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Inventories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Inventories.
      */
     distinct?: InventoryScalarFieldEnum | InventoryScalarFieldEnum[]
@@ -1870,31 +1956,31 @@ export namespace Prisma {
     where?: InventoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Inventories to fetch.
      */
     orderBy?: InventoryOrderByWithRelationInput | InventoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for Inventories.
      */
     cursor?: InventoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Inventories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Inventories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of Inventories.
      */
     distinct?: InventoryScalarFieldEnum | InventoryScalarFieldEnum[]
@@ -1918,25 +2004,25 @@ export namespace Prisma {
     where?: InventoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of Inventories to fetch.
      */
     orderBy?: InventoryOrderByWithRelationInput | InventoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing Inventories.
      */
     cursor?: InventoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` Inventories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` Inventories.
      */
     skip?: number
@@ -2242,55 +2328,55 @@ export namespace Prisma {
     where?: StockMovementWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockMovements to fetch.
      */
     orderBy?: StockMovementOrderByWithRelationInput | StockMovementOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: StockMovementWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockMovements from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockMovements.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned StockMovements
     **/
     _count?: true | StockMovementCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: StockMovementAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: StockMovementSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: StockMovementMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: StockMovementMaxAggregateInputType
@@ -2418,7 +2504,7 @@ export namespace Prisma {
 
   type StockMovementGetPayload<S extends boolean | null | undefined | StockMovementDefaultArgs> = $Result.GetResult<Prisma.$StockMovementPayload, S>
 
-  type StockMovementCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type StockMovementCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<StockMovementFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: StockMovementCountAggregateInputType | true
     }
@@ -2439,7 +2525,7 @@ export namespace Prisma {
     findUnique<T extends StockMovementFindUniqueArgs>(args: SelectSubset<T, StockMovementFindUniqueArgs<ExtArgs>>): Prisma__StockMovementClient<$Result.GetResult<Prisma.$StockMovementPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one StockMovement that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one StockMovement that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {StockMovementFindUniqueOrThrowArgs} args - Arguments to find a StockMovement
      * @example
@@ -2491,13 +2577,13 @@ export namespace Prisma {
      * @example
      * // Get all StockMovements
      * const stockMovements = await prisma.stockMovement.findMany()
-     * 
+     *
      * // Get first 10 StockMovements
      * const stockMovements = await prisma.stockMovement.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const stockMovementWithIdOnly = await prisma.stockMovement.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends StockMovementFindManyArgs>(args?: SelectSubset<T, StockMovementFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StockMovementPayload<ExtArgs>, T, "findMany">>
 
@@ -2511,7 +2597,7 @@ export namespace Prisma {
      *     // ... data to create a StockMovement
      *   }
      * })
-     * 
+     *
      */
     create<T extends StockMovementCreateArgs>(args: SelectSubset<T, StockMovementCreateArgs<ExtArgs>>): Prisma__StockMovementClient<$Result.GetResult<Prisma.$StockMovementPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -2525,7 +2611,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends StockMovementCreateManyArgs>(args?: SelectSubset<T, StockMovementCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2539,9 +2625,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many StockMovements and only return the `id`
-     * const stockMovementWithIdOnly = await prisma.stockMovement.createManyAndReturn({ 
+     * const stockMovementWithIdOnly = await prisma.stockMovement.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -2549,7 +2635,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends StockMovementCreateManyAndReturnArgs>(args?: SelectSubset<T, StockMovementCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StockMovementPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -2563,7 +2649,7 @@ export namespace Prisma {
      *     // ... filter to delete one StockMovement
      *   }
      * })
-     * 
+     *
      */
     delete<T extends StockMovementDeleteArgs>(args: SelectSubset<T, StockMovementDeleteArgs<ExtArgs>>): Prisma__StockMovementClient<$Result.GetResult<Prisma.$StockMovementPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -2580,7 +2666,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends StockMovementUpdateArgs>(args: SelectSubset<T, StockMovementUpdateArgs<ExtArgs>>): Prisma__StockMovementClient<$Result.GetResult<Prisma.$StockMovementPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -2594,7 +2680,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends StockMovementDeleteManyArgs>(args?: SelectSubset<T, StockMovementDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2613,7 +2699,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends StockMovementUpdateManyArgs>(args: SelectSubset<T, StockMovementUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2702,7 +2788,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends StockMovementGroupByArgs,
@@ -2804,7 +2890,7 @@ export namespace Prisma {
 
   /**
    * Fields of the StockMovement model
-   */ 
+   */
   interface StockMovementFieldRefs {
     readonly id: FieldRef<"StockMovement", 'String'>
     readonly inventoryId: FieldRef<"StockMovement", 'String'>
@@ -2816,7 +2902,7 @@ export namespace Prisma {
     readonly createdBy: FieldRef<"StockMovement", 'String'>
     readonly createdAt: FieldRef<"StockMovement", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -2873,31 +2959,31 @@ export namespace Prisma {
     where?: StockMovementWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockMovements to fetch.
      */
     orderBy?: StockMovementOrderByWithRelationInput | StockMovementOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for StockMovements.
      */
     cursor?: StockMovementWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockMovements from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockMovements.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of StockMovements.
      */
     distinct?: StockMovementScalarFieldEnum | StockMovementScalarFieldEnum[]
@@ -2921,31 +3007,31 @@ export namespace Prisma {
     where?: StockMovementWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockMovements to fetch.
      */
     orderBy?: StockMovementOrderByWithRelationInput | StockMovementOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for StockMovements.
      */
     cursor?: StockMovementWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockMovements from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockMovements.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of StockMovements.
      */
     distinct?: StockMovementScalarFieldEnum | StockMovementScalarFieldEnum[]
@@ -2969,25 +3055,25 @@ export namespace Prisma {
     where?: StockMovementWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockMovements to fetch.
      */
     orderBy?: StockMovementOrderByWithRelationInput | StockMovementOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing StockMovements.
      */
     cursor?: StockMovementWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockMovements from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockMovements.
      */
     skip?: number
@@ -3257,55 +3343,55 @@ export namespace Prisma {
     where?: StockReservationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockReservations to fetch.
      */
     orderBy?: StockReservationOrderByWithRelationInput | StockReservationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the start position
      */
     cursor?: StockReservationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockReservations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockReservations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Count returned StockReservations
     **/
     _count?: true | StockReservationCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to average
     **/
     _avg?: StockReservationAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to sum
     **/
     _sum?: StockReservationSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the minimum value
     **/
     _min?: StockReservationMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
+     *
      * Select which fields to find the maximum value
     **/
     _max?: StockReservationMaxAggregateInputType
@@ -3433,7 +3519,7 @@ export namespace Prisma {
 
   type StockReservationGetPayload<S extends boolean | null | undefined | StockReservationDefaultArgs> = $Result.GetResult<Prisma.$StockReservationPayload, S>
 
-  type StockReservationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+  type StockReservationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
     Omit<StockReservationFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: StockReservationCountAggregateInputType | true
     }
@@ -3454,7 +3540,7 @@ export namespace Prisma {
     findUnique<T extends StockReservationFindUniqueArgs>(args: SelectSubset<T, StockReservationFindUniqueArgs<ExtArgs>>): Prisma__StockReservationClient<$Result.GetResult<Prisma.$StockReservationPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one StockReservation that matches the filter or throw an error with `error.code='P2025'` 
+     * Find one StockReservation that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
      * @param {StockReservationFindUniqueOrThrowArgs} args - Arguments to find a StockReservation
      * @example
@@ -3506,13 +3592,13 @@ export namespace Prisma {
      * @example
      * // Get all StockReservations
      * const stockReservations = await prisma.stockReservation.findMany()
-     * 
+     *
      * // Get first 10 StockReservations
      * const stockReservations = await prisma.stockReservation.findMany({ take: 10 })
-     * 
+     *
      * // Only select the `id`
      * const stockReservationWithIdOnly = await prisma.stockReservation.findMany({ select: { id: true } })
-     * 
+     *
      */
     findMany<T extends StockReservationFindManyArgs>(args?: SelectSubset<T, StockReservationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StockReservationPayload<ExtArgs>, T, "findMany">>
 
@@ -3526,7 +3612,7 @@ export namespace Prisma {
      *     // ... data to create a StockReservation
      *   }
      * })
-     * 
+     *
      */
     create<T extends StockReservationCreateArgs>(args: SelectSubset<T, StockReservationCreateArgs<ExtArgs>>): Prisma__StockReservationClient<$Result.GetResult<Prisma.$StockReservationPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -3540,7 +3626,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *     
+     *
      */
     createMany<T extends StockReservationCreateManyArgs>(args?: SelectSubset<T, StockReservationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3554,9 +3640,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     * 
+     *
      * // Create many StockReservations and only return the `id`
-     * const stockReservationWithIdOnly = await prisma.stockReservation.createManyAndReturn({ 
+     * const stockReservationWithIdOnly = await prisma.stockReservation.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -3564,7 +3650,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * 
+     *
      */
     createManyAndReturn<T extends StockReservationCreateManyAndReturnArgs>(args?: SelectSubset<T, StockReservationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StockReservationPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -3578,7 +3664,7 @@ export namespace Prisma {
      *     // ... filter to delete one StockReservation
      *   }
      * })
-     * 
+     *
      */
     delete<T extends StockReservationDeleteArgs>(args: SelectSubset<T, StockReservationDeleteArgs<ExtArgs>>): Prisma__StockReservationClient<$Result.GetResult<Prisma.$StockReservationPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -3595,7 +3681,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     update<T extends StockReservationUpdateArgs>(args: SelectSubset<T, StockReservationUpdateArgs<ExtArgs>>): Prisma__StockReservationClient<$Result.GetResult<Prisma.$StockReservationPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -3609,7 +3695,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     * 
+     *
      */
     deleteMany<T extends StockReservationDeleteManyArgs>(args?: SelectSubset<T, StockReservationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3628,7 +3714,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     * 
+     *
      */
     updateMany<T extends StockReservationUpdateManyArgs>(args: SelectSubset<T, StockReservationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3717,7 +3803,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     * 
+     *
     **/
     groupBy<
       T extends StockReservationGroupByArgs,
@@ -3819,7 +3905,7 @@ export namespace Prisma {
 
   /**
    * Fields of the StockReservation model
-   */ 
+   */
   interface StockReservationFieldRefs {
     readonly id: FieldRef<"StockReservation", 'String'>
     readonly inventoryId: FieldRef<"StockReservation", 'String'>
@@ -3831,7 +3917,7 @@ export namespace Prisma {
     readonly releasedAt: FieldRef<"StockReservation", 'DateTime'>
     readonly createdAt: FieldRef<"StockReservation", 'DateTime'>
   }
-    
+
 
   // Custom InputTypes
   /**
@@ -3888,31 +3974,31 @@ export namespace Prisma {
     where?: StockReservationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockReservations to fetch.
      */
     orderBy?: StockReservationOrderByWithRelationInput | StockReservationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for StockReservations.
      */
     cursor?: StockReservationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockReservations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockReservations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of StockReservations.
      */
     distinct?: StockReservationScalarFieldEnum | StockReservationScalarFieldEnum[]
@@ -3936,31 +4022,31 @@ export namespace Prisma {
     where?: StockReservationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockReservations to fetch.
      */
     orderBy?: StockReservationOrderByWithRelationInput | StockReservationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for searching for StockReservations.
      */
     cursor?: StockReservationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockReservations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockReservations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
+     *
      * Filter by unique combinations of StockReservations.
      */
     distinct?: StockReservationScalarFieldEnum | StockReservationScalarFieldEnum[]
@@ -3984,25 +4070,25 @@ export namespace Prisma {
     where?: StockReservationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
+     *
      * Determine the order of StockReservations to fetch.
      */
     orderBy?: StockReservationOrderByWithRelationInput | StockReservationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
+     *
      * Sets the position for listing StockReservations.
      */
     cursor?: StockReservationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Take `±n` StockReservations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
+     *
      * Skip the first `n` StockReservations.
      */
     skip?: number
@@ -4163,6 +4249,1034 @@ export namespace Prisma {
 
 
   /**
+   * Model OutboxEvent
+   */
+
+  export type AggregateOutboxEvent = {
+    _count: OutboxEventCountAggregateOutputType | null
+    _avg: OutboxEventAvgAggregateOutputType | null
+    _sum: OutboxEventSumAggregateOutputType | null
+    _min: OutboxEventMinAggregateOutputType | null
+    _max: OutboxEventMaxAggregateOutputType | null
+  }
+
+  export type OutboxEventAvgAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type OutboxEventSumAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type OutboxEventMinAggregateOutputType = {
+    id: string | null
+    aggregateType: string | null
+    aggregateId: string | null
+    eventName: string | null
+    routingKey: string | null
+    status: string | null
+    attempts: number | null
+    availableAt: Date | null
+    lockedAt: Date | null
+    lockToken: string | null
+    publishedAt: Date | null
+    lastError: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type OutboxEventMaxAggregateOutputType = {
+    id: string | null
+    aggregateType: string | null
+    aggregateId: string | null
+    eventName: string | null
+    routingKey: string | null
+    status: string | null
+    attempts: number | null
+    availableAt: Date | null
+    lockedAt: Date | null
+    lockToken: string | null
+    publishedAt: Date | null
+    lastError: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type OutboxEventCountAggregateOutputType = {
+    id: number
+    aggregateType: number
+    aggregateId: number
+    eventName: number
+    routingKey: number
+    eventPayload: number
+    status: number
+    attempts: number
+    availableAt: number
+    lockedAt: number
+    lockToken: number
+    publishedAt: number
+    lastError: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type OutboxEventAvgAggregateInputType = {
+    attempts?: true
+  }
+
+  export type OutboxEventSumAggregateInputType = {
+    attempts?: true
+  }
+
+  export type OutboxEventMinAggregateInputType = {
+    id?: true
+    aggregateType?: true
+    aggregateId?: true
+    eventName?: true
+    routingKey?: true
+    status?: true
+    attempts?: true
+    availableAt?: true
+    lockedAt?: true
+    lockToken?: true
+    publishedAt?: true
+    lastError?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type OutboxEventMaxAggregateInputType = {
+    id?: true
+    aggregateType?: true
+    aggregateId?: true
+    eventName?: true
+    routingKey?: true
+    status?: true
+    attempts?: true
+    availableAt?: true
+    lockedAt?: true
+    lockToken?: true
+    publishedAt?: true
+    lastError?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type OutboxEventCountAggregateInputType = {
+    id?: true
+    aggregateType?: true
+    aggregateId?: true
+    eventName?: true
+    routingKey?: true
+    eventPayload?: true
+    status?: true
+    attempts?: true
+    availableAt?: true
+    lockedAt?: true
+    lockToken?: true
+    publishedAt?: true
+    lastError?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type OutboxEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which OutboxEvent to aggregate.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the start position
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Count returned OutboxEvents
+    **/
+    _count?: true | OutboxEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to average
+    **/
+    _avg?: OutboxEventAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to sum
+    **/
+    _sum?: OutboxEventSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the minimum value
+    **/
+    _min?: OutboxEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     *
+     * Select which fields to find the maximum value
+    **/
+    _max?: OutboxEventMaxAggregateInputType
+  }
+
+  export type GetOutboxEventAggregateType<T extends OutboxEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateOutboxEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateOutboxEvent[P]>
+      : GetScalarType<T[P], AggregateOutboxEvent[P]>
+  }
+
+
+
+
+  export type OutboxEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: OutboxEventWhereInput
+    orderBy?: OutboxEventOrderByWithAggregationInput | OutboxEventOrderByWithAggregationInput[]
+    by: OutboxEventScalarFieldEnum[] | OutboxEventScalarFieldEnum
+    having?: OutboxEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: OutboxEventCountAggregateInputType | true
+    _avg?: OutboxEventAvgAggregateInputType
+    _sum?: OutboxEventSumAggregateInputType
+    _min?: OutboxEventMinAggregateInputType
+    _max?: OutboxEventMaxAggregateInputType
+  }
+
+  export type OutboxEventGroupByOutputType = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonValue
+    status: string
+    attempts: number
+    availableAt: Date
+    lockedAt: Date | null
+    lockToken: string | null
+    publishedAt: Date | null
+    lastError: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: OutboxEventCountAggregateOutputType | null
+    _avg: OutboxEventAvgAggregateOutputType | null
+    _sum: OutboxEventSumAggregateOutputType | null
+    _min: OutboxEventMinAggregateOutputType | null
+    _max: OutboxEventMaxAggregateOutputType | null
+  }
+
+  type GetOutboxEventGroupByPayload<T extends OutboxEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<OutboxEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof OutboxEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], OutboxEventGroupByOutputType[P]>
+            : GetScalarType<T[P], OutboxEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type OutboxEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    aggregateType?: boolean
+    aggregateId?: boolean
+    eventName?: boolean
+    routingKey?: boolean
+    eventPayload?: boolean
+    status?: boolean
+    attempts?: boolean
+    availableAt?: boolean
+    lockedAt?: boolean
+    lockToken?: boolean
+    publishedAt?: boolean
+    lastError?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["outboxEvent"]>
+
+  export type OutboxEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    aggregateType?: boolean
+    aggregateId?: boolean
+    eventName?: boolean
+    routingKey?: boolean
+    eventPayload?: boolean
+    status?: boolean
+    attempts?: boolean
+    availableAt?: boolean
+    lockedAt?: boolean
+    lockToken?: boolean
+    publishedAt?: boolean
+    lastError?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["outboxEvent"]>
+
+  export type OutboxEventSelectScalar = {
+    id?: boolean
+    aggregateType?: boolean
+    aggregateId?: boolean
+    eventName?: boolean
+    routingKey?: boolean
+    eventPayload?: boolean
+    status?: boolean
+    attempts?: boolean
+    availableAt?: boolean
+    lockedAt?: boolean
+    lockToken?: boolean
+    publishedAt?: boolean
+    lastError?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $OutboxEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "OutboxEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      aggregateType: string
+      aggregateId: string
+      eventName: string
+      routingKey: string
+      eventPayload: Prisma.JsonValue
+      status: string
+      attempts: number
+      availableAt: Date
+      lockedAt: Date | null
+      lockToken: string | null
+      publishedAt: Date | null
+      lastError: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["outboxEvent"]>
+    composites: {}
+  }
+
+  type OutboxEventGetPayload<S extends boolean | null | undefined | OutboxEventDefaultArgs> = $Result.GetResult<Prisma.$OutboxEventPayload, S>
+
+  type OutboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<OutboxEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: OutboxEventCountAggregateInputType | true
+    }
+
+  export interface OutboxEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['OutboxEvent'], meta: { name: 'OutboxEvent' } }
+    /**
+     * Find zero or one OutboxEvent that matches the filter.
+     * @param {OutboxEventFindUniqueArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends OutboxEventFindUniqueArgs>(args: SelectSubset<T, OutboxEventFindUniqueArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one OutboxEvent that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {OutboxEventFindUniqueOrThrowArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends OutboxEventFindUniqueOrThrowArgs>(args: SelectSubset<T, OutboxEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first OutboxEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventFindFirstArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends OutboxEventFindFirstArgs>(args?: SelectSubset<T, OutboxEventFindFirstArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first OutboxEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventFindFirstOrThrowArgs} args - Arguments to find a OutboxEvent
+     * @example
+     * // Get one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends OutboxEventFindFirstOrThrowArgs>(args?: SelectSubset<T, OutboxEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more OutboxEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all OutboxEvents
+     * const outboxEvents = await prisma.outboxEvent.findMany()
+     *
+     * // Get first 10 OutboxEvents
+     * const outboxEvents = await prisma.outboxEvent.findMany({ take: 10 })
+     *
+     * // Only select the `id`
+     * const outboxEventWithIdOnly = await prisma.outboxEvent.findMany({ select: { id: true } })
+     *
+     */
+    findMany<T extends OutboxEventFindManyArgs>(args?: SelectSubset<T, OutboxEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a OutboxEvent.
+     * @param {OutboxEventCreateArgs} args - Arguments to create a OutboxEvent.
+     * @example
+     * // Create one OutboxEvent
+     * const OutboxEvent = await prisma.outboxEvent.create({
+     *   data: {
+     *     // ... data to create a OutboxEvent
+     *   }
+     * })
+     *
+     */
+    create<T extends OutboxEventCreateArgs>(args: SelectSubset<T, OutboxEventCreateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many OutboxEvents.
+     * @param {OutboxEventCreateManyArgs} args - Arguments to create many OutboxEvents.
+     * @example
+     * // Create many OutboxEvents
+     * const outboxEvent = await prisma.outboxEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     */
+    createMany<T extends OutboxEventCreateManyArgs>(args?: SelectSubset<T, OutboxEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many OutboxEvents and returns the data saved in the database.
+     * @param {OutboxEventCreateManyAndReturnArgs} args - Arguments to create many OutboxEvents.
+     * @example
+     * // Create many OutboxEvents
+     * const outboxEvent = await prisma.outboxEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *
+     * // Create many OutboxEvents and only return the `id`
+     * const outboxEventWithIdOnly = await prisma.outboxEvent.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     *
+     */
+    createManyAndReturn<T extends OutboxEventCreateManyAndReturnArgs>(args?: SelectSubset<T, OutboxEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a OutboxEvent.
+     * @param {OutboxEventDeleteArgs} args - Arguments to delete one OutboxEvent.
+     * @example
+     * // Delete one OutboxEvent
+     * const OutboxEvent = await prisma.outboxEvent.delete({
+     *   where: {
+     *     // ... filter to delete one OutboxEvent
+     *   }
+     * })
+     *
+     */
+    delete<T extends OutboxEventDeleteArgs>(args: SelectSubset<T, OutboxEventDeleteArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one OutboxEvent.
+     * @param {OutboxEventUpdateArgs} args - Arguments to update one OutboxEvent.
+     * @example
+     * // Update one OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    update<T extends OutboxEventUpdateArgs>(args: SelectSubset<T, OutboxEventUpdateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more OutboxEvents.
+     * @param {OutboxEventDeleteManyArgs} args - Arguments to filter OutboxEvents to delete.
+     * @example
+     * // Delete a few OutboxEvents
+     * const { count } = await prisma.outboxEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     *
+     */
+    deleteMany<T extends OutboxEventDeleteManyArgs>(args?: SelectSubset<T, OutboxEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more OutboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many OutboxEvents
+     * const outboxEvent = await prisma.outboxEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     *
+     */
+    updateMany<T extends OutboxEventUpdateManyArgs>(args: SelectSubset<T, OutboxEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one OutboxEvent.
+     * @param {OutboxEventUpsertArgs} args - Arguments to update or create a OutboxEvent.
+     * @example
+     * // Update or create a OutboxEvent
+     * const outboxEvent = await prisma.outboxEvent.upsert({
+     *   create: {
+     *     // ... data to create a OutboxEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the OutboxEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends OutboxEventUpsertArgs>(args: SelectSubset<T, OutboxEventUpsertArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of OutboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventCountArgs} args - Arguments to filter OutboxEvents to count.
+     * @example
+     * // Count the number of OutboxEvents
+     * const count = await prisma.outboxEvent.count({
+     *   where: {
+     *     // ... the filter for the OutboxEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends OutboxEventCountArgs>(
+      args?: Subset<T, OutboxEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], OutboxEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a OutboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends OutboxEventAggregateArgs>(args: Subset<T, OutboxEventAggregateArgs>): Prisma.PrismaPromise<GetOutboxEventAggregateType<T>>
+
+    /**
+     * Group by OutboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {OutboxEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     *
+    **/
+    groupBy<
+      T extends OutboxEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: OutboxEventGroupByArgs['orderBy'] }
+        : { orderBy?: OutboxEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, OutboxEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetOutboxEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the OutboxEvent model
+   */
+  readonly fields: OutboxEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for OutboxEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__OutboxEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the OutboxEvent model
+   */
+  interface OutboxEventFieldRefs {
+    readonly id: FieldRef<"OutboxEvent", 'String'>
+    readonly aggregateType: FieldRef<"OutboxEvent", 'String'>
+    readonly aggregateId: FieldRef<"OutboxEvent", 'String'>
+    readonly eventName: FieldRef<"OutboxEvent", 'String'>
+    readonly routingKey: FieldRef<"OutboxEvent", 'String'>
+    readonly eventPayload: FieldRef<"OutboxEvent", 'Json'>
+    readonly status: FieldRef<"OutboxEvent", 'String'>
+    readonly attempts: FieldRef<"OutboxEvent", 'Int'>
+    readonly availableAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly lockedAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly lockToken: FieldRef<"OutboxEvent", 'String'>
+    readonly publishedAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly lastError: FieldRef<"OutboxEvent", 'String'>
+    readonly createdAt: FieldRef<"OutboxEvent", 'DateTime'>
+    readonly updatedAt: FieldRef<"OutboxEvent", 'DateTime'>
+  }
+
+
+  // Custom InputTypes
+  /**
+   * OutboxEvent findUnique
+   */
+  export type OutboxEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent findUniqueOrThrow
+   */
+  export type OutboxEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent findFirst
+   */
+  export type OutboxEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for OutboxEvents.
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of OutboxEvents.
+     */
+    distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * OutboxEvent findFirstOrThrow
+   */
+  export type OutboxEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvent to fetch.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for searching for OutboxEvents.
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     *
+     * Filter by unique combinations of OutboxEvents.
+     */
+    distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * OutboxEvent findMany
+   */
+  export type OutboxEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which OutboxEvents to fetch.
+     */
+    where?: OutboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     *
+     * Determine the order of OutboxEvents to fetch.
+     */
+    orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     *
+     * Sets the position for listing OutboxEvents.
+     */
+    cursor?: OutboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Take `±n` OutboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     *
+     * Skip the first `n` OutboxEvents.
+     */
+    skip?: number
+    distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * OutboxEvent create
+   */
+  export type OutboxEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to create a OutboxEvent.
+     */
+    data: XOR<OutboxEventCreateInput, OutboxEventUncheckedCreateInput>
+  }
+
+  /**
+   * OutboxEvent createMany
+   */
+  export type OutboxEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many OutboxEvents.
+     */
+    data: OutboxEventCreateManyInput | OutboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * OutboxEvent createManyAndReturn
+   */
+  export type OutboxEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many OutboxEvents.
+     */
+    data: OutboxEventCreateManyInput | OutboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * OutboxEvent update
+   */
+  export type OutboxEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to update a OutboxEvent.
+     */
+    data: XOR<OutboxEventUpdateInput, OutboxEventUncheckedUpdateInput>
+    /**
+     * Choose, which OutboxEvent to update.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent updateMany
+   */
+  export type OutboxEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update OutboxEvents.
+     */
+    data: XOR<OutboxEventUpdateManyMutationInput, OutboxEventUncheckedUpdateManyInput>
+    /**
+     * Filter which OutboxEvents to update
+     */
+    where?: OutboxEventWhereInput
+  }
+
+  /**
+   * OutboxEvent upsert
+   */
+  export type OutboxEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * The filter to search for the OutboxEvent to update in case it exists.
+     */
+    where: OutboxEventWhereUniqueInput
+    /**
+     * In case the OutboxEvent found by the `where` argument doesn't exist, create a new OutboxEvent with this data.
+     */
+    create: XOR<OutboxEventCreateInput, OutboxEventUncheckedCreateInput>
+    /**
+     * In case the OutboxEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<OutboxEventUpdateInput, OutboxEventUncheckedUpdateInput>
+  }
+
+  /**
+   * OutboxEvent delete
+   */
+  export type OutboxEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+    /**
+     * Filter which OutboxEvent to delete.
+     */
+    where: OutboxEventWhereUniqueInput
+  }
+
+  /**
+   * OutboxEvent deleteMany
+   */
+  export type OutboxEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which OutboxEvents to delete
+     */
+    where?: OutboxEventWhereInput
+  }
+
+  /**
+   * OutboxEvent without action
+   */
+  export type OutboxEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the OutboxEvent
+     */
+    select?: OutboxEventSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -4222,12 +5336,40 @@ export namespace Prisma {
   export type StockReservationScalarFieldEnum = (typeof StockReservationScalarFieldEnum)[keyof typeof StockReservationScalarFieldEnum]
 
 
+  export const OutboxEventScalarFieldEnum: {
+    id: 'id',
+    aggregateType: 'aggregateType',
+    aggregateId: 'aggregateId',
+    eventName: 'eventName',
+    routingKey: 'routingKey',
+    eventPayload: 'eventPayload',
+    status: 'status',
+    attempts: 'attempts',
+    availableAt: 'availableAt',
+    lockedAt: 'lockedAt',
+    lockToken: 'lockToken',
+    publishedAt: 'publishedAt',
+    lastError: 'lastError',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
   };
 
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const QueryMode: {
@@ -4246,8 +5388,17 @@ export namespace Prisma {
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
   /**
-   * Field references 
+   * Field references
    */
 
 
@@ -4255,56 +5406,63 @@ export namespace Prisma {
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
-    
+
 
 
   /**
    * Reference to a field of type 'String[]'
    */
   export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
-    
+
 
 
   /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
+
 
 
   /**
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-    
+
 
 
   /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
+
 
 
   /**
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
+
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+
 
 
   /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-    
+
 
 
   /**
    * Reference to a field of type 'Float[]'
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-    
+
   /**
    * Deep Input Types
    */
@@ -4547,6 +5705,110 @@ export namespace Prisma {
     confirmedAt?: DateTimeNullableWithAggregatesFilter<"StockReservation"> | Date | string | null
     releasedAt?: DateTimeNullableWithAggregatesFilter<"StockReservation"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"StockReservation"> | Date | string
+  }
+
+  export type OutboxEventWhereInput = {
+    AND?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    OR?: OutboxEventWhereInput[]
+    NOT?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    id?: StringFilter<"OutboxEvent"> | string
+    aggregateType?: StringFilter<"OutboxEvent"> | string
+    aggregateId?: StringFilter<"OutboxEvent"> | string
+    eventName?: StringFilter<"OutboxEvent"> | string
+    routingKey?: StringFilter<"OutboxEvent"> | string
+    eventPayload?: JsonFilter<"OutboxEvent">
+    status?: StringFilter<"OutboxEvent"> | string
+    attempts?: IntFilter<"OutboxEvent"> | number
+    availableAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    lockedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lockToken?: StringNullableFilter<"OutboxEvent"> | string | null
+    publishedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lastError?: StringNullableFilter<"OutboxEvent"> | string | null
+    createdAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+  }
+
+  export type OutboxEventOrderByWithRelationInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    eventPayload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrderInput | SortOrder
+    lockToken?: SortOrderInput | SortOrder
+    publishedAt?: SortOrderInput | SortOrder
+    lastError?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    OR?: OutboxEventWhereInput[]
+    NOT?: OutboxEventWhereInput | OutboxEventWhereInput[]
+    aggregateType?: StringFilter<"OutboxEvent"> | string
+    aggregateId?: StringFilter<"OutboxEvent"> | string
+    eventName?: StringFilter<"OutboxEvent"> | string
+    routingKey?: StringFilter<"OutboxEvent"> | string
+    eventPayload?: JsonFilter<"OutboxEvent">
+    status?: StringFilter<"OutboxEvent"> | string
+    attempts?: IntFilter<"OutboxEvent"> | number
+    availableAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    lockedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lockToken?: StringNullableFilter<"OutboxEvent"> | string | null
+    publishedAt?: DateTimeNullableFilter<"OutboxEvent"> | Date | string | null
+    lastError?: StringNullableFilter<"OutboxEvent"> | string | null
+    createdAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"OutboxEvent"> | Date | string
+  }, "id">
+
+  export type OutboxEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    eventPayload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrderInput | SortOrder
+    lockToken?: SortOrderInput | SortOrder
+    publishedAt?: SortOrderInput | SortOrder
+    lastError?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: OutboxEventCountOrderByAggregateInput
+    _avg?: OutboxEventAvgOrderByAggregateInput
+    _max?: OutboxEventMaxOrderByAggregateInput
+    _min?: OutboxEventMinOrderByAggregateInput
+    _sum?: OutboxEventSumOrderByAggregateInput
+  }
+
+  export type OutboxEventScalarWhereWithAggregatesInput = {
+    AND?: OutboxEventScalarWhereWithAggregatesInput | OutboxEventScalarWhereWithAggregatesInput[]
+    OR?: OutboxEventScalarWhereWithAggregatesInput[]
+    NOT?: OutboxEventScalarWhereWithAggregatesInput | OutboxEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    aggregateType?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    aggregateId?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    eventName?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    routingKey?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    eventPayload?: JsonWithAggregatesFilter<"OutboxEvent">
+    status?: StringWithAggregatesFilter<"OutboxEvent"> | string
+    attempts?: IntWithAggregatesFilter<"OutboxEvent"> | number
+    availableAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
+    lockedAt?: DateTimeNullableWithAggregatesFilter<"OutboxEvent"> | Date | string | null
+    lockToken?: StringNullableWithAggregatesFilter<"OutboxEvent"> | string | null
+    publishedAt?: DateTimeNullableWithAggregatesFilter<"OutboxEvent"> | Date | string | null
+    lastError?: StringNullableWithAggregatesFilter<"OutboxEvent"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
   }
 
   export type InventoryCreateInput = {
@@ -4812,6 +6074,132 @@ export namespace Prisma {
     confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     releasedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventCreateInput = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    availableAt?: Date | string
+    lockedAt?: Date | string | null
+    lockToken?: string | null
+    publishedAt?: Date | string | null
+    lastError?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type OutboxEventUncheckedCreateInput = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    availableAt?: Date | string
+    lockedAt?: Date | string | null
+    lockToken?: string | null
+    publishedAt?: Date | string | null
+    lastError?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type OutboxEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventCreateManyInput = {
+    id: string
+    aggregateType: string
+    aggregateId: string
+    eventName: string
+    routingKey: string
+    eventPayload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    availableAt?: Date | string
+    lockedAt?: Date | string | null
+    lockToken?: string | null
+    publishedAt?: Date | string | null
+    lastError?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type OutboxEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type OutboxEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    aggregateType?: StringFieldUpdateOperationsInput | string
+    aggregateId?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    routingKey?: StringFieldUpdateOperationsInput | string
+    eventPayload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    availableAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    lockedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lockToken?: NullableStringFieldUpdateOperationsInput | string | null
+    publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -5127,6 +6515,113 @@ export namespace Prisma {
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type OutboxEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    eventPayload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrder
+    lockToken?: SortOrder
+    publishedAt?: SortOrder
+    lastError?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventAvgOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+
+  export type OutboxEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrder
+    lockToken?: SortOrder
+    publishedAt?: SortOrder
+    lastError?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    aggregateType?: SortOrder
+    aggregateId?: SortOrder
+    eventName?: SortOrder
+    routingKey?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    availableAt?: SortOrder
+    lockedAt?: SortOrder
+    lockToken?: SortOrder
+    publishedAt?: SortOrder
+    lastError?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type OutboxEventSumOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
 
   export type StockMovementCreateNestedManyWithoutInventoryInput = {
     create?: XOR<StockMovementCreateWithoutInventoryInput, StockMovementUncheckedCreateWithoutInventoryInput> | StockMovementCreateWithoutInventoryInput[] | StockMovementUncheckedCreateWithoutInventoryInput[]
@@ -5423,6 +6918,28 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type StockMovementCreateWithoutInventoryInput = {
@@ -5804,6 +7321,10 @@ export namespace Prisma {
      * @deprecated Use StockReservationDefaultArgs instead
      */
     export type StockReservationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = StockReservationDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use OutboxEventDefaultArgs instead
+     */
+    export type OutboxEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = OutboxEventDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

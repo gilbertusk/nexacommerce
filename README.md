@@ -5,10 +5,11 @@
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2016-blue.svg)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Cache-Redis%207-red.svg)](https://redis.io/)
 [![RabbitMQ](https://img.shields.io/badge/Message%20Broker-RabbitMQ%203-orange.svg)](https://www.rabbitmq.com/)
+[![Kafka](https://img.shields.io/badge/Event%20Stream-Apache%20Kafka%204.3.1-black.svg)](https://kafka.apache.org/)
 [![Docker](https://img.shields.io/badge/Container-Docker-blue.svg)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-NexaCommerce is a production-ready, enterprise-grade e-commerce backend platform built using a distributed microservices architecture. It demonstrates modern engineering practices including domain-driven separation, secure API routing, distributed caching, a centralized message broker event-driven system, resilient SAGA checkouts, payment gateway integrations, and automatic Docker/CI/CD pipelines.
+NexaCommerce is an enterprise e-commerce microservices platform under active production hardening. It demonstrates domain separation, secure API routing, distributed caching, RabbitMQ workflow messaging, Kafka business-fact streaming, resilient SAGA checkouts, payment gateway integrations, and automated Docker/CI pipelines. Local quality gates are documented separately from live broker, provider, and deployment acceptance.
 
 The platform is designed to scale horizontally, ensuring transactional consistency and strict isolation of database schemas per microservice while facilitating rich asynchronous side-effects such as email alerts, low-stock warnings, analytics ingestion, and real-time review aggregations.
 
@@ -53,7 +54,7 @@ The platform is designed to scale horizontally, ensuring transactional consisten
 ### 🌐 Architecture & Infrastructure
 - **API Gateway Pattern:** Single entry point for clients providing reverse proxy routing, rate limiting, access control validation, and Swagger documentation aggregation.
 - **Monorepo Structure:** Structured via npm workspaces with isolated dependency chains and shared custom library packages.
-- **Microservices Isolation:** Clean architectural separation of 12 distinct backend services communicating synchronously via REST HTTP and asynchronously via RabbitMQ topic exchange.
+- **Service Isolation:** Clean architectural separation of 14 backend applications communicating synchronously via REST HTTP, operationally via RabbitMQ, and analytically through a RabbitMQ-to-Kafka bridge.
 - **Isolated Database Schemas:** Logical isolation using postgres schema namespaces to enforce data decoupling per domain.
 
 ### 🔐 Security & Access Control
@@ -84,7 +85,7 @@ The platform is designed to scale horizontally, ensuring transactional consisten
 
 ## System Architecture
 
-The client interacts solely with the API Gateway. The API Gateway verifies the JWT, injects user metadata headers, and forwards requests to the appropriate downstream service. Microservices use local database schemas and write events to RabbitMQ to coordinate side-effects.
+The client interacts solely with the API Gateway. The API Gateway verifies the JWT, injects user metadata headers, and forwards requests to the appropriate downstream service. Domain services commit business events to transactional outboxes; dispatchers publish them once to RabbitMQ for operational workflows. A dedicated Event Stream Service forwards the durable business-fact copy to Kafka for replayable projections without making Kafka part of the checkout path.
 
 ```
                                 ┌──────────────────┐
@@ -106,7 +107,15 @@ The client interacts solely with the API Gateway. The API Gateway verifies the J
                 ┌──────▼──────┐   ┌──────▼──────┐  ┌──────▼──────┐
                 │ PostgreSQL  │   │ Redis Cache │  │  RabbitMQ   │
                 │ (Port 5445) │   │ (Port 6379) │  │ (Port 5672) │
-                └─────────────┘   └─────────────┘  └─────────────┘
+                └─────────────┘   └─────────────┘  └──────┬──────┘
+                                                          │ durable fact queue
+                                                   ┌──────▼─────────────┐
+                                                   │ Event Stream Bridge │
+                                                   └──────┬─────────────┘
+                                                          │ keyed records
+                                                   ┌──────▼──────┐
+                                                   │ Kafka 4.3.1 │
+                                                   └─────────────┘
 ```
 
 ---
@@ -128,6 +137,7 @@ The client interacts solely with the API Gateway. The API Gateway verifies the J
 | **Review Service** | 3010 | `/api/v1/reviews` | `reviews` | Customer ratings, average updates, admin moderations |
 | **Notification Service** | 3011| `/api/v1/notifications`| `notifications`| In-app notification logs, template HTML email dispatches |
 | **Analytics Service** | 3012| `/api/v1/analytics`| `analytics` | Performance aggregation tables, dashboards metrics |
+| **Event Stream Service** | 3013 | `/health`, `/ready`, `/stream/catalog` | *None* | Confirmed RabbitMQ-to-Kafka business-fact bridge and topic provisioning |
 
 ---
 
@@ -136,7 +146,7 @@ The client interacts solely with the API Gateway. The API Gateway verifies the J
 - **Languages:** TypeScript, Node.js (v20 LTS), SQL
 - **Framework:** Express.js, npm Workspaces
 - **Databases & Cache:** PostgreSQL 16, Redis 7 (appendonly)
-- **Message Broker:** RabbitMQ 3.13 (Topic Exchange)
+- **Messaging:** RabbitMQ 3.13 for operational workflows; Apache Kafka 4.3.1 for retained, replayable business facts
 - **ORM:** Prisma v5 (schema-per-service isolation)
 - **Testing:** Jest, Supertest
 - **Containerization:** Docker, Docker Compose
@@ -146,7 +156,7 @@ The client interacts solely with the API Gateway. The API Gateway verifies the J
 
 ## Event-Driven Communication Flow
 
-NexaCommerce leverages RabbitMQ for asynchronous domain decoupling. When a state change occurs, a service publishes an event to the `nexacommerce.events` exchange. Interested microservices consume these messages and execute localized handlers:
+NexaCommerce uses RabbitMQ for asynchronous operational decoupling. Domain services commit events through transactional outboxes and dispatch them to `nexacommerce.events`. Interested services execute localized handlers, while the durable Event Stream queue is forwarded to a keyed Kafka topic only after RabbitMQ delivery. Domain services do not independently publish the same event to both brokers.
 
 ```
 [Payment Success Event] (payment.success)
@@ -158,7 +168,11 @@ NexaCommerce leverages RabbitMQ for asynchronous domain decoupling. When a state
        ├───> [Inventory Service] ───> Confirms stock (RESERVED -> CONFIRMED)
        ├───> [Analytics Service] ───> Increments sales report matrices
        └───> [Notification Service] ───> Logs in-app notification & dispatches receipt email
+
+[RabbitMQ durable business-fact copy] ───> [Event Stream Service] ───> [Kafka topic by domain]
 ```
+
+See [Phase 4 Kafka Streaming](docs/phase-4-kafka-streaming.md) for topic ownership, partition keys, retention, schemas, consumer groups, and replay rules.
 
 ---
 
@@ -245,7 +259,7 @@ npm run seed:reset
 ### Running the Services
 
 #### Development Mode
-Run all 13 microservices concurrently in hot-reload mode:
+Run all configured backend and frontend development processes concurrently in hot-reload mode:
 ```bash
 npm run dev:all
 ```
@@ -318,6 +332,7 @@ nexacommerce/
 │   ├── api-gateway/             # Request router & JWT access control
 │   ├── auth-service/            # Register, log-ins, RBAC, refresh rotation
 │   ├── cart-service/            # Redis carts manager
+│   ├── event-stream-service/    # RabbitMQ-to-Kafka business-fact bridge
 │   ├── inventory-service/       # Stock levels & auto-expiring reserves
 │   ├── notification-service/    # Bell logs & Nodemailer email alerts
 │   ├── order-service/           # Checkout saga coordinator
@@ -364,7 +379,7 @@ NexaCommerce utilizes shared packages to promote DRY code and ensure type safety
 - **`@nexacommerce/config`**: Configuration validation library using Zod to parse and secure environment variables at startup.
 - **`@nexacommerce/logger`**: Custom structured JSON logger library powered by Winston.
 - **`@nexacommerce/validation`**: Request body schemas and validators using Zod.
-- **`@nexacommerce/event-contracts`**: RabbitMQ topology configurations, exchange contracts, routing keys, and TypeScript message body payload definitions.
+- **`@nexacommerce/event-contracts`**: Domain event types plus RabbitMQ topology, queue bindings, and routing-key contracts.
 - **`@nexacommerce/test-utils`**: Deep transaction cleaning utilities and mock instances for testing databases.
 
 ---
@@ -422,7 +437,7 @@ To prevent message loss and ensure asynchronous delivery guarantees, RabbitMQ ex
 - **Exchange Durability:** The `nexacommerce.events` topic exchange is declared with `durable: true`, ensuring exchange metadata survives message broker restarts.
 - **Queue Durability:** Named queues (e.g., `notification-service.events`, `analytics-service.events`) are declared with `durable: true`.
 - **Publisher Confirms:** Microservices publish messages with confirmation mode enabled, listening for broker ACKs before marking events as sent.
-- **Consumer Acknowledgements:** Message consumers operate with `noAck: false` (manual acknowledgements). Messages are only acknowledged (`ack`) after successfully executing downstream databases writes. If transient errors happen, the consumer triggers a `nack` with `requeue: true`.
+- **Consumer Acknowledgements:** Consumers use manual acknowledgements. Successful deliveries are acknowledged after the handler finishes; failures are copied to confirmed delayed-retry queues and then per-consumer dead-letter queues when the retry budget is exhausted. The original is requeued only if that safety copy cannot be confirmed.
 
 ---
 

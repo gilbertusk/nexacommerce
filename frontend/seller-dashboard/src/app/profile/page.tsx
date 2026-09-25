@@ -2,15 +2,16 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPut } from '@/lib/api/client';
+import { apiGet, apiPatch } from '@/lib/api/client';
 
 interface SellerProfile {
   id: string;
   storeName?: string;
+  storeDescription?: string;
+  storeAddress?: string;
   description?: string;
   phone?: string;
   address?: string;
-  bankAccount?: string;
   isVerified?: boolean;
   verificationStatus?: string;
   totalProducts?: number;
@@ -25,10 +26,9 @@ interface ProfileResponse {
 interface StatsResponse {
   success: boolean;
   data: {
+    overview?: { totalProducts?: number; totalOrders?: number };
     totalProducts?: number;
     totalOrders?: number;
-    productCount?: number;
-    orderCount?: number;
   };
 }
 
@@ -37,7 +37,6 @@ interface FormState {
   description: string;
   phone: string;
   address: string;
-  bankAccount: string;
 }
 
 function FieldSkeleton() {
@@ -68,7 +67,6 @@ export default function ProfilePage() {
     description: '',
     phone: '',
     address: '',
-    bankAccount: '',
   });
 
   useEffect(() => {
@@ -78,10 +76,10 @@ export default function ProfilePage() {
       setIsLoading(true);
       setError('');
       try {
-        const res = await apiGet<ProfileResponse>(
+        const [res, userRes] = await Promise.all([apiGet<ProfileResponse>(
           '/api/v1/users/seller-profile/me',
           token!,
-        );
+        ), apiGet<{ success: boolean; data: { phone?: string | null } }>('/api/v1/users/me', token!)]);
         if (res.success) {
           let data: SellerProfile;
           if ('storeName' in res.data || 'id' in res.data) {
@@ -90,13 +88,13 @@ export default function ProfilePage() {
             const nested = res.data as { sellerProfile?: SellerProfile; seller?: SellerProfile };
             data = nested.sellerProfile ?? nested.seller ?? (res.data as unknown as SellerProfile);
           }
+          data = { ...data, description: data.storeDescription, address: data.storeAddress, phone: userRes.data.phone ?? '' };
           setProfile(data);
           setForm({
             storeName: data.storeName ?? '',
             description: data.description ?? '',
             phone: data.phone ?? '',
             address: data.address ?? '',
-            bankAccount: data.bankAccount ?? '',
           });
           if (data.totalProducts != null) setTotalProducts(data.totalProducts);
           if (data.totalOrders != null) setTotalOrders(data.totalOrders);
@@ -112,15 +110,15 @@ export default function ProfilePage() {
       if (!seller) return;
       try {
         const res = await apiGet<StatsResponse>(
-          `/api/v1/analytics/seller/${seller!.id}`,
+          `/api/v1/analytics/seller/dashboard`,
           token!,
         );
         if (res.success) {
           setTotalProducts(
-            res.data.totalProducts ?? res.data.productCount ?? null,
+            res.data.overview?.totalProducts ?? res.data.totalProducts ?? null,
           );
           setTotalOrders(
-            res.data.totalOrders ?? res.data.orderCount ?? null,
+            res.data.overview?.totalOrders ?? res.data.totalOrders ?? null,
           );
         }
       } catch {
@@ -144,17 +142,17 @@ export default function ProfilePage() {
     setSaveError('');
     setIsSaving(true);
     try {
-      await apiPut(
+      const profileUpdate = apiPatch(
         '/api/v1/users/seller-profile/me',
         {
           storeName: form.storeName.trim() || undefined,
-          description: form.description.trim() || undefined,
-          phone: form.phone.trim() || undefined,
-          address: form.address.trim() || undefined,
-          bankAccount: form.bankAccount.trim() || undefined,
+          storeDescription: form.description.trim() || undefined,
+          storeAddress: form.address.trim() || undefined,
         },
         token!,
       );
+      const accountUpdate = apiPatch('/api/v1/users/me', { phone: form.phone.trim() || undefined }, token!);
+      await Promise.all([profileUpdate, accountUpdate]);
       setProfile((prev) =>
         prev
           ? {
@@ -163,7 +161,6 @@ export default function ProfilePage() {
               description: form.description,
               phone: form.phone,
               address: form.address,
-              bankAccount: form.bankAccount,
             }
           : prev,
       );
@@ -324,7 +321,6 @@ export default function ProfilePage() {
                     description: profile.description ?? '',
                     phone: profile.phone ?? '',
                     address: profile.address ?? '',
-                    bankAccount: profile.bankAccount ?? '',
                   });
                 }
               }}
@@ -373,8 +369,7 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
                   Nomor Telepon
                 </label>
@@ -386,21 +381,6 @@ export default function ProfilePage() {
                   placeholder="08xxxxxxxxxx"
                   className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all"
                 />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
-                  Rekening Bank
-                </label>
-                <input
-                  type="text"
-                  name="bankAccount"
-                  value={form.bankAccount}
-                  onChange={handleChange}
-                  placeholder="Nama Bank - Nomor Rekening"
-                  className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-                />
-              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -467,11 +447,6 @@ export default function ProfilePage() {
                 label: 'Nomor Telepon',
                 value: profile?.phone,
                 icon: 'phone',
-              },
-              {
-                label: 'Rekening Bank',
-                value: profile?.bankAccount,
-                icon: 'account_balance',
               },
               {
                 label: 'Alamat',

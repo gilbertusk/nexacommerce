@@ -138,10 +138,10 @@ function NotificationsContent() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (token) {
-      fetchNotifications(token, page, activeTab === "unread");
+    if (token && user?.id) {
+      fetchNotifications(token, user.id, page, activeTab === "unread");
     }
-  }, [token, page, activeTab, fetchNotifications]);
+  }, [token, user?.id, page, activeTab, fetchNotifications]);
 
   if (!user) {
     return (
@@ -158,15 +158,15 @@ function NotificationsContent() {
   }
 
   const handleMarkAsRead = (id: string) => {
-    if (token) markAsRead(id, token);
+    if (token && user?.id) markAsRead(id, token, user.id);
   };
 
   const handleMarkAllAsRead = () => {
-    if (token) markAllAsRead(token);
+    if (token && user?.id) markAllAsRead(token, user.id);
   };
 
   const handleDelete = (id: string) => {
-    if (token) deleteNotification(id, token);
+    if (token && user?.id) deleteNotification(id, token, user.id);
   };
 
   const totalPages = Math.ceil(total / 20);

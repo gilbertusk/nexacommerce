@@ -4,7 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSellerStore } from '@/lib/store/useSellerStore';
-import { apiGet, apiPost } from '@/lib/api/client';
+import { apiGet, apiPost, apiUpload } from '@/lib/api/client';
 
 interface Category {
   id: string;
@@ -28,7 +28,7 @@ interface BrandListResponse {
 
 interface ProductCreateResponse {
   success: boolean;
-  data?: unknown;
+  data?: { id?: string } | { product?: { id?: string } };
   message?: string;
 }
 
@@ -37,6 +37,7 @@ interface FormState {
   description: string;
   price: string;
   stock: string;
+  weight: string;
   categoryId: string;
   brandId: string;
   images: string;
@@ -47,6 +48,7 @@ const INITIAL_FORM: FormState = {
   description: '',
   price: '',
   stock: '',
+  weight: '',
   categoryId: '',
   brandId: '',
   images: '',
@@ -54,12 +56,28 @@ const INITIAL_FORM: FormState = {
 
 function validateForm(form: FormState): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!form.name.trim()) errors.name = 'Nama produk wajib diisi.';
-  if (!form.price || isNaN(Number(form.price)) || Number(form.price) < 0)
-    errors.price = 'Harga harus berupa angka positif.';
-  if (!form.stock || isNaN(Number(form.stock)) || Number(form.stock) < 0)
-    errors.stock = 'Stok harus berupa angka tidak negatif.';
+  if (form.name.trim().length < 2) errors.name = 'Nama produk minimal 2 karakter.';
+  if (!form.price || !Number.isFinite(Number(form.price)) || Number(form.price) <= 0)
+    errors.price = 'Harga harus lebih besar dari nol.';
+  if (!form.stock || !Number.isSafeInteger(Number(form.stock)) || Number(form.stock) < 0)
+    errors.stock = 'Stok harus berupa bilangan bulat tidak negatif.';
+  if (!form.categoryId) errors.categoryId = 'Kategori wajib dipilih.';
+  if (!form.weight || !Number.isSafeInteger(Number(form.weight)) || Number(form.weight) <= 0)
+    errors.weight = 'Berat harus berupa bilangan bulat positif dalam gram.';
+  const imageUrls = form.images.split('\n').map((url) => url.trim()).filter(Boolean);
+  if (new Set(imageUrls).size !== imageUrls.length) errors.images = 'URL gambar tidak boleh duplikat.';
+  if (imageUrls.some((url) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol !== 'https:' || Boolean(parsed.username || parsed.password) || url.length > 2048;
+    } catch { return true; }
+  })) errors.images = 'Setiap URL gambar harus berupa URL HTTPS yang valid.';
   return errors;
+}
+
+function slugify(value: string) {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90);
 }
 
 export default function NewProductPage() {
@@ -70,6 +88,7 @@ export default function NewProductPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -81,7 +100,7 @@ export default function NewProductPage() {
       try {
         const [catRes, brandRes] = await Promise.all([
           apiGet<CategoryListResponse>('/api/v1/products/categories', token!),
-          apiGet<BrandListResponse>('/api/v1/brands', token!),
+          apiGet<BrandListResponse>('/api/v1/products/brands', token!),
         ]);
 
         if (catRes.success) {
@@ -140,12 +159,13 @@ export default function NewProductPage() {
 
       const payload: Record<string, unknown> = {
         name: form.name.trim(),
+        slug: slugify(form.name),
         description: form.description.trim(),
         price: Number(form.price),
         stock: Number(form.stock),
-        images: imageUrls,
+        weight: Number(form.weight),
+        categoryId: form.categoryId,
       };
-      if (form.categoryId) payload.categoryId = form.categoryId;
       if (form.brandId) payload.brandId = form.brandId;
 
       const res = await apiPost<ProductCreateResponse>(
@@ -155,6 +175,31 @@ export default function NewProductPage() {
       );
 
       if (res.success) {
+        const product = res.data && 'id' in res.data
+          ? res.data
+          : res.data && 'product' in res.data ? res.data.product : undefined;
+        if (!product?.id) {
+          setServerError('Produk mungkin sudah tersimpan, tetapi respons server tidak menyertakan ID. Periksa daftar produk sebelum mencoba lagi.');
+          return;
+        }
+        try {
+          for (const file of imageFiles) {
+            const upload = new FormData();
+            upload.append('image', file);
+            await apiUpload(`/api/v1/products/products/${product.id}/images/upload`, upload);
+          }
+          for (const [index, url] of imageUrls.entries()) {
+            await apiPost(`/api/v1/products/products/${product.id}/images`, {
+              url,
+              alt: form.name.trim(),
+              sortOrder: imageFiles.length + index,
+              isMain: imageFiles.length === 0 && index === 0,
+            }, token!);
+          }
+        } catch (imageError) {
+          setServerError(`Produk berhasil dibuat, tetapi gambar gagal disimpan: ${imageError instanceof Error ? imageError.message : 'kesalahan tidak diketahui'}. Periksa produk sebelum mengulangi pembuatan.`);
+          return;
+        }
         router.push('/products');
       } else {
         setServerError(res.message ?? 'Gagal membuat produk.');
@@ -274,13 +319,30 @@ export default function NewProductPage() {
                 <p className="text-xs text-red-600">{errors.stock}</p>
               )}
             </div>
+
+            <div className="flex flex-col gap-1.5 col-span-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
+                Berat produk (gram) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="weight"
+                value={form.weight}
+                onChange={handleChange}
+                min="1"
+                step="1"
+                placeholder="Contoh: 500"
+                className={`w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary placeholder:text-ink-secondary/60 focus:outline-none focus:ring-1 focus:ring-primary transition-all ${errors.weight ? 'border-red-400' : ''}`}
+              />
+              {errors.weight && <p className="text-xs text-red-600">{errors.weight}</p>}
+            </div>
           </div>
 
           {/* Category and Brand */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
-                Kategori
+              Kategori <span className="text-red-500">*</span>
               </label>
               <select
                 name="categoryId"
@@ -295,6 +357,7 @@ export default function NewProductPage() {
                   </option>
                 ))}
               </select>
+              {errors.categoryId && <p className="text-xs text-red-600">{errors.categoryId}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -319,10 +382,25 @@ export default function NewProductPage() {
 
           {/* Images */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
-              URL Gambar
+            <label htmlFor="product-image-files" className="text-xs font-bold uppercase tracking-widest text-ink-secondary">
+              Upload Gambar Produk
+            </label>
+            <input
+              id="product-image-files"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(event) => setImageFiles(Array.from(event.target.files ?? []))}
+              className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary"
+            />
+            {imageFiles.length > 0 && (
+              <p className="text-[10px] text-ink-secondary">{imageFiles.length} gambar dipilih: {imageFiles.map((file) => file.name).join(', ')}</p>
+            )}
+            <label htmlFor="product-image-urls" className="text-xs font-bold uppercase tracking-widest text-ink-secondary mt-3">
+              Atau Tambahkan URL HTTPS
             </label>
             <textarea
+              id="product-image-urls"
               name="images"
               value={form.images}
               onChange={handleChange}
@@ -331,8 +409,9 @@ export default function NewProductPage() {
               className="w-full px-4 py-3 bg-surface hairline rounded-sm text-sm text-ink-primary placeholder:text-ink-secondary/60 focus:outline-none focus:ring-1 focus:ring-primary transition-all resize-none font-mono"
             />
             <p className="text-[10px] text-ink-secondary">
-              Masukkan satu URL gambar per baris.
+              Upload menerima JPEG, PNG, atau WebP maksimal 5 MB per gambar. Server memvalidasi, mengubah ke WebP, lalu menyimpan ke media object storage.
             </p>
+            {errors.images && <p className="text-xs text-red-600">{errors.images}</p>}
           </div>
         </div>
 
