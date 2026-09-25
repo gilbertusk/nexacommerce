@@ -88,3 +88,54 @@ To prevent transient failures from becoming tight redelivery loops:
 ## 5. Kafka replay boundary
 
 RabbitMQ remains responsible for operational delivery. The durable `event-stream-service.business-facts` queue receives a copy of replayable facts, and the bridge only acknowledges each RabbitMQ message after Kafka acknowledges the corresponding keyed record. Kafka consumers build projections; they must not send workflow commands back into checkout/payment/inventory state during replay. See `docs/phase-4-kafka-streaming.md` for topic, key, retention, schema, consumer-group, and replay rules.
+
+## 6. Consumer-side inbox
+
+Every consumer that mutates state applies an event through the database-backed inbox in
+`packages/common/src/inbox.ts`. The claim, the business mutation, and the record marking the event
+consumed all commit in one transaction:
+
+```
+runInTransaction(tx => {
+  claim(tx, {eventId, consumer})   -> DUPLICATE ? skip
+  handler(tx)                      -> the state change
+  markProcessed(tx, {eventId, consumer})
+})
+```
+
+The deduplication key is `(event_id, consumer)`, not `event_id` alone. One event may therefore be
+applied once *per consumer*, which is what allows the RabbitMQ consumer and the Kafka projection to
+each process the same domain fact into their own tables without either skipping it as a duplicate of
+the other.
+
+Because the claim shares the transaction, a failed attempt rolls back its own claim; there is no
+lease to expire and no stuck claim to recover. A worker that loses a concurrent race hits the unique
+constraint and reads that as a duplicate delivery rather than an error.
+
+Two consequences that callers rely on:
+
+- **Network calls happen before the transaction opens.** Both Analytics and Notification resolve
+  their enrichment (catalog, review summary, recipient) first, so a projection never holds row locks
+  while waiting on another service.
+- **A side effect that cannot be rolled back gets a safety copy inside the transaction.** Outbound
+  email is not sent during consumption; a job row is written to `email_logs` in the same transaction
+  as the notification, and a separate dispatcher delivers it with bounded retries. Delivery is
+  at-least-once by construction, which is the correct direction for transactional mail.
+
+## 7. Kafka projection boundary
+
+The Analytics Kafka projection reads `nexacommerce.orders.v1` and `nexacommerce.payments.v1` and
+writes only `daily_sales_projections` and `kafka_projection_progress`.
+
+- `autoCommit` is off. A failed projection throws before `commitOffsets`, so an offset advances only
+  after the projection transaction has committed.
+- `partitionsConsumedConcurrently: 1` preserves per-partition ordering.
+- Only `schemaVersion` 1 is accepted. A malformed or unsupported record is counted and stepped over
+  rather than retried forever, because blocking a partition on one bad record stalls every
+  well-formed event behind it.
+- The projection never calls RabbitMQ and never mutates order, payment, inventory, or shipping
+  state, which is what makes replaying a topic from any offset safe.
+
+`daily_sales_projections` is deliberately separate from the RabbitMQ-fed `daily_sales_report`: the
+same fact arrives over both paths, and one shared table would count every order and payment twice.
+The cutover sequence is in `docs/phase-4-kafka-streaming.md`.

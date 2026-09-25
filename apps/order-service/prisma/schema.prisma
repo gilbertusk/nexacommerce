@@ -24,6 +24,13 @@ model Order {
   shippingAddress   Json                 @map("shipping_address")
   courierName       String?              @map("courier_name")
   courierService    String?              @map("courier_service")
+
+  /// The server-issued quote this order's shipping price came from, and the
+  /// per-seller split-shipment breakdown it contained. The breakdown is the
+  /// source of truth for a multi-seller order; `courierName`/`courierService`
+  /// hold the first shipment only, for existing single-courier reads.
+  shippingQuoteId   String?              @unique @map("shipping_quote_id")
+  shipmentBreakdown Json?                @map("shipment_breakdown")
   status            String               @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID, PROCESSING, PACKED, SHIPPED, DELIVERED, COMPLETED, CANCELLED, RETURN_REQUESTED, RETURN_APPROVED, PARTIALLY_REFUNDED, REFUNDED
   notes             String?
   paidAt            DateTime?            @map("paid_at")

@@ -6,6 +6,8 @@ import {
   createAddressSchema,
   updateAddressSchema,
   createSellerProfileSchema,
+  sellerDispatchOriginSchema,
+  verifySellerDispatchOriginSchema,
 } from '@nexacommerce/validation';
 
 export class UserController {
@@ -135,6 +137,55 @@ export class UserController {
     const validatedData = createSellerProfileSchema.partial().parse(req.body);
     const profile = await userService.updateSellerProfile(userId, validatedData);
     res.status(200).json(successResponse(profile, 'Seller profile updated successfully'));
+  };
+
+  /** Seller submits their dispatch origin; verification is a separate step. */
+  setSellerDispatchOrigin = async (req: Request, res: Response) => {
+    const userId = (req.headers['x-user-id'] as string) || req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'User ID header is missing' });
+      return;
+    }
+    const { originCity, originProvince } = sellerDispatchOriginSchema.parse(req.body);
+    const profile = await userService.setSellerDispatchOrigin(userId, originCity, originProvince);
+    res.status(200).json(
+      successResponse(profile, 'Dispatch origin saved and awaiting verification'),
+    );
+  };
+
+  /** Administrator approves or revokes a seller's dispatch origin. */
+  verifySellerDispatchOrigin = async (req: Request, res: Response) => {
+    const { verified } = verifySellerDispatchOriginSchema.parse(req.body);
+    const profile = await userService.verifySellerDispatchOrigin(req.params.id, verified);
+    res.status(200).json(
+      successResponse(profile, verified ? 'Dispatch origin verified' : 'Dispatch origin verification revoked'),
+    );
+  };
+
+  /**
+   * Dispatch origins for a set of sellers, for shipping quoting.
+   *
+   * A seller whose origin is unset or unverified is returned with
+   * `dispatchReady: false` rather than omitted, so the caller can name the
+   * seller that is blocking a quote instead of failing anonymously.
+   */
+  internalGetSellerOrigins = async (req: Request, res: Response) => {
+    const { sellerIds } = req.body ?? {};
+    if (!Array.isArray(sellerIds) || sellerIds.length === 0) {
+      res.status(400).json({ success: false, message: 'sellerIds must be a non-empty array' });
+      return;
+    }
+    if (sellerIds.length > 100) {
+      res.status(400).json({ success: false, message: 'sellerIds may contain at most 100 entries' });
+      return;
+    }
+    if (!sellerIds.every((id: unknown) => typeof id === 'string' && id.length > 0)) {
+      res.status(400).json({ success: false, message: 'sellerIds must contain non-empty strings' });
+      return;
+    }
+
+    const profiles = await userService.getDispatchOrigins(sellerIds);
+    res.status(200).json(successResponse(profiles, 'Seller dispatch origins retrieved'));
   };
 
   internalGetAddress = async (req: Request, res: Response) => {

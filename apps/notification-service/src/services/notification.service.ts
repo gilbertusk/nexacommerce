@@ -2,6 +2,8 @@ import { notificationRepository } from '../repositories/notification.repository'
 import { emailService } from './email.service';
 import { createLogger } from '@nexacommerce/logger';
 import config from '../config';
+import prisma from '../prisma/client';
+import type { NotificationWriteClient } from '../repositories/notification.repository';
 
 const logger = createLogger('notification-service');
 
@@ -18,7 +20,9 @@ export class NotificationService {
     const actionUrl = new URL(route, config.customerWebUrl);
     actionUrl.searchParams.set('token', options.token);
 
-    return emailService.sendEmail({
+    // Queued rather than sent inline: the caller is told the message is
+    // durably accepted for delivery, not that SMTP already took it.
+    await emailService.queueEmail(prisma, {
       to: options.email,
       templateName: options.type,
       templateData: {
@@ -26,20 +30,33 @@ export class NotificationService {
         actionUrl: actionUrl.toString(),
       },
     });
+    return true;
   }
 
-  async createNotification(options: {
-    userId: string;
-    type: string;
-    title: string;
-    message: string;
-    data?: any;
-    channel?: 'IN_APP' | 'EMAIL' | 'BOTH';
-    emailTo?: string;
-    emailTemplateName?: string;
-    emailTemplateData?: any;
-    sourceEventId?: string;
-  }) {
+  /**
+   * Write one notification and, when the channel calls for it, the email job
+   * that goes with it.
+   *
+   * Both writes use `client`. When the caller passes an inbox transaction, the
+   * in-app record, the queued email, and the marker saying the source event was
+   * consumed all commit together — so a crash cannot leave a notification with
+   * no email, or an event marked handled with neither.
+   */
+  async createNotification(
+    options: {
+      userId: string;
+      type: string;
+      title: string;
+      message: string;
+      data?: any;
+      channel?: 'IN_APP' | 'EMAIL' | 'BOTH';
+      emailTo?: string;
+      emailTemplateName?: string;
+      emailTemplateData?: any;
+      sourceEventId?: string;
+    },
+    client: NotificationWriteClient = prisma,
+  ) {
     const {
       userId,
       type,
@@ -57,15 +74,9 @@ export class NotificationService {
 
     let notificationRecord = null;
 
-    if (sourceEventId) {
-      const existing = await notificationRepository.findBySourceEventId(sourceEventId);
-      if (existing) return existing;
-    }
-
-    // Create In-App Notification if channel is IN_APP or BOTH
     if (channel === 'IN_APP' || channel === 'BOTH') {
-      try {
-        notificationRecord = await notificationRepository.createNotification({
+      notificationRecord = await notificationRepository.createNotification(
+        {
           userId,
           sourceEventId,
           type,
@@ -73,25 +84,17 @@ export class NotificationService {
           message,
           data: data ? (data as any) : undefined,
           channel,
-        });
-      } catch (error: any) {
-        if (sourceEventId && error?.code === 'P2002') {
-          return notificationRepository.findBySourceEventId(sourceEventId);
-        }
-        throw error;
-      }
+        },
+        client,
+      );
     }
 
-    // Send Email if channel is EMAIL or BOTH
     if ((channel === 'EMAIL' || channel === 'BOTH') && emailTo && emailTemplateName) {
-      // Async send email so it doesn't block the API/event response
-      emailService.sendEmail({
+      await emailService.queueEmail(client, {
         to: emailTo,
         templateName: emailTemplateName,
         templateData: emailTemplateData || {},
         notificationId: notificationRecord?.id,
-      }).catch((err) => {
-        logger.error(`Failed to send email async for ${emailTemplateName} to ${emailTo}:`, err);
       });
     }
 

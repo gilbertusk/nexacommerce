@@ -1,6 +1,6 @@
 jest.mock('../../src/repositories/notification.repository');
 jest.mock('../../src/services/email.service', () => ({
-  emailService: { sendEmail: jest.fn() },
+  emailService: { queueEmail: jest.fn() },
 }));
 
 import { notificationRepository } from '../../src/repositories/notification.repository';
@@ -10,7 +10,9 @@ import { NotificationService } from '../../src/services/notification.service';
 const mockRepository = notificationRepository as jest.Mocked<typeof notificationRepository>;
 const mockEmailService = emailService as jest.Mocked<typeof emailService>;
 
-describe('NotificationService event idempotency', () => {
+const TX = { tx: true } as any;
+
+describe('NotificationService.createNotification', () => {
   const options = {
     userId: 'customer-1',
     type: 'PAYMENT_SUCCESS',
@@ -25,43 +27,61 @@ describe('NotificationService event idempotency', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockEmailService.sendEmail.mockResolvedValue(true);
+    mockEmailService.queueEmail.mockResolvedValue({ id: 'email-1' });
+    mockRepository.createNotification.mockResolvedValue({ id: 'notification-1' } as any);
   });
 
-  it('does not create or email a notification for an event already handled', async () => {
-    mockRepository.findBySourceEventId.mockResolvedValue({ id: 'notification-1' } as any);
+  it('writes the notification and queues its email through the same client', async () => {
+    // Act
+    await new NotificationService().createNotification(options, TX);
 
-    const result = await new NotificationService().createNotification(options);
+    // Assert: both writes must be able to commit or roll back as one unit.
+    expect(mockRepository.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'customer-1', sourceEventId: 'event-1' }),
+      TX,
+    );
+    expect(mockEmailService.queueEmail).toHaveBeenCalledWith(
+      TX,
+      expect.objectContaining({
+        to: 'customer@example.com',
+        templateName: 'PAYMENT_SUCCESS',
+        notificationId: 'notification-1',
+      }),
+    );
+  });
 
-    expect(result).toEqual({ id: 'notification-1' });
+  it('queues no email for an in-app only notification', async () => {
+    // Act
+    await new NotificationService().createNotification(
+      { ...options, channel: 'IN_APP' },
+      TX,
+    );
+
+    // Assert
+    expect(mockRepository.createNotification).toHaveBeenCalled();
+    expect(mockEmailService.queueEmail).not.toHaveBeenCalled();
+  });
+
+  it('writes no in-app row for an email-only notification', async () => {
+    // Act
+    const result = await new NotificationService().createNotification(
+      { ...options, channel: 'EMAIL' },
+      TX,
+    );
+
+    // Assert
+    expect(result).toBeNull();
     expect(mockRepository.createNotification).not.toHaveBeenCalled();
-    expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
+    expect(mockEmailService.queueEmail).toHaveBeenCalled();
   });
 
-  it('stores the source event id before scheduling email delivery', async () => {
-    mockRepository.findBySourceEventId.mockResolvedValue(null);
-    mockRepository.createNotification.mockResolvedValue({ id: 'notification-2' } as any);
+  it('propagates a queueing failure so the whole transaction is abandoned', async () => {
+    // Arrange: the notification must not survive without its email.
+    mockEmailService.queueEmail.mockRejectedValue(new Error('template missing'));
 
-    const result = await new NotificationService().createNotification(options);
-
-    expect(result).toEqual({ id: 'notification-2' });
-    expect(mockRepository.createNotification).toHaveBeenCalledWith(expect.objectContaining({
-      sourceEventId: 'event-1',
-    }));
-    expect(mockEmailService.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
-      notificationId: 'notification-2',
-    }));
-  });
-
-  it('treats a concurrent unique event insert as a duplicate', async () => {
-    mockRepository.findBySourceEventId
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 'notification-winner' } as any);
-    mockRepository.createNotification.mockRejectedValue({ code: 'P2002' });
-
-    const result = await new NotificationService().createNotification(options);
-
-    expect(result).toEqual({ id: 'notification-winner' });
-    expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
+    // Act + Assert
+    await expect(
+      new NotificationService().createNotification(options, TX),
+    ).rejects.toThrow('template missing');
   });
 });

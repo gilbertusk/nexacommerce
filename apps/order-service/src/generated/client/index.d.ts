@@ -15,33 +15,33 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 /**
  * Model Order
- *
+ * 
  */
 export type Order = $Result.DefaultSelection<Prisma.$OrderPayload>
 /**
  * Model OrderItem
- *
+ * 
  */
 export type OrderItem = $Result.DefaultSelection<Prisma.$OrderItemPayload>
 /**
  * Model OrderStatusHistory
- *
+ * 
  */
 export type OrderStatusHistory = $Result.DefaultSelection<Prisma.$OrderStatusHistoryPayload>
 /**
  * Model OrderComplaint
- *
+ * 
  */
 export type OrderComplaint = $Result.DefaultSelection<Prisma.$OrderComplaintPayload>
 /**
  * Model OutboxEvent
- *
+ * 
  */
 export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
 
 /**
  * ##  Prisma Client ʲˢ
- *
+ * 
  * Type-safe database client for TypeScript & Node.js
  * @example
  * ```
@@ -50,7 +50,7 @@ export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
  * const orders = await prisma.order.findMany()
  * ```
  *
- *
+ * 
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
  */
 export class PrismaClient<
@@ -62,7 +62,7 @@ export class PrismaClient<
 
     /**
    * ##  Prisma Client ʲˢ
-   *
+   * 
    * Type-safe database client for TypeScript & Node.js
    * @example
    * ```
@@ -71,7 +71,7 @@ export class PrismaClient<
    * const orders = await prisma.order.findMany()
    * ```
    *
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
    */
 
@@ -101,7 +101,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRaw`UPDATE User SET cool = ${true} WHERE email = ${'user@email.com'};`
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -113,7 +113,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRawUnsafe('UPDATE User SET cool = $1 WHERE email = $2 ;', true, 'user@email.com')
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -124,7 +124,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRaw`SELECT * FROM User WHERE id = ${1} OR email = ${'user@email.com'};`
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -136,7 +136,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRawUnsafe('SELECT * FROM User WHERE id = $1 OR email = $2;', 1, 'user@email.com')
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -152,7 +152,7 @@ export class PrismaClient<
    *   prisma.user.create({ data: { name: 'Alice' } }),
    * ])
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
@@ -252,7 +252,7 @@ export namespace Prisma {
   export type DecimalJsLike = runtime.DecimalJsLike
 
   /**
-   * Metrics
+   * Metrics 
    */
   export type Metrics = runtime.Metrics
   export type Metric<T> = runtime.Metric<T>
@@ -277,7 +277,7 @@ export namespace Prisma {
     client: string
   }
 
-  export const prismaVersion: PrismaVersion
+  export const prismaVersion: PrismaVersion 
 
   /**
    * Utility Types
@@ -293,15 +293,15 @@ export namespace Prisma {
 
   /**
    * Types of the values used to represent different kinds of `null` values when working with JSON fields.
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   namespace NullTypes {
     /**
     * Type of `Prisma.DbNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.DbNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class DbNull {
@@ -311,9 +311,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.JsonNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.JsonNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class JsonNull {
@@ -323,9 +323,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.AnyNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.AnyNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class AnyNull {
@@ -336,21 +336,21 @@ export namespace Prisma {
 
   /**
    * Helper for filtering JSON entries that have `null` on the database (empty on the db)
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const DbNull: NullTypes.DbNull
 
   /**
    * Helper for filtering JSON entries that have JSON `null` values (not empty on the db)
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const JsonNull: NullTypes.JsonNull
 
   /**
    * Helper for filtering JSON entries that are `Prisma.DbNull` or `Prisma.JsonNull`
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const AnyNull: NullTypes.AnyNull
@@ -1071,7 +1071,7 @@ export namespace Prisma {
      * ```
      * // Defaults to stdout
      * log: ['query', 'info', 'warn', 'error']
-     *
+     * 
      * // Emit as events
      * log: [
      *   { emit: 'stdout', level: 'query' },
@@ -1276,6 +1276,7 @@ export namespace Prisma {
     shippingAddressId: string | null
     courierName: string | null
     courierService: string | null
+    shippingQuoteId: string | null
     status: string | null
     notes: string | null
     paidAt: Date | null
@@ -1301,6 +1302,7 @@ export namespace Prisma {
     shippingAddressId: string | null
     courierName: string | null
     courierService: string | null
+    shippingQuoteId: string | null
     status: string | null
     notes: string | null
     paidAt: Date | null
@@ -1327,6 +1329,8 @@ export namespace Prisma {
     shippingAddress: number
     courierName: number
     courierService: number
+    shippingQuoteId: number
+    shipmentBreakdown: number
     status: number
     notes: number
     paidAt: number
@@ -1368,6 +1372,7 @@ export namespace Prisma {
     shippingAddressId?: true
     courierName?: true
     courierService?: true
+    shippingQuoteId?: true
     status?: true
     notes?: true
     paidAt?: true
@@ -1393,6 +1398,7 @@ export namespace Prisma {
     shippingAddressId?: true
     courierName?: true
     courierService?: true
+    shippingQuoteId?: true
     status?: true
     notes?: true
     paidAt?: true
@@ -1419,6 +1425,8 @@ export namespace Prisma {
     shippingAddress?: true
     courierName?: true
     courierService?: true
+    shippingQuoteId?: true
+    shipmentBreakdown?: true
     status?: true
     notes?: true
     paidAt?: true
@@ -1437,55 +1445,55 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned Orders
     **/
     _count?: true | OrderCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to average
     **/
     _avg?: OrderAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to sum
     **/
     _sum?: OrderSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: OrderMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: OrderMaxAggregateInputType
@@ -1532,6 +1540,8 @@ export namespace Prisma {
     shippingAddress: JsonValue
     courierName: string | null
     courierService: string | null
+    shippingQuoteId: string | null
+    shipmentBreakdown: JsonValue | null
     status: string
     notes: string | null
     paidAt: Date | null
@@ -1577,6 +1587,8 @@ export namespace Prisma {
     shippingAddress?: boolean
     courierName?: boolean
     courierService?: boolean
+    shippingQuoteId?: boolean
+    shipmentBreakdown?: boolean
     status?: boolean
     notes?: boolean
     paidAt?: boolean
@@ -1607,6 +1619,8 @@ export namespace Prisma {
     shippingAddress?: boolean
     courierName?: boolean
     courierService?: boolean
+    shippingQuoteId?: boolean
+    shipmentBreakdown?: boolean
     status?: boolean
     notes?: boolean
     paidAt?: boolean
@@ -1633,6 +1647,8 @@ export namespace Prisma {
     shippingAddress?: boolean
     courierName?: boolean
     courierService?: boolean
+    shippingQuoteId?: boolean
+    shipmentBreakdown?: boolean
     status?: boolean
     notes?: boolean
     paidAt?: boolean
@@ -1674,6 +1690,14 @@ export namespace Prisma {
       shippingAddress: Prisma.JsonValue
       courierName: string | null
       courierService: string | null
+      /**
+       * The server-issued quote this order's shipping price came from, and the
+       * per-seller split-shipment breakdown it contained. The breakdown is the
+       * source of truth for a multi-seller order; `courierName`/`courierService`
+       * hold the first shipment only, for existing single-courier reads.
+       */
+      shippingQuoteId: string | null
+      shipmentBreakdown: Prisma.JsonValue | null
       status: string
       notes: string | null
       paidAt: Date | null
@@ -1688,7 +1712,7 @@ export namespace Prisma {
 
   type OrderGetPayload<S extends boolean | null | undefined | OrderDefaultArgs> = $Result.GetResult<Prisma.$OrderPayload, S>
 
-  type OrderCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type OrderCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<OrderFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: OrderCountAggregateInputType | true
     }
@@ -1709,7 +1733,7 @@ export namespace Prisma {
     findUnique<T extends OrderFindUniqueArgs>(args: SelectSubset<T, OrderFindUniqueArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one Order that matches the filter or throw an error with `error.code='P2025'`
+     * Find one Order that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {OrderFindUniqueOrThrowArgs} args - Arguments to find a Order
      * @example
@@ -1761,13 +1785,13 @@ export namespace Prisma {
      * @example
      * // Get all Orders
      * const orders = await prisma.order.findMany()
-     *
+     * 
      * // Get first 10 Orders
      * const orders = await prisma.order.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const orderWithIdOnly = await prisma.order.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends OrderFindManyArgs>(args?: SelectSubset<T, OrderFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "findMany">>
 
@@ -1781,7 +1805,7 @@ export namespace Prisma {
      *     // ... data to create a Order
      *   }
      * })
-     *
+     * 
      */
     create<T extends OrderCreateArgs>(args: SelectSubset<T, OrderCreateArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -1795,7 +1819,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends OrderCreateManyArgs>(args?: SelectSubset<T, OrderCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1809,9 +1833,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many Orders and only return the `id`
-     * const orderWithIdOnly = await prisma.order.createManyAndReturn({
+     * const orderWithIdOnly = await prisma.order.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -1819,7 +1843,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends OrderCreateManyAndReturnArgs>(args?: SelectSubset<T, OrderCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -1833,7 +1857,7 @@ export namespace Prisma {
      *     // ... filter to delete one Order
      *   }
      * })
-     *
+     * 
      */
     delete<T extends OrderDeleteArgs>(args: SelectSubset<T, OrderDeleteArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -1850,7 +1874,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends OrderUpdateArgs>(args: SelectSubset<T, OrderUpdateArgs<ExtArgs>>): Prisma__OrderClient<$Result.GetResult<Prisma.$OrderPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -1864,7 +1888,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends OrderDeleteManyArgs>(args?: SelectSubset<T, OrderDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1883,7 +1907,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends OrderUpdateManyArgs>(args: SelectSubset<T, OrderUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1972,7 +1996,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends OrderGroupByArgs,
@@ -2076,7 +2100,7 @@ export namespace Prisma {
 
   /**
    * Fields of the Order model
-   */
+   */ 
   interface OrderFieldRefs {
     readonly id: FieldRef<"Order", 'String'>
     readonly orderNumber: FieldRef<"Order", 'String'>
@@ -2093,6 +2117,8 @@ export namespace Prisma {
     readonly shippingAddress: FieldRef<"Order", 'Json'>
     readonly courierName: FieldRef<"Order", 'String'>
     readonly courierService: FieldRef<"Order", 'String'>
+    readonly shippingQuoteId: FieldRef<"Order", 'String'>
+    readonly shipmentBreakdown: FieldRef<"Order", 'Json'>
     readonly status: FieldRef<"Order", 'String'>
     readonly notes: FieldRef<"Order", 'String'>
     readonly paidAt: FieldRef<"Order", 'DateTime'>
@@ -2102,7 +2128,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Order", 'DateTime'>
     readonly updatedAt: FieldRef<"Order", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -2159,31 +2185,31 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for Orders.
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of Orders.
      */
     distinct?: OrderScalarFieldEnum | OrderScalarFieldEnum[]
@@ -2207,31 +2233,31 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for Orders.
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Orders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of Orders.
      */
     distinct?: OrderScalarFieldEnum | OrderScalarFieldEnum[]
@@ -2255,25 +2281,25 @@ export namespace Prisma {
     where?: OrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Orders to fetch.
      */
     orderBy?: OrderOrderByWithRelationInput | OrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing Orders.
      */
     cursor?: OrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Orders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Orders.
      */
     skip?: number
@@ -2629,55 +2655,55 @@ export namespace Prisma {
     where?: OrderItemWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderItems to fetch.
      */
     orderBy?: OrderItemOrderByWithRelationInput | OrderItemOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: OrderItemWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderItems from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderItems.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned OrderItems
     **/
     _count?: true | OrderItemCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to average
     **/
     _avg?: OrderItemAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to sum
     **/
     _sum?: OrderItemSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: OrderItemMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: OrderItemMaxAggregateInputType
@@ -2820,7 +2846,7 @@ export namespace Prisma {
 
   type OrderItemGetPayload<S extends boolean | null | undefined | OrderItemDefaultArgs> = $Result.GetResult<Prisma.$OrderItemPayload, S>
 
-  type OrderItemCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type OrderItemCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<OrderItemFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: OrderItemCountAggregateInputType | true
     }
@@ -2841,7 +2867,7 @@ export namespace Prisma {
     findUnique<T extends OrderItemFindUniqueArgs>(args: SelectSubset<T, OrderItemFindUniqueArgs<ExtArgs>>): Prisma__OrderItemClient<$Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one OrderItem that matches the filter or throw an error with `error.code='P2025'`
+     * Find one OrderItem that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {OrderItemFindUniqueOrThrowArgs} args - Arguments to find a OrderItem
      * @example
@@ -2893,13 +2919,13 @@ export namespace Prisma {
      * @example
      * // Get all OrderItems
      * const orderItems = await prisma.orderItem.findMany()
-     *
+     * 
      * // Get first 10 OrderItems
      * const orderItems = await prisma.orderItem.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const orderItemWithIdOnly = await prisma.orderItem.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends OrderItemFindManyArgs>(args?: SelectSubset<T, OrderItemFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "findMany">>
 
@@ -2913,7 +2939,7 @@ export namespace Prisma {
      *     // ... data to create a OrderItem
      *   }
      * })
-     *
+     * 
      */
     create<T extends OrderItemCreateArgs>(args: SelectSubset<T, OrderItemCreateArgs<ExtArgs>>): Prisma__OrderItemClient<$Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -2927,7 +2953,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends OrderItemCreateManyArgs>(args?: SelectSubset<T, OrderItemCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2941,9 +2967,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many OrderItems and only return the `id`
-     * const orderItemWithIdOnly = await prisma.orderItem.createManyAndReturn({
+     * const orderItemWithIdOnly = await prisma.orderItem.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -2951,7 +2977,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends OrderItemCreateManyAndReturnArgs>(args?: SelectSubset<T, OrderItemCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -2965,7 +2991,7 @@ export namespace Prisma {
      *     // ... filter to delete one OrderItem
      *   }
      * })
-     *
+     * 
      */
     delete<T extends OrderItemDeleteArgs>(args: SelectSubset<T, OrderItemDeleteArgs<ExtArgs>>): Prisma__OrderItemClient<$Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -2982,7 +3008,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends OrderItemUpdateArgs>(args: SelectSubset<T, OrderItemUpdateArgs<ExtArgs>>): Prisma__OrderItemClient<$Result.GetResult<Prisma.$OrderItemPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -2996,7 +3022,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends OrderItemDeleteManyArgs>(args?: SelectSubset<T, OrderItemDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3015,7 +3041,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends OrderItemUpdateManyArgs>(args: SelectSubset<T, OrderItemUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3104,7 +3130,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends OrderItemGroupByArgs,
@@ -3206,7 +3232,7 @@ export namespace Prisma {
 
   /**
    * Fields of the OrderItem model
-   */
+   */ 
   interface OrderItemFieldRefs {
     readonly id: FieldRef<"OrderItem", 'String'>
     readonly orderId: FieldRef<"OrderItem", 'String'>
@@ -3221,7 +3247,7 @@ export namespace Prisma {
     readonly sellerName: FieldRef<"OrderItem", 'String'>
     readonly createdAt: FieldRef<"OrderItem", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -3278,31 +3304,31 @@ export namespace Prisma {
     where?: OrderItemWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderItems to fetch.
      */
     orderBy?: OrderItemOrderByWithRelationInput | OrderItemOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OrderItems.
      */
     cursor?: OrderItemWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderItems from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderItems.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OrderItems.
      */
     distinct?: OrderItemScalarFieldEnum | OrderItemScalarFieldEnum[]
@@ -3326,31 +3352,31 @@ export namespace Prisma {
     where?: OrderItemWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderItems to fetch.
      */
     orderBy?: OrderItemOrderByWithRelationInput | OrderItemOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OrderItems.
      */
     cursor?: OrderItemWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderItems from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderItems.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OrderItems.
      */
     distinct?: OrderItemScalarFieldEnum | OrderItemScalarFieldEnum[]
@@ -3374,25 +3400,25 @@ export namespace Prisma {
     where?: OrderItemWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderItems to fetch.
      */
     orderBy?: OrderItemOrderByWithRelationInput | OrderItemOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing OrderItems.
      */
     cursor?: OrderItemWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderItems from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderItems.
      */
     skip?: number
@@ -3632,43 +3658,43 @@ export namespace Prisma {
     where?: OrderStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderStatusHistories to fetch.
      */
     orderBy?: OrderStatusHistoryOrderByWithRelationInput | OrderStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: OrderStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderStatusHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned OrderStatusHistories
     **/
     _count?: true | OrderStatusHistoryCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: OrderStatusHistoryMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: OrderStatusHistoryMaxAggregateInputType
@@ -3782,7 +3808,7 @@ export namespace Prisma {
 
   type OrderStatusHistoryGetPayload<S extends boolean | null | undefined | OrderStatusHistoryDefaultArgs> = $Result.GetResult<Prisma.$OrderStatusHistoryPayload, S>
 
-  type OrderStatusHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type OrderStatusHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<OrderStatusHistoryFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: OrderStatusHistoryCountAggregateInputType | true
     }
@@ -3803,7 +3829,7 @@ export namespace Prisma {
     findUnique<T extends OrderStatusHistoryFindUniqueArgs>(args: SelectSubset<T, OrderStatusHistoryFindUniqueArgs<ExtArgs>>): Prisma__OrderStatusHistoryClient<$Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one OrderStatusHistory that matches the filter or throw an error with `error.code='P2025'`
+     * Find one OrderStatusHistory that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {OrderStatusHistoryFindUniqueOrThrowArgs} args - Arguments to find a OrderStatusHistory
      * @example
@@ -3855,13 +3881,13 @@ export namespace Prisma {
      * @example
      * // Get all OrderStatusHistories
      * const orderStatusHistories = await prisma.orderStatusHistory.findMany()
-     *
+     * 
      * // Get first 10 OrderStatusHistories
      * const orderStatusHistories = await prisma.orderStatusHistory.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const orderStatusHistoryWithIdOnly = await prisma.orderStatusHistory.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends OrderStatusHistoryFindManyArgs>(args?: SelectSubset<T, OrderStatusHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "findMany">>
 
@@ -3875,7 +3901,7 @@ export namespace Prisma {
      *     // ... data to create a OrderStatusHistory
      *   }
      * })
-     *
+     * 
      */
     create<T extends OrderStatusHistoryCreateArgs>(args: SelectSubset<T, OrderStatusHistoryCreateArgs<ExtArgs>>): Prisma__OrderStatusHistoryClient<$Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -3889,7 +3915,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends OrderStatusHistoryCreateManyArgs>(args?: SelectSubset<T, OrderStatusHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3903,9 +3929,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many OrderStatusHistories and only return the `id`
-     * const orderStatusHistoryWithIdOnly = await prisma.orderStatusHistory.createManyAndReturn({
+     * const orderStatusHistoryWithIdOnly = await prisma.orderStatusHistory.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -3913,7 +3939,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends OrderStatusHistoryCreateManyAndReturnArgs>(args?: SelectSubset<T, OrderStatusHistoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -3927,7 +3953,7 @@ export namespace Prisma {
      *     // ... filter to delete one OrderStatusHistory
      *   }
      * })
-     *
+     * 
      */
     delete<T extends OrderStatusHistoryDeleteArgs>(args: SelectSubset<T, OrderStatusHistoryDeleteArgs<ExtArgs>>): Prisma__OrderStatusHistoryClient<$Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -3944,7 +3970,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends OrderStatusHistoryUpdateArgs>(args: SelectSubset<T, OrderStatusHistoryUpdateArgs<ExtArgs>>): Prisma__OrderStatusHistoryClient<$Result.GetResult<Prisma.$OrderStatusHistoryPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -3958,7 +3984,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends OrderStatusHistoryDeleteManyArgs>(args?: SelectSubset<T, OrderStatusHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3977,7 +4003,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends OrderStatusHistoryUpdateManyArgs>(args: SelectSubset<T, OrderStatusHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4066,7 +4092,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends OrderStatusHistoryGroupByArgs,
@@ -4168,7 +4194,7 @@ export namespace Prisma {
 
   /**
    * Fields of the OrderStatusHistory model
-   */
+   */ 
   interface OrderStatusHistoryFieldRefs {
     readonly id: FieldRef<"OrderStatusHistory", 'String'>
     readonly orderId: FieldRef<"OrderStatusHistory", 'String'>
@@ -4178,7 +4204,7 @@ export namespace Prisma {
     readonly changedBy: FieldRef<"OrderStatusHistory", 'String'>
     readonly createdAt: FieldRef<"OrderStatusHistory", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -4235,31 +4261,31 @@ export namespace Prisma {
     where?: OrderStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderStatusHistories to fetch.
      */
     orderBy?: OrderStatusHistoryOrderByWithRelationInput | OrderStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OrderStatusHistories.
      */
     cursor?: OrderStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderStatusHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OrderStatusHistories.
      */
     distinct?: OrderStatusHistoryScalarFieldEnum | OrderStatusHistoryScalarFieldEnum[]
@@ -4283,31 +4309,31 @@ export namespace Prisma {
     where?: OrderStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderStatusHistories to fetch.
      */
     orderBy?: OrderStatusHistoryOrderByWithRelationInput | OrderStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OrderStatusHistories.
      */
     cursor?: OrderStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderStatusHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OrderStatusHistories.
      */
     distinct?: OrderStatusHistoryScalarFieldEnum | OrderStatusHistoryScalarFieldEnum[]
@@ -4331,25 +4357,25 @@ export namespace Prisma {
     where?: OrderStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderStatusHistories to fetch.
      */
     orderBy?: OrderStatusHistoryOrderByWithRelationInput | OrderStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing OrderStatusHistories.
      */
     cursor?: OrderStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderStatusHistories.
      */
     skip?: number
@@ -4607,43 +4633,43 @@ export namespace Prisma {
     where?: OrderComplaintWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderComplaints to fetch.
      */
     orderBy?: OrderComplaintOrderByWithRelationInput | OrderComplaintOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: OrderComplaintWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderComplaints from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderComplaints.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned OrderComplaints
     **/
     _count?: true | OrderComplaintCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: OrderComplaintMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: OrderComplaintMaxAggregateInputType
@@ -4772,7 +4798,7 @@ export namespace Prisma {
 
   type OrderComplaintGetPayload<S extends boolean | null | undefined | OrderComplaintDefaultArgs> = $Result.GetResult<Prisma.$OrderComplaintPayload, S>
 
-  type OrderComplaintCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type OrderComplaintCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<OrderComplaintFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: OrderComplaintCountAggregateInputType | true
     }
@@ -4793,7 +4819,7 @@ export namespace Prisma {
     findUnique<T extends OrderComplaintFindUniqueArgs>(args: SelectSubset<T, OrderComplaintFindUniqueArgs<ExtArgs>>): Prisma__OrderComplaintClient<$Result.GetResult<Prisma.$OrderComplaintPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one OrderComplaint that matches the filter or throw an error with `error.code='P2025'`
+     * Find one OrderComplaint that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {OrderComplaintFindUniqueOrThrowArgs} args - Arguments to find a OrderComplaint
      * @example
@@ -4845,13 +4871,13 @@ export namespace Prisma {
      * @example
      * // Get all OrderComplaints
      * const orderComplaints = await prisma.orderComplaint.findMany()
-     *
+     * 
      * // Get first 10 OrderComplaints
      * const orderComplaints = await prisma.orderComplaint.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const orderComplaintWithIdOnly = await prisma.orderComplaint.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends OrderComplaintFindManyArgs>(args?: SelectSubset<T, OrderComplaintFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderComplaintPayload<ExtArgs>, T, "findMany">>
 
@@ -4865,7 +4891,7 @@ export namespace Prisma {
      *     // ... data to create a OrderComplaint
      *   }
      * })
-     *
+     * 
      */
     create<T extends OrderComplaintCreateArgs>(args: SelectSubset<T, OrderComplaintCreateArgs<ExtArgs>>): Prisma__OrderComplaintClient<$Result.GetResult<Prisma.$OrderComplaintPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -4879,7 +4905,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends OrderComplaintCreateManyArgs>(args?: SelectSubset<T, OrderComplaintCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4893,9 +4919,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many OrderComplaints and only return the `id`
-     * const orderComplaintWithIdOnly = await prisma.orderComplaint.createManyAndReturn({
+     * const orderComplaintWithIdOnly = await prisma.orderComplaint.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -4903,7 +4929,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends OrderComplaintCreateManyAndReturnArgs>(args?: SelectSubset<T, OrderComplaintCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OrderComplaintPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -4917,7 +4943,7 @@ export namespace Prisma {
      *     // ... filter to delete one OrderComplaint
      *   }
      * })
-     *
+     * 
      */
     delete<T extends OrderComplaintDeleteArgs>(args: SelectSubset<T, OrderComplaintDeleteArgs<ExtArgs>>): Prisma__OrderComplaintClient<$Result.GetResult<Prisma.$OrderComplaintPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -4934,7 +4960,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends OrderComplaintUpdateArgs>(args: SelectSubset<T, OrderComplaintUpdateArgs<ExtArgs>>): Prisma__OrderComplaintClient<$Result.GetResult<Prisma.$OrderComplaintPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -4948,7 +4974,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends OrderComplaintDeleteManyArgs>(args?: SelectSubset<T, OrderComplaintDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4967,7 +4993,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends OrderComplaintUpdateManyArgs>(args: SelectSubset<T, OrderComplaintUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5056,7 +5082,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends OrderComplaintGroupByArgs,
@@ -5158,7 +5184,7 @@ export namespace Prisma {
 
   /**
    * Fields of the OrderComplaint model
-   */
+   */ 
   interface OrderComplaintFieldRefs {
     readonly id: FieldRef<"OrderComplaint", 'String'>
     readonly orderId: FieldRef<"OrderComplaint", 'String'>
@@ -5171,7 +5197,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"OrderComplaint", 'DateTime'>
     readonly updatedAt: FieldRef<"OrderComplaint", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -5228,31 +5254,31 @@ export namespace Prisma {
     where?: OrderComplaintWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderComplaints to fetch.
      */
     orderBy?: OrderComplaintOrderByWithRelationInput | OrderComplaintOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OrderComplaints.
      */
     cursor?: OrderComplaintWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderComplaints from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderComplaints.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OrderComplaints.
      */
     distinct?: OrderComplaintScalarFieldEnum | OrderComplaintScalarFieldEnum[]
@@ -5276,31 +5302,31 @@ export namespace Prisma {
     where?: OrderComplaintWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderComplaints to fetch.
      */
     orderBy?: OrderComplaintOrderByWithRelationInput | OrderComplaintOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OrderComplaints.
      */
     cursor?: OrderComplaintWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderComplaints from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderComplaints.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OrderComplaints.
      */
     distinct?: OrderComplaintScalarFieldEnum | OrderComplaintScalarFieldEnum[]
@@ -5324,25 +5350,25 @@ export namespace Prisma {
     where?: OrderComplaintWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OrderComplaints to fetch.
      */
     orderBy?: OrderComplaintOrderByWithRelationInput | OrderComplaintOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing OrderComplaints.
      */
     cursor?: OrderComplaintWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OrderComplaints from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OrderComplaints.
      */
     skip?: number
@@ -5644,55 +5670,55 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned OutboxEvents
     **/
     _count?: true | OutboxEventCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to average
     **/
     _avg?: OutboxEventAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to sum
     **/
     _sum?: OutboxEventSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: OutboxEventMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: OutboxEventMaxAggregateInputType
@@ -5840,7 +5866,7 @@ export namespace Prisma {
 
   type OutboxEventGetPayload<S extends boolean | null | undefined | OutboxEventDefaultArgs> = $Result.GetResult<Prisma.$OutboxEventPayload, S>
 
-  type OutboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type OutboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<OutboxEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: OutboxEventCountAggregateInputType | true
     }
@@ -5861,7 +5887,7 @@ export namespace Prisma {
     findUnique<T extends OutboxEventFindUniqueArgs>(args: SelectSubset<T, OutboxEventFindUniqueArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one OutboxEvent that matches the filter or throw an error with `error.code='P2025'`
+     * Find one OutboxEvent that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {OutboxEventFindUniqueOrThrowArgs} args - Arguments to find a OutboxEvent
      * @example
@@ -5913,13 +5939,13 @@ export namespace Prisma {
      * @example
      * // Get all OutboxEvents
      * const outboxEvents = await prisma.outboxEvent.findMany()
-     *
+     * 
      * // Get first 10 OutboxEvents
      * const outboxEvents = await prisma.outboxEvent.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const outboxEventWithIdOnly = await prisma.outboxEvent.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends OutboxEventFindManyArgs>(args?: SelectSubset<T, OutboxEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findMany">>
 
@@ -5933,7 +5959,7 @@ export namespace Prisma {
      *     // ... data to create a OutboxEvent
      *   }
      * })
-     *
+     * 
      */
     create<T extends OutboxEventCreateArgs>(args: SelectSubset<T, OutboxEventCreateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -5947,7 +5973,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends OutboxEventCreateManyArgs>(args?: SelectSubset<T, OutboxEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5961,9 +5987,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many OutboxEvents and only return the `id`
-     * const outboxEventWithIdOnly = await prisma.outboxEvent.createManyAndReturn({
+     * const outboxEventWithIdOnly = await prisma.outboxEvent.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -5971,7 +5997,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends OutboxEventCreateManyAndReturnArgs>(args?: SelectSubset<T, OutboxEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -5985,7 +6011,7 @@ export namespace Prisma {
      *     // ... filter to delete one OutboxEvent
      *   }
      * })
-     *
+     * 
      */
     delete<T extends OutboxEventDeleteArgs>(args: SelectSubset<T, OutboxEventDeleteArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -6002,7 +6028,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends OutboxEventUpdateArgs>(args: SelectSubset<T, OutboxEventUpdateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -6016,7 +6042,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends OutboxEventDeleteManyArgs>(args?: SelectSubset<T, OutboxEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -6035,7 +6061,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends OutboxEventUpdateManyArgs>(args: SelectSubset<T, OutboxEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -6124,7 +6150,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends OutboxEventGroupByArgs,
@@ -6225,7 +6251,7 @@ export namespace Prisma {
 
   /**
    * Fields of the OutboxEvent model
-   */
+   */ 
   interface OutboxEventFieldRefs {
     readonly id: FieldRef<"OutboxEvent", 'String'>
     readonly aggregateType: FieldRef<"OutboxEvent", 'String'>
@@ -6243,7 +6269,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"OutboxEvent", 'DateTime'>
     readonly updatedAt: FieldRef<"OutboxEvent", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -6288,31 +6314,31 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OutboxEvents.
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OutboxEvents.
      */
     distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
@@ -6332,31 +6358,31 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OutboxEvents.
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OutboxEvents.
      */
     distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
@@ -6376,25 +6402,25 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing OutboxEvents.
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
@@ -6560,6 +6586,8 @@ export namespace Prisma {
     shippingAddress: 'shippingAddress',
     courierName: 'courierName',
     courierService: 'courierService',
+    shippingQuoteId: 'shippingQuoteId',
+    shipmentBreakdown: 'shipmentBreakdown',
     status: 'status',
     notes: 'notes',
     paidAt: 'paidAt',
@@ -6656,6 +6684,14 @@ export namespace Prisma {
   export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
+  export const NullableJsonNullValueInput: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull
+  };
+
+  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
   export const QueryMode: {
     default: 'default',
     insensitive: 'insensitive'
@@ -6682,7 +6718,7 @@ export namespace Prisma {
 
 
   /**
-   * Field references
+   * Field references 
    */
 
 
@@ -6690,77 +6726,77 @@ export namespace Prisma {
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
-
+    
 
 
   /**
    * Reference to a field of type 'String[]'
    */
   export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Decimal'
    */
   export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
-
+    
 
 
   /**
    * Reference to a field of type 'Decimal[]'
    */
   export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Json'
    */
   export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-
+    
 
 
   /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-
+    
 
 
   /**
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-
+    
 
 
   /**
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-
+    
 
 
   /**
    * Reference to a field of type 'Float[]'
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-
+    
   /**
    * Deep Input Types
    */
@@ -6785,6 +6821,8 @@ export namespace Prisma {
     shippingAddress?: JsonFilter<"Order">
     courierName?: StringNullableFilter<"Order"> | string | null
     courierService?: StringNullableFilter<"Order"> | string | null
+    shippingQuoteId?: StringNullableFilter<"Order"> | string | null
+    shipmentBreakdown?: JsonNullableFilter<"Order">
     status?: StringFilter<"Order"> | string
     notes?: StringNullableFilter<"Order"> | string | null
     paidAt?: DateTimeNullableFilter<"Order"> | Date | string | null
@@ -6814,6 +6852,8 @@ export namespace Prisma {
     shippingAddress?: SortOrder
     courierName?: SortOrderInput | SortOrder
     courierService?: SortOrderInput | SortOrder
+    shippingQuoteId?: SortOrderInput | SortOrder
+    shipmentBreakdown?: SortOrderInput | SortOrder
     status?: SortOrder
     notes?: SortOrderInput | SortOrder
     paidAt?: SortOrderInput | SortOrder
@@ -6830,6 +6870,7 @@ export namespace Prisma {
   export type OrderWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     orderNumber?: string
+    shippingQuoteId?: string
     AND?: OrderWhereInput | OrderWhereInput[]
     OR?: OrderWhereInput[]
     NOT?: OrderWhereInput | OrderWhereInput[]
@@ -6846,6 +6887,7 @@ export namespace Prisma {
     shippingAddress?: JsonFilter<"Order">
     courierName?: StringNullableFilter<"Order"> | string | null
     courierService?: StringNullableFilter<"Order"> | string | null
+    shipmentBreakdown?: JsonNullableFilter<"Order">
     status?: StringFilter<"Order"> | string
     notes?: StringNullableFilter<"Order"> | string | null
     paidAt?: DateTimeNullableFilter<"Order"> | Date | string | null
@@ -6857,7 +6899,7 @@ export namespace Prisma {
     items?: OrderItemListRelationFilter
     statusHistory?: OrderStatusHistoryListRelationFilter
     complaints?: OrderComplaintListRelationFilter
-  }, "id" | "orderNumber">
+  }, "id" | "orderNumber" | "shippingQuoteId">
 
   export type OrderOrderByWithAggregationInput = {
     id?: SortOrder
@@ -6875,6 +6917,8 @@ export namespace Prisma {
     shippingAddress?: SortOrder
     courierName?: SortOrderInput | SortOrder
     courierService?: SortOrderInput | SortOrder
+    shippingQuoteId?: SortOrderInput | SortOrder
+    shipmentBreakdown?: SortOrderInput | SortOrder
     status?: SortOrder
     notes?: SortOrderInput | SortOrder
     paidAt?: SortOrderInput | SortOrder
@@ -6909,6 +6953,8 @@ export namespace Prisma {
     shippingAddress?: JsonWithAggregatesFilter<"Order">
     courierName?: StringNullableWithAggregatesFilter<"Order"> | string | null
     courierService?: StringNullableWithAggregatesFilter<"Order"> | string | null
+    shippingQuoteId?: StringNullableWithAggregatesFilter<"Order"> | string | null
+    shipmentBreakdown?: JsonNullableWithAggregatesFilter<"Order">
     status?: StringWithAggregatesFilter<"Order"> | string
     notes?: StringNullableWithAggregatesFilter<"Order"> | string | null
     paidAt?: DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
@@ -7277,6 +7323,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -7306,6 +7354,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -7335,6 +7385,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7364,6 +7416,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7393,6 +7447,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -7419,6 +7475,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7445,6 +7503,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -7884,7 +7944,7 @@ export namespace Prisma {
     mode?: QueryMode
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
-  export type JsonFilter<$PrismaModel = never> =
+  export type JsonFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
         Required<JsonFilterBase<$PrismaModel>>
@@ -7892,6 +7952,28 @@ export namespace Prisma {
     | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
 
   export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+  export type JsonNullableFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
     equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
     path?: string[]
     string_contains?: string | StringFieldRefInput<$PrismaModel>
@@ -7980,6 +8062,8 @@ export namespace Prisma {
     shippingAddress?: SortOrder
     courierName?: SortOrder
     courierService?: SortOrder
+    shippingQuoteId?: SortOrder
+    shipmentBreakdown?: SortOrder
     status?: SortOrder
     notes?: SortOrder
     paidAt?: SortOrder
@@ -8012,6 +8096,7 @@ export namespace Prisma {
     shippingAddressId?: SortOrder
     courierName?: SortOrder
     courierService?: SortOrder
+    shippingQuoteId?: SortOrder
     status?: SortOrder
     notes?: SortOrder
     paidAt?: SortOrder
@@ -8037,6 +8122,7 @@ export namespace Prisma {
     shippingAddressId?: SortOrder
     courierName?: SortOrder
     courierService?: SortOrder
+    shippingQuoteId?: SortOrder
     status?: SortOrder
     notes?: SortOrder
     paidAt?: SortOrder
@@ -8105,7 +8191,7 @@ export namespace Prisma {
     _min?: NestedStringNullableFilter<$PrismaModel>
     _max?: NestedStringNullableFilter<$PrismaModel>
   }
-  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
         Required<JsonWithAggregatesFilterBase<$PrismaModel>>
@@ -8129,6 +8215,31 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedJsonFilter<$PrismaModel>
     _max?: NestedJsonFilter<$PrismaModel>
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -8716,7 +8827,7 @@ export namespace Prisma {
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
-  export type NestedJsonFilter<$PrismaModel = never> =
+  export type NestedJsonFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
         Required<NestedJsonFilterBase<$PrismaModel>>
@@ -8724,6 +8835,28 @@ export namespace Prisma {
     | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
 
   export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+  export type NestedJsonNullableFilter<$PrismaModel = never> = 
+    | PatchUndefined<
+        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
     equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
     path?: string[]
     string_contains?: string | StringFieldRefInput<$PrismaModel>
@@ -9005,6 +9138,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -9033,6 +9168,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -9077,6 +9214,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9105,6 +9244,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9133,6 +9274,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -9161,6 +9304,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -9205,6 +9350,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9233,6 +9380,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9261,6 +9410,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -9289,6 +9440,8 @@ export namespace Prisma {
     shippingAddress: JsonNullValueInput | InputJsonValue
     courierName?: string | null
     courierService?: string | null
+    shippingQuoteId?: string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: string
     notes?: string | null
     paidAt?: Date | string | null
@@ -9333,6 +9486,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -9361,6 +9516,8 @@ export namespace Prisma {
     shippingAddress?: JsonNullValueInput | InputJsonValue
     courierName?: NullableStringFieldUpdateOperationsInput | string | null
     courierService?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingQuoteId?: NullableStringFieldUpdateOperationsInput | string | null
+    shipmentBreakdown?: NullableJsonNullValueInput | InputJsonValue
     status?: StringFieldUpdateOperationsInput | string
     notes?: NullableStringFieldUpdateOperationsInput | string | null
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

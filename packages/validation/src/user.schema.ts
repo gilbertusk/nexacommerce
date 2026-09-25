@@ -30,3 +30,20 @@ export const createSellerProfileSchema = z.object({
   storeBanner: z.string().url('Invalid banner URL').optional().or(z.literal('')),
   storeAddress: z.string().optional(),
 });
+
+/**
+ * A seller's proposed dispatch origin.
+ *
+ * Submitting this clears any prior verification: the origin decides which rate
+ * table row prices a customer's shipping, so a seller must not be able to move
+ * it and have the new location trusted without review.
+ */
+export const sellerDispatchOriginSchema = z.object({
+  originCity: z.string().trim().min(2, 'Origin city is required').max(100),
+  originProvince: z.string().trim().min(2, 'Origin province is required').max(100),
+});
+
+/** An administrator's decision on a proposed dispatch origin. */
+export const verifySellerDispatchOriginSchema = z.object({
+  verified: z.boolean(),
+});

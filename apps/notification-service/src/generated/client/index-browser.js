@@ -149,7 +149,24 @@ exports.Prisma.EmailLogScalarFieldEnum = {
   error: 'error',
   retryCount: 'retryCount',
   maxRetries: 'maxRetries',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  availableAt: 'availableAt',
+  lockedAt: 'lockedAt',
+  lockToken: 'lockToken'
+};
+
+exports.Prisma.InboxEventScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  consumer: 'consumer',
+  eventName: 'eventName',
+  payload: 'payload',
+  status: 'status',
+  attempts: 'attempts',
+  lastError: 'lastError',
+  processedAt: 'processedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.EmailTemplateScalarFieldEnum = {
@@ -197,6 +214,7 @@ exports.Prisma.NullsOrder = {
 exports.Prisma.ModelName = {
   Notification: 'Notification',
   EmailLog: 'EmailLog',
+  InboxEvent: 'InboxEvent',
   EmailTemplate: 'EmailTemplate'
 };
 

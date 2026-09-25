@@ -15,6 +15,7 @@ const notificationEnvSchema = z.object({
   AUTH_SERVICE_URL: z.string().default('http://localhost:3001'),
   ORDER_SERVICE_URL: z.string().default('http://localhost:3005'),
   PRODUCT_SERVICE_URL: z.string().default('http://localhost:3003'),
+  REVIEW_SERVICE_URL: z.string().default('http://localhost:3010'),
   SMTP_HOST: z.string().default('smtp.ethereal.email'),
   SMTP_PORT: z.preprocess((val) => val ? parseInt(val as string, 10) : undefined, z.number().default(587)),
   SMTP_USER: z.string().optional().default(''),
@@ -44,6 +45,7 @@ export const config = {
   authServiceUrl: env.AUTH_SERVICE_URL,
   orderServiceUrl: env.ORDER_SERVICE_URL,
   productServiceUrl: env.PRODUCT_SERVICE_URL,
+  reviewServiceUrl: env.REVIEW_SERVICE_URL,
   customerWebUrl,
   smtp: {
     host: smtpHost,

@@ -178,20 +178,34 @@ See [Phase 4 Kafka Streaming](docs/phase-4-kafka-streaming.md) for topic ownersh
 
 ## Checkout Orchestration Steps
 
-The Order Service coordinates checkout as follows:
-1. Fetch cart items from **Cart Service**.
-2. Retrieve product pricing and verify details from **Product Service**.
-3. Verify address details from **User Service**.
-4. Retrieve shipping cost from **Shipping Service**.
-5. Calculate discounts and validate scope from **Voucher Service**.
-6. Check stock availability from **Inventory Service**.
-7. Create local Order records under database transaction.
-8. Reserve stock inside **Inventory Service** (pessimistic lock).
-9. Lock voucher usage inside **Voucher Service**.
-10. Retrieve payment token from **Payment Service** (Midtrans API).
-11. Clear active cart in **Cart Service** and publish `OrderCreated`.
+Shipping is priced **before** checkout begins. The customer requests a server-issued quote from
+**Shipping Service**, which prices one shipment per seller from that seller's verified dispatch
+origin using the internal rate table, and returns an opaque quote id. Checkout accepts only that id;
+no client-supplied shipping cost is accepted, and a request carrying one is rejected.
 
-If any step fails, the orchestrator triggers compensating transactions to release stock and unlock the voucher.
+The Order Service then coordinates checkout as follows:
+1. Fetch cart items from **Cart Service**.
+2. Retrieve product pricing, weights, and status from **Product Service**.
+3. Check stock availability in **Inventory Service**.
+4. Verify address details from **User Service**.
+5. Generate the order id, recompute the cart fingerprint, and **consume the shipping quote** in
+   **Shipping Service**. The stored quote supplies the only shipping figure used. Claiming it before
+   any dependent state exists is what guarantees a quote can never price two orders.
+6. Calculate discounts and validate scope in **Voucher Service**.
+7. Create local Order records under a database transaction, recording the quote id and the
+   per-seller shipment breakdown.
+8. Reserve stock in **Inventory Service**.
+9. Lock voucher usage in **Voucher Service**.
+10. Retrieve a payment token from **Payment Service** (Midtrans API).
+11. Clear the active cart in **Cart Service** and publish `OrderCreated`.
+
+If any step fails, the orchestrator triggers compensating transactions to release stock and unlock
+the voucher. A consumed quote is not returned to the pool; the customer requests a new one, which
+costs a round trip but cannot cause a double charge.
+
+Checkout fails closed, by design, whenever a seller in the cart has no **verified** dispatch origin
+or no configured rate covers the route, service, and weight. See
+[Checkout Orchestration Flow](docs/checkout-flow.md).
 
 ---
 

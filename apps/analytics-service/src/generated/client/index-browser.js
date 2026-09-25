@@ -225,6 +225,41 @@ exports.Prisma.AnalyticsEventScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.InboxEventScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  consumer: 'consumer',
+  eventName: 'eventName',
+  payload: 'payload',
+  status: 'status',
+  attempts: 'attempts',
+  lastError: 'lastError',
+  processedAt: 'processedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DailySalesProjectionScalarFieldEnum = {
+  id: 'id',
+  date: 'date',
+  totalOrders: 'totalOrders',
+  totalCompletedOrders: 'totalCompletedOrders',
+  totalCancelledOrders: 'totalCancelledOrders',
+  totalRevenue: 'totalRevenue',
+  totalItemsSold: 'totalItemsSold',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.KafkaProjectionProgressScalarFieldEnum = {
+  id: 'id',
+  consumerGroup: 'consumerGroup',
+  topic: 'topic',
+  partition: 'partition',
+  lastOffset: 'lastOffset',
+  lastEventAt: 'lastEventAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -258,7 +293,10 @@ exports.Prisma.ModelName = {
   SellerPerformanceReport: 'SellerPerformanceReport',
   PaymentReport: 'PaymentReport',
   CategoryPerformanceReport: 'CategoryPerformanceReport',
-  AnalyticsEvent: 'AnalyticsEvent'
+  AnalyticsEvent: 'AnalyticsEvent',
+  InboxEvent: 'InboxEvent',
+  DailySalesProjection: 'DailySalesProjection',
+  KafkaProjectionProgress: 'KafkaProjectionProgress'
 };
 
 /**

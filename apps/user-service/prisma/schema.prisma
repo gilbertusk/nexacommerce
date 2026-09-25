@@ -30,6 +30,15 @@ model SellerProfile {
   storeLogo        String?   @map("store_logo")
   storeBanner      String?   @map("store_banner")
   storeAddress     String?   @map("store_address")
+
+  /// Structured dispatch origin. Shipping quotes are per-seller, so a rate can
+  /// only be looked up once these are set and verified. They are nullable on
+  /// purpose: an unset origin must block checkout for that seller rather than
+  /// fall back to a guessed warehouse.
+  originCity       String?   @map("origin_city")
+  originProvince   String?   @map("origin_province")
+  originVerifiedAt DateTime? @map("origin_verified_at")
+
   isVerified       Boolean   @default(false) @map("is_verified")
   status           String    @default("PENDING")
   verifiedAt       DateTime? @map("verified_at")

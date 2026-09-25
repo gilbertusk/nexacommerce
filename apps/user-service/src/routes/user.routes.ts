@@ -17,7 +17,7 @@ const populateUserContext = (req: Request, res: Response, next: NextFunction) =>
 };
 
 // Middleware to check if internal service
-const checkInternalService = createInternalServiceGuard(['order-service', 'cart-service', 'product-service']);
+const checkInternalService = createInternalServiceGuard(['order-service', 'cart-service', 'product-service', 'shipping-service']);
 
 // Middleware to enforce roles
 const restrictTo = (...roles: string[]) => {
@@ -50,16 +50,19 @@ router.patch('/me/addresses/:id/set-default', asyncHandler(userController.setDef
 router.post('/seller-profile', asyncHandler(userController.createSellerProfile));
 router.get('/seller-profile/me', asyncHandler(userController.getSellerProfile));
 router.patch('/seller-profile/me', asyncHandler(userController.updateSellerProfile));
+router.put('/seller-profile/me/dispatch-origin', asyncHandler(userController.setSellerDispatchOrigin));
 
 // --- Admin Endpoints (ADMIN only) ---
 router.get('/', restrictTo('ADMIN'), asyncHandler(userController.listUsers));
 router.get('/seller-profiles', restrictTo('ADMIN'), asyncHandler(userController.listSellerProfiles));
 router.patch('/seller-profiles/:id/status', restrictTo('ADMIN'), asyncHandler(userController.updateSellerProfileStatus));
+router.patch('/seller-profiles/:id/dispatch-origin', restrictTo('ADMIN'), asyncHandler(userController.verifySellerDispatchOrigin));
 router.get('/:id', restrictTo('ADMIN'), asyncHandler(userController.getUserById));
 router.patch('/:id/status', restrictTo('ADMIN'), asyncHandler(userController.updateUserStatus));
 
 // --- Internal microservice endpoints ---
 router.get('/internal/users/:userId/addresses/:addressId', checkInternalService, asyncHandler(userController.internalGetAddress));
+router.post('/internal/sellers/dispatch-origins', checkInternalService, asyncHandler(userController.internalGetSellerOrigins));
 
 export default router;
 export { router as userRoutes };

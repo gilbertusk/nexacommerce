@@ -1959,6 +1959,9 @@ export namespace Prisma {
     storeLogo: string | null
     storeBanner: string | null
     storeAddress: string | null
+    originCity: string | null
+    originProvince: string | null
+    originVerifiedAt: Date | null
     isVerified: boolean | null
     status: string | null
     verifiedAt: Date | null
@@ -1974,6 +1977,9 @@ export namespace Prisma {
     storeLogo: string | null
     storeBanner: string | null
     storeAddress: string | null
+    originCity: string | null
+    originProvince: string | null
+    originVerifiedAt: Date | null
     isVerified: boolean | null
     status: string | null
     verifiedAt: Date | null
@@ -1989,6 +1995,9 @@ export namespace Prisma {
     storeLogo: number
     storeBanner: number
     storeAddress: number
+    originCity: number
+    originProvince: number
+    originVerifiedAt: number
     isVerified: number
     status: number
     verifiedAt: number
@@ -2006,6 +2015,9 @@ export namespace Prisma {
     storeLogo?: true
     storeBanner?: true
     storeAddress?: true
+    originCity?: true
+    originProvince?: true
+    originVerifiedAt?: true
     isVerified?: true
     status?: true
     verifiedAt?: true
@@ -2021,6 +2033,9 @@ export namespace Prisma {
     storeLogo?: true
     storeBanner?: true
     storeAddress?: true
+    originCity?: true
+    originProvince?: true
+    originVerifiedAt?: true
     isVerified?: true
     status?: true
     verifiedAt?: true
@@ -2036,6 +2051,9 @@ export namespace Prisma {
     storeLogo?: true
     storeBanner?: true
     storeAddress?: true
+    originCity?: true
+    originProvince?: true
+    originVerifiedAt?: true
     isVerified?: true
     status?: true
     verifiedAt?: true
@@ -2124,6 +2142,9 @@ export namespace Prisma {
     storeLogo: string | null
     storeBanner: string | null
     storeAddress: string | null
+    originCity: string | null
+    originProvince: string | null
+    originVerifiedAt: Date | null
     isVerified: boolean
     status: string
     verifiedAt: Date | null
@@ -2156,6 +2177,9 @@ export namespace Prisma {
     storeLogo?: boolean
     storeBanner?: boolean
     storeAddress?: boolean
+    originCity?: boolean
+    originProvince?: boolean
+    originVerifiedAt?: boolean
     isVerified?: boolean
     status?: boolean
     verifiedAt?: boolean
@@ -2171,6 +2195,9 @@ export namespace Prisma {
     storeLogo?: boolean
     storeBanner?: boolean
     storeAddress?: boolean
+    originCity?: boolean
+    originProvince?: boolean
+    originVerifiedAt?: boolean
     isVerified?: boolean
     status?: boolean
     verifiedAt?: boolean
@@ -2186,6 +2213,9 @@ export namespace Prisma {
     storeLogo?: boolean
     storeBanner?: boolean
     storeAddress?: boolean
+    originCity?: boolean
+    originProvince?: boolean
+    originVerifiedAt?: boolean
     isVerified?: boolean
     status?: boolean
     verifiedAt?: boolean
@@ -2205,6 +2235,15 @@ export namespace Prisma {
       storeLogo: string | null
       storeBanner: string | null
       storeAddress: string | null
+      /**
+       * Structured dispatch origin. Shipping quotes are per-seller, so a rate can
+       * only be looked up once these are set and verified. They are nullable on
+       * purpose: an unset origin must block checkout for that seller rather than
+       * fall back to a guessed warehouse.
+       */
+      originCity: string | null
+      originProvince: string | null
+      originVerifiedAt: Date | null
       isVerified: boolean
       status: string
       verifiedAt: Date | null
@@ -2610,6 +2649,9 @@ export namespace Prisma {
     readonly storeLogo: FieldRef<"SellerProfile", 'String'>
     readonly storeBanner: FieldRef<"SellerProfile", 'String'>
     readonly storeAddress: FieldRef<"SellerProfile", 'String'>
+    readonly originCity: FieldRef<"SellerProfile", 'String'>
+    readonly originProvince: FieldRef<"SellerProfile", 'String'>
+    readonly originVerifiedAt: FieldRef<"SellerProfile", 'DateTime'>
     readonly isVerified: FieldRef<"SellerProfile", 'Boolean'>
     readonly status: FieldRef<"SellerProfile", 'String'>
     readonly verifiedAt: FieldRef<"SellerProfile", 'DateTime'>
@@ -3902,6 +3944,9 @@ export namespace Prisma {
     storeLogo: 'storeLogo',
     storeBanner: 'storeBanner',
     storeAddress: 'storeAddress',
+    originCity: 'originCity',
+    originProvince: 'originProvince',
+    originVerifiedAt: 'originVerifiedAt',
     isVerified: 'isVerified',
     status: 'status',
     verifiedAt: 'verifiedAt',
@@ -4094,6 +4139,9 @@ export namespace Prisma {
     storeLogo?: StringNullableFilter<"SellerProfile"> | string | null
     storeBanner?: StringNullableFilter<"SellerProfile"> | string | null
     storeAddress?: StringNullableFilter<"SellerProfile"> | string | null
+    originCity?: StringNullableFilter<"SellerProfile"> | string | null
+    originProvince?: StringNullableFilter<"SellerProfile"> | string | null
+    originVerifiedAt?: DateTimeNullableFilter<"SellerProfile"> | Date | string | null
     isVerified?: BoolFilter<"SellerProfile"> | boolean
     status?: StringFilter<"SellerProfile"> | string
     verifiedAt?: DateTimeNullableFilter<"SellerProfile"> | Date | string | null
@@ -4109,6 +4157,9 @@ export namespace Prisma {
     storeLogo?: SortOrderInput | SortOrder
     storeBanner?: SortOrderInput | SortOrder
     storeAddress?: SortOrderInput | SortOrder
+    originCity?: SortOrderInput | SortOrder
+    originProvince?: SortOrderInput | SortOrder
+    originVerifiedAt?: SortOrderInput | SortOrder
     isVerified?: SortOrder
     status?: SortOrder
     verifiedAt?: SortOrderInput | SortOrder
@@ -4127,6 +4178,9 @@ export namespace Prisma {
     storeLogo?: StringNullableFilter<"SellerProfile"> | string | null
     storeBanner?: StringNullableFilter<"SellerProfile"> | string | null
     storeAddress?: StringNullableFilter<"SellerProfile"> | string | null
+    originCity?: StringNullableFilter<"SellerProfile"> | string | null
+    originProvince?: StringNullableFilter<"SellerProfile"> | string | null
+    originVerifiedAt?: DateTimeNullableFilter<"SellerProfile"> | Date | string | null
     isVerified?: BoolFilter<"SellerProfile"> | boolean
     status?: StringFilter<"SellerProfile"> | string
     verifiedAt?: DateTimeNullableFilter<"SellerProfile"> | Date | string | null
@@ -4142,6 +4196,9 @@ export namespace Prisma {
     storeLogo?: SortOrderInput | SortOrder
     storeBanner?: SortOrderInput | SortOrder
     storeAddress?: SortOrderInput | SortOrder
+    originCity?: SortOrderInput | SortOrder
+    originProvince?: SortOrderInput | SortOrder
+    originVerifiedAt?: SortOrderInput | SortOrder
     isVerified?: SortOrder
     status?: SortOrder
     verifiedAt?: SortOrderInput | SortOrder
@@ -4163,6 +4220,9 @@ export namespace Prisma {
     storeLogo?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
     storeBanner?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
     storeAddress?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
+    originCity?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
+    originProvince?: StringNullableWithAggregatesFilter<"SellerProfile"> | string | null
+    originVerifiedAt?: DateTimeNullableWithAggregatesFilter<"SellerProfile"> | Date | string | null
     isVerified?: BoolWithAggregatesFilter<"SellerProfile"> | boolean
     status?: StringWithAggregatesFilter<"SellerProfile"> | string
     verifiedAt?: DateTimeNullableWithAggregatesFilter<"SellerProfile"> | Date | string | null
@@ -4349,6 +4409,9 @@ export namespace Prisma {
     storeLogo?: string | null
     storeBanner?: string | null
     storeAddress?: string | null
+    originCity?: string | null
+    originProvince?: string | null
+    originVerifiedAt?: Date | string | null
     isVerified?: boolean
     status?: string
     verifiedAt?: Date | string | null
@@ -4364,6 +4427,9 @@ export namespace Prisma {
     storeLogo?: string | null
     storeBanner?: string | null
     storeAddress?: string | null
+    originCity?: string | null
+    originProvince?: string | null
+    originVerifiedAt?: Date | string | null
     isVerified?: boolean
     status?: string
     verifiedAt?: Date | string | null
@@ -4379,6 +4445,9 @@ export namespace Prisma {
     storeLogo?: NullableStringFieldUpdateOperationsInput | string | null
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    originCity?: NullableStringFieldUpdateOperationsInput | string | null
+    originProvince?: NullableStringFieldUpdateOperationsInput | string | null
+    originVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
     status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4394,6 +4463,9 @@ export namespace Prisma {
     storeLogo?: NullableStringFieldUpdateOperationsInput | string | null
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    originCity?: NullableStringFieldUpdateOperationsInput | string | null
+    originProvince?: NullableStringFieldUpdateOperationsInput | string | null
+    originVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
     status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4409,6 +4481,9 @@ export namespace Prisma {
     storeLogo?: string | null
     storeBanner?: string | null
     storeAddress?: string | null
+    originCity?: string | null
+    originProvince?: string | null
+    originVerifiedAt?: Date | string | null
     isVerified?: boolean
     status?: string
     verifiedAt?: Date | string | null
@@ -4424,6 +4499,9 @@ export namespace Prisma {
     storeLogo?: NullableStringFieldUpdateOperationsInput | string | null
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    originCity?: NullableStringFieldUpdateOperationsInput | string | null
+    originProvince?: NullableStringFieldUpdateOperationsInput | string | null
+    originVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
     status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4439,6 +4517,9 @@ export namespace Prisma {
     storeLogo?: NullableStringFieldUpdateOperationsInput | string | null
     storeBanner?: NullableStringFieldUpdateOperationsInput | string | null
     storeAddress?: NullableStringFieldUpdateOperationsInput | string | null
+    originCity?: NullableStringFieldUpdateOperationsInput | string | null
+    originProvince?: NullableStringFieldUpdateOperationsInput | string | null
+    originVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     isVerified?: BoolFieldUpdateOperationsInput | boolean
     status?: StringFieldUpdateOperationsInput | string
     verifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4721,6 +4802,9 @@ export namespace Prisma {
     storeLogo?: SortOrder
     storeBanner?: SortOrder
     storeAddress?: SortOrder
+    originCity?: SortOrder
+    originProvince?: SortOrder
+    originVerifiedAt?: SortOrder
     isVerified?: SortOrder
     status?: SortOrder
     verifiedAt?: SortOrder
@@ -4736,6 +4820,9 @@ export namespace Prisma {
     storeLogo?: SortOrder
     storeBanner?: SortOrder
     storeAddress?: SortOrder
+    originCity?: SortOrder
+    originProvince?: SortOrder
+    originVerifiedAt?: SortOrder
     isVerified?: SortOrder
     status?: SortOrder
     verifiedAt?: SortOrder
@@ -4751,6 +4838,9 @@ export namespace Prisma {
     storeLogo?: SortOrder
     storeBanner?: SortOrder
     storeAddress?: SortOrder
+    originCity?: SortOrder
+    originProvince?: SortOrder
+    originVerifiedAt?: SortOrder
     isVerified?: SortOrder
     status?: SortOrder
     verifiedAt?: SortOrder

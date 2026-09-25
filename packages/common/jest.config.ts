@@ -10,6 +10,7 @@ const config: Config = {
   },
   moduleNameMapper: {
     '^@nexacommerce/event-contracts$': '<rootDir>/../event-contracts/src/index.ts',
+    '^@nexacommerce/logger$': '<rootDir>/../logger/src/index.ts',
   },
 };
 

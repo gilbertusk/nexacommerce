@@ -138,6 +138,8 @@ exports.Prisma.OrderScalarFieldEnum = {
   shippingAddress: 'shippingAddress',
   courierName: 'courierName',
   courierService: 'courierService',
+  shippingQuoteId: 'shippingQuoteId',
+  shipmentBreakdown: 'shipmentBreakdown',
   status: 'status',
   notes: 'notes',
   paidAt: 'paidAt',
@@ -210,6 +212,11 @@ exports.Prisma.SortOrder = {
 };
 
 exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
   JsonNull: Prisma.JsonNull
 };
 

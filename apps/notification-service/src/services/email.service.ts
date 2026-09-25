@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import config from '../config';
 import prisma from '../prisma/client';
 import { createLogger } from '@nexacommerce/logger';
+import { EmailWriteClient, enqueueEmail } from './email-outbox';
 
 const logger = createLogger('email-service');
 
@@ -9,11 +10,10 @@ export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private isInitialized = false;
 
-  constructor() {
-    this.initializeTransporter().catch((err) => {
-      logger.error('Failed to initialize EmailService transporter:', err);
-    });
-  }
+  // The transporter is created on first use, not in the constructor. Building
+  // it can reach the network (it provisions an Ethereal account when no SMTP
+  // credentials are configured), and importing this module must not perform
+  // network I/O.
 
   private async initializeTransporter() {
     if (this.isInitialized) return;
@@ -61,123 +61,88 @@ export class EmailService {
     return compiled;
   }
 
-  async sendEmail(options: {
+  /**
+   * Resolve a template into a ready-to-send message. Returns null when the
+   * template is missing or inactive so the caller can decide whether that is a
+   * configuration error worth failing on.
+   */
+  async resolveTemplate(
+    templateName: string,
+    templateData: Record<string, any>,
+    client: EmailWriteClient = prisma,
+  ): Promise<{ subject: string; html: string; text?: string } | null> {
+    const template = await client.emailTemplate.findUnique({ where: { name: templateName } });
+    if (!template || !template.isActive) return null;
+
+    return {
+      subject: this.compileTemplate(template.subject, templateData),
+      html: this.compileTemplate(template.htmlBody, templateData),
+      text: template.textBody ? this.compileTemplate(template.textBody, templateData) : undefined,
+    };
+  }
+
+  /**
+   * Durably queue an email using `client`, so the job commits with whatever
+   * caused it. Delivery is performed later by the dispatcher.
+   *
+   * Throws when the template is unknown: an event that asked for an email the
+   * system cannot build is a configuration fault, and failing here sends the
+   * event through the consumer's bounded retry and DLQ path instead of
+   * silently dropping the message.
+   */
+  async queueEmail(
+    client: EmailWriteClient,
+    options: {
+      to: string;
+      templateName: string;
+      templateData: Record<string, any>;
+      notificationId?: string;
+    },
+  ): Promise<{ id: string }> {
+    const rendered = await this.resolveTemplate(options.templateName, options.templateData, client);
+    if (!rendered) {
+      throw new Error(`Email template "${options.templateName}" not found or inactive`);
+    }
+
+    return enqueueEmail(client, {
+      to: options.to,
+      subject: rendered.subject,
+      templateName: options.templateName,
+      templateData: options.templateData,
+      notificationId: options.notificationId,
+    });
+  }
+
+  /**
+   * Hand one message to the SMTP transport. Throws on failure so the caller
+   * can apply the retry policy; this method owns no persistence.
+   */
+  async deliverEmail(message: {
     to: string;
-    templateName: string;
-    templateData: Record<string, any>;
-    notificationId?: string;
-  }): Promise<boolean> {
-    // Ensure initialized
+    subject: string;
+    html: string;
+    text?: string;
+  }): Promise<string> {
     if (!this.isInitialized) {
       await this.initializeTransporter();
     }
-
-    const { to, templateName, templateData, notificationId } = options;
-
-    // Find template
-    const template = await prisma.emailTemplate.findUnique({
-      where: { name: templateName },
-    });
-
-    if (!template || !template.isActive) {
-      logger.warn(`Email template ${templateName} not found or is inactive. Email not sent.`);
-      return false;
+    if (!this.transporter) {
+      throw new Error('SMTP transporter not initialized');
     }
 
-    const subject = this.compileTemplate(template.subject, templateData);
-    const htmlBody = this.compileTemplate(template.htmlBody, templateData);
-    const textBody = template.textBody ? this.compileTemplate(template.textBody, templateData) : undefined;
-    const safeTemplateData = Object.fromEntries(
-      Object.entries(templateData).map(([key, value]) => [
-        key,
-        /token|url/i.test(key) ? '[REDACTED]' : value,
-      ]),
-    );
-
-    // Create log
-    const emailLog = await prisma.emailLog.create({
-      data: {
-        notificationId,
-        to,
-        subject,
-        templateName,
-        templateData: safeTemplateData as any,
-        status: 'PENDING',
-      },
+    const info = await this.transporter.sendMail({
+      from: config.smtp.from,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
     });
 
-    return this.sendWithRetry(emailLog.id, to, subject, htmlBody, textBody);
-  }
-
-  private async sendWithRetry(
-    logId: string,
-    to: string,
-    subject: string,
-    html: string,
-    text?: string,
-    attempt = 1
-  ): Promise<boolean> {
-    try {
-      if (!this.transporter) {
-        throw new Error('Transporter not initialized');
-      }
-
-      const info = await this.transporter.sendMail({
-        from: config.smtp.from,
-        to,
-        subject,
-        html,
-        text,
-      });
-
-      logger.info(`Email sent: ${info.messageId}`);
-      if (nodemailer.getTestMessageUrl(info)) {
-        logger.info(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
-      }
-
-      await prisma.emailLog.update({
-        where: { id: logId },
-        data: {
-          status: 'SENT',
-          sentAt: new Date(),
-          retryCount: attempt - 1,
-        },
-      });
-
-      return true;
-    } catch (error: any) {
-      logger.error(`Error sending email (attempt ${attempt}/3):`, error);
-
-      if (attempt < 3) {
-        await prisma.emailLog.update({
-          where: { id: logId },
-          data: {
-            retryCount: attempt,
-            error: error.message || String(error),
-          },
-        });
-
-        // Retry in 5 seconds instead of 30 to make testing faster but still asynchronous
-        setTimeout(() => {
-          this.sendWithRetry(logId, to, subject, html, text, attempt + 1).catch((err) => {
-            logger.error(`Retry attempt failed:`, err);
-          });
-        }, 5000);
-
-        return false;
-      } else {
-        await prisma.emailLog.update({
-          where: { id: logId },
-          data: {
-            status: 'FAILED',
-            failedAt: new Date(),
-            error: error.message || String(error),
-            retryCount: attempt - 1,
-          },
-        });
-        return false;
-      }
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) {
+      logger.info(`Preview URL: ${previewUrl}`);
     }
+    return info.messageId;
   }
 
   async seedTemplates() {

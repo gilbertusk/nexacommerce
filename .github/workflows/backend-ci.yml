@@ -84,6 +84,32 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      kafka:
+        image: apache/kafka:4.3.1
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:29093
+          KAFKA_LISTENERS: CONTROLLER://:29093,PLAINTEXT://:9092
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+          KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+          KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+          CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+        options: >-
+          --health-cmd "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 10
+          --health-start-period 30s
     env:
       CI: 'true'
       NODE_ENV: test
@@ -92,6 +118,7 @@ jobs:
       JWT_SECRET: test-jwt-secret-ci
       JWT_REFRESH_SECRET: test-jwt-refresh-secret-ci
       INTERNAL_SERVICE_TOKEN: test-internal-service-token-at-least-32-characters
+      KAFKA_BROKERS: localhost:9092
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -107,6 +134,19 @@ jobs:
           npm run build --workspace=packages/logger --if-present
           npm run build --workspace=packages/validation --if-present
           npm run build --workspace=packages/event-contracts --if-present
+      - name: Provision Kafka stream topics
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Automatic topic creation is disabled in production, so CI creates
+          # the same topics the Event Stream Service provisions at startup.
+          for topic in orders payments inventory shipping reviews; do
+            docker run --rm --network host apache/kafka:4.3.1 \
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+              --create --if-not-exists --topic "nexacommerce.${topic}.v1" \
+              --partitions 6 --replication-factor 1
+          done
+
       - name: Deploy migrations and test database services
         shell: bash
         run: |
@@ -143,6 +183,7 @@ jobs:
           --workspace=packages/common
           --workspace=frontend/customer-web
           --workspace=frontend/seller-dashboard
+          --workspace=frontend/admin-dashboard
           --if-present
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high

@@ -357,6 +357,11 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
       - ORDER_SERVICE_URL=http://order-service:3005
+      # Shipping quotes read the authoritative cart, the destination address,
+      # the seller's verified dispatch origin, and product weights.
+      - CART_SERVICE_URL=http://cart-service:3004
+      - USER_SERVICE_URL=http://user-service:3002
+      - PRODUCT_SERVICE_URL=http://product-service:3003
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
     depends_on:
       postgres:
@@ -440,10 +445,22 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:?RABBITMQ_USER is required}:${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}@rabbitmq:5672
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
+      # Kafka projection. The consumer group id is part of the replay contract:
+      # changing it makes the projection rebuild from the start of the topic.
+      - KAFKA_BROKERS=kafka:19092
+      - KAFKA_CLIENT_ID=nexacommerce-analytics
+      - KAFKA_TOPIC_PREFIX=${KAFKA_TOPIC_PREFIX:-nexacommerce}
+      - KAFKA_PROJECTION_GROUP_ID=${KAFKA_PROJECTION_GROUP_ID:-analytics-daily-projection-v1}
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PRODUCT_SERVICE_URL=http://product-service:3003
+      - ORDER_SERVICE_URL=http://order-service:3005
+      - REVIEW_SERVICE_URL=http://review-service:3010
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - nexacommerce-network

@@ -37,6 +37,11 @@ router.get('/couriers', asyncHandler(shippingController.getCouriers));
 router.get('/rates', asyncHandler(shippingController.getRates));
 router.get('/track/:trackingNumber', asyncHandler(shippingController.trackByTrackingNumber));
 
+// --- Trusted shipping quotes ---
+// A quote is the only source of a shipping price that checkout will accept.
+router.post('/quotes', restrictTo('CUSTOMER'), asyncHandler(shippingController.createQuote));
+router.get('/quotes/:quoteId', restrictTo('CUSTOMER'), asyncHandler(shippingController.getQuote));
+
 // --- Authenticated & Guarded Endpoints ---
 router.get('/seller/orders', restrictTo('SELLER'), asyncHandler(shippingController.getSellerShippingOrders));
 router.get('/admin/orders', restrictTo('ADMIN'), asyncHandler(shippingController.getAdminShippingOrders));
@@ -47,6 +52,7 @@ router.patch('/:orderId/tracking', restrictTo('SELLER', 'ADMIN'), asyncHandler(s
 // --- Internal microservice endpoints ---
 router.get('/internal/shipping/:orderId', checkInternalService, asyncHandler(shippingController.internalGetShipping));
 router.post('/internal/shipping/create', checkInternalService, asyncHandler(shippingController.internalCreateShipping));
+router.post('/internal/quotes/:quoteId/consume', checkInternalService, asyncHandler(shippingController.internalConsumeQuote));
 
 export default router;
 export { router as shippingRoutes };

@@ -194,6 +194,20 @@ exports.Prisma.OutboxEventScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.ShippingQuoteScalarFieldEnum = {
+  id: 'id',
+  customerId: 'customerId',
+  destination: 'destination',
+  shipments: 'shipments',
+  totalCost: 'totalCost',
+  cartHash: 'cartHash',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  consumedAt: 'consumedAt',
+  consumedBy: 'consumedBy',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -225,7 +239,8 @@ exports.Prisma.ModelName = {
   ShippingRate: 'ShippingRate',
   ShippingOrder: 'ShippingOrder',
   ShippingStatusHistory: 'ShippingStatusHistory',
-  OutboxEvent: 'OutboxEvent'
+  OutboxEvent: 'OutboxEvent',
+  ShippingQuote: 'ShippingQuote'
 };
 
 /**

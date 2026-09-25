@@ -3,34 +3,49 @@ import { emailService } from './email.service';
 import { NotificationService } from './notification.service';
 
 describe('NotificationService.sendAuthEmail', () => {
-  it('builds an email verification URL and returns the SMTP acceptance result', async () => {
-    const sendEmail = jest.spyOn(emailService, 'sendEmail').mockResolvedValue(true);
+  it('builds an email verification URL and queues the message durably', async () => {
+    // Arrange
+    const queueEmail = jest.spyOn(emailService, 'queueEmail').mockResolvedValue({ id: 'email-1' });
 
-    await expect(new NotificationService().sendAuthEmail({
+    // Act
+    const accepted = await new NotificationService().sendAuthEmail({
       type: 'EMAIL_VERIFICATION',
       email: 'customer@example.com',
       name: 'Customer',
       token: '7a9b7ae8-1ac0-4a42-8348-6041ed96a1d2',
-    })).resolves.toBe(true);
+    });
 
-    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
-      to: 'customer@example.com',
-      templateName: 'EMAIL_VERIFICATION',
-      templateData: expect.objectContaining({
-        actionUrl: expect.stringContaining('/auth/verify-email?token=7a9b7ae8-1ac0-4a42-8348-6041ed96a1d2'),
+    // Assert
+    expect(accepted).toBe(true);
+    expect(queueEmail).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        to: 'customer@example.com',
+        templateName: 'EMAIL_VERIFICATION',
+        templateData: expect.objectContaining({
+          actionUrl: expect.stringContaining(
+            '/auth/verify-email?token=7a9b7ae8-1ac0-4a42-8348-6041ed96a1d2',
+          ),
+        }),
       }),
-    }));
+    );
   });
 
-  it('propagates SMTP non-acceptance to the internal endpoint', async () => {
-    jest.spyOn(emailService, 'sendEmail').mockResolvedValue(false);
+  it('surfaces a queueing failure instead of reporting the email as accepted', async () => {
+    // Arrange: an unknown template is a configuration fault, not a silent no-op.
+    jest
+      .spyOn(emailService, 'queueEmail')
+      .mockRejectedValue(new Error('Email template "PASSWORD_RESET" not found or inactive'));
 
-    await expect(new NotificationService().sendAuthEmail({
-      type: 'PASSWORD_RESET',
-      email: 'customer@example.com',
-      name: 'Customer',
-      token: '7a9b7ae8-1ac0-4a42-8348-6041ed96a1d2',
-    })).resolves.toBe(false);
+    // Act + Assert
+    await expect(
+      new NotificationService().sendAuthEmail({
+        type: 'PASSWORD_RESET',
+        email: 'customer@example.com',
+        name: 'Customer',
+        token: '7a9b7ae8-1ac0-4a42-8348-6041ed96a1d2',
+      }),
+    ).rejects.toThrow('not found or inactive');
   });
 });
 

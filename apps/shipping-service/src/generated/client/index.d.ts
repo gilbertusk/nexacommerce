@@ -15,33 +15,44 @@ export type PrismaPromise<T> = $Public.PrismaPromise<T>
 
 /**
  * Model Courier
- *
+ * 
  */
 export type Courier = $Result.DefaultSelection<Prisma.$CourierPayload>
 /**
  * Model ShippingRate
- *
+ * 
  */
 export type ShippingRate = $Result.DefaultSelection<Prisma.$ShippingRatePayload>
 /**
  * Model ShippingOrder
- *
+ * 
  */
 export type ShippingOrder = $Result.DefaultSelection<Prisma.$ShippingOrderPayload>
 /**
  * Model ShippingStatusHistory
- *
+ * 
  */
 export type ShippingStatusHistory = $Result.DefaultSelection<Prisma.$ShippingStatusHistoryPayload>
 /**
  * Model OutboxEvent
- *
+ * 
  */
 export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
+/**
+ * Model ShippingQuote
+ * A server-issued shipping price that checkout can trust.
+ * 
+ * The browser never supplies a shipping cost. It asks for a quote, receives an
+ * opaque id, and passes that id to checkout; the Order Service resolves the id
+ * back to this row. The snapshot columns record exactly what the price was
+ * computed from, so revalidation at checkout can detect a changed cart,
+ * address, or rate table rather than silently honouring a stale price.
+ */
+export type ShippingQuote = $Result.DefaultSelection<Prisma.$ShippingQuotePayload>
 
 /**
  * ##  Prisma Client ʲˢ
- *
+ * 
  * Type-safe database client for TypeScript & Node.js
  * @example
  * ```
@@ -50,7 +61,7 @@ export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
  * const couriers = await prisma.courier.findMany()
  * ```
  *
- *
+ * 
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
  */
 export class PrismaClient<
@@ -62,7 +73,7 @@ export class PrismaClient<
 
     /**
    * ##  Prisma Client ʲˢ
-   *
+   * 
    * Type-safe database client for TypeScript & Node.js
    * @example
    * ```
@@ -71,7 +82,7 @@ export class PrismaClient<
    * const couriers = await prisma.courier.findMany()
    * ```
    *
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
    */
 
@@ -101,7 +112,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRaw`UPDATE User SET cool = ${true} WHERE email = ${'user@email.com'};`
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -113,7 +124,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$executeRawUnsafe('UPDATE User SET cool = $1 WHERE email = $2 ;', true, 'user@email.com')
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $executeRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<number>;
@@ -124,7 +135,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRaw`SELECT * FROM User WHERE id = ${1} OR email = ${'user@email.com'};`
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRaw<T = unknown>(query: TemplateStringsArray | Prisma.Sql, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -136,7 +147,7 @@ export class PrismaClient<
    * ```
    * const result = await prisma.$queryRawUnsafe('SELECT * FROM User WHERE id = $1 OR email = $2;', 1, 'user@email.com')
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/raw-database-access).
    */
   $queryRawUnsafe<T = unknown>(query: string, ...values: any[]): Prisma.PrismaPromise<T>;
@@ -152,7 +163,7 @@ export class PrismaClient<
    *   prisma.user.create({ data: { name: 'Alice' } }),
    * ])
    * ```
-   *
+   * 
    * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(arg: [...P], options?: { isolationLevel?: Prisma.TransactionIsolationLevel }): $Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
@@ -211,6 +222,16 @@ export class PrismaClient<
     * ```
     */
   get outboxEvent(): Prisma.OutboxEventDelegate<ExtArgs>;
+
+  /**
+   * `prisma.shippingQuote`: Exposes CRUD operations for the **ShippingQuote** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ShippingQuotes
+    * const shippingQuotes = await prisma.shippingQuote.findMany()
+    * ```
+    */
+  get shippingQuote(): Prisma.ShippingQuoteDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -252,7 +273,7 @@ export namespace Prisma {
   export type DecimalJsLike = runtime.DecimalJsLike
 
   /**
-   * Metrics
+   * Metrics 
    */
   export type Metrics = runtime.Metrics
   export type Metric<T> = runtime.Metric<T>
@@ -277,7 +298,7 @@ export namespace Prisma {
     client: string
   }
 
-  export const prismaVersion: PrismaVersion
+  export const prismaVersion: PrismaVersion 
 
   /**
    * Utility Types
@@ -293,15 +314,15 @@ export namespace Prisma {
 
   /**
    * Types of the values used to represent different kinds of `null` values when working with JSON fields.
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   namespace NullTypes {
     /**
     * Type of `Prisma.DbNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.DbNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class DbNull {
@@ -311,9 +332,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.JsonNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.JsonNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class JsonNull {
@@ -323,9 +344,9 @@ export namespace Prisma {
 
     /**
     * Type of `Prisma.AnyNull`.
-    *
+    * 
     * You cannot use other instances of this class. Please use the `Prisma.AnyNull` value.
-    *
+    * 
     * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
     */
     class AnyNull {
@@ -336,21 +357,21 @@ export namespace Prisma {
 
   /**
    * Helper for filtering JSON entries that have `null` on the database (empty on the db)
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const DbNull: NullTypes.DbNull
 
   /**
    * Helper for filtering JSON entries that have JSON `null` values (not empty on the db)
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const JsonNull: NullTypes.JsonNull
 
   /**
    * Helper for filtering JSON entries that are `Prisma.DbNull` or `Prisma.JsonNull`
-   *
+   * 
    * @see https://www.prisma.io/docs/concepts/components/prisma-client/working-with-fields/working-with-json-fields#filtering-on-a-json-field
    */
   export const AnyNull: NullTypes.AnyNull
@@ -656,7 +677,8 @@ export namespace Prisma {
     ShippingRate: 'ShippingRate',
     ShippingOrder: 'ShippingOrder',
     ShippingStatusHistory: 'ShippingStatusHistory',
-    OutboxEvent: 'OutboxEvent'
+    OutboxEvent: 'OutboxEvent',
+    ShippingQuote: 'ShippingQuote'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -672,7 +694,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "courier" | "shippingRate" | "shippingOrder" | "shippingStatusHistory" | "outboxEvent"
+      modelProps: "courier" | "shippingRate" | "shippingOrder" | "shippingStatusHistory" | "outboxEvent" | "shippingQuote"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1026,6 +1048,76 @@ export namespace Prisma {
           }
         }
       }
+      ShippingQuote: {
+        payload: Prisma.$ShippingQuotePayload<ExtArgs>
+        fields: Prisma.ShippingQuoteFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ShippingQuoteFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ShippingQuoteFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>
+          }
+          findFirst: {
+            args: Prisma.ShippingQuoteFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ShippingQuoteFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>
+          }
+          findMany: {
+            args: Prisma.ShippingQuoteFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>[]
+          }
+          create: {
+            args: Prisma.ShippingQuoteCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>
+          }
+          createMany: {
+            args: Prisma.ShippingQuoteCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ShippingQuoteCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>[]
+          }
+          delete: {
+            args: Prisma.ShippingQuoteDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>
+          }
+          update: {
+            args: Prisma.ShippingQuoteUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>
+          }
+          deleteMany: {
+            args: Prisma.ShippingQuoteDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ShippingQuoteUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ShippingQuoteUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ShippingQuotePayload>
+          }
+          aggregate: {
+            args: Prisma.ShippingQuoteAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateShippingQuote>
+          }
+          groupBy: {
+            args: Prisma.ShippingQuoteGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ShippingQuoteGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ShippingQuoteCountArgs<ExtArgs>
+            result: $Utils.Optional<ShippingQuoteCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1071,7 +1163,7 @@ export namespace Prisma {
      * ```
      * // Defaults to stdout
      * log: ['query', 'info', 'warn', 'error']
-     *
+     * 
      * // Emit as events
      * log: [
      *   { emit: 'stdout', level: 'query' },
@@ -1333,43 +1425,43 @@ export namespace Prisma {
     where?: CourierWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Couriers to fetch.
      */
     orderBy?: CourierOrderByWithRelationInput | CourierOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: CourierWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Couriers from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Couriers.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned Couriers
     **/
     _count?: true | CourierCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: CourierMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: CourierMaxAggregateInputType
@@ -1485,7 +1577,7 @@ export namespace Prisma {
 
   type CourierGetPayload<S extends boolean | null | undefined | CourierDefaultArgs> = $Result.GetResult<Prisma.$CourierPayload, S>
 
-  type CourierCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type CourierCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<CourierFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: CourierCountAggregateInputType | true
     }
@@ -1506,7 +1598,7 @@ export namespace Prisma {
     findUnique<T extends CourierFindUniqueArgs>(args: SelectSubset<T, CourierFindUniqueArgs<ExtArgs>>): Prisma__CourierClient<$Result.GetResult<Prisma.$CourierPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one Courier that matches the filter or throw an error with `error.code='P2025'`
+     * Find one Courier that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {CourierFindUniqueOrThrowArgs} args - Arguments to find a Courier
      * @example
@@ -1558,13 +1650,13 @@ export namespace Prisma {
      * @example
      * // Get all Couriers
      * const couriers = await prisma.courier.findMany()
-     *
+     * 
      * // Get first 10 Couriers
      * const couriers = await prisma.courier.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const courierWithIdOnly = await prisma.courier.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends CourierFindManyArgs>(args?: SelectSubset<T, CourierFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CourierPayload<ExtArgs>, T, "findMany">>
 
@@ -1578,7 +1670,7 @@ export namespace Prisma {
      *     // ... data to create a Courier
      *   }
      * })
-     *
+     * 
      */
     create<T extends CourierCreateArgs>(args: SelectSubset<T, CourierCreateArgs<ExtArgs>>): Prisma__CourierClient<$Result.GetResult<Prisma.$CourierPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -1592,7 +1684,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends CourierCreateManyArgs>(args?: SelectSubset<T, CourierCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1606,9 +1698,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many Couriers and only return the `id`
-     * const courierWithIdOnly = await prisma.courier.createManyAndReturn({
+     * const courierWithIdOnly = await prisma.courier.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -1616,7 +1708,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends CourierCreateManyAndReturnArgs>(args?: SelectSubset<T, CourierCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CourierPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -1630,7 +1722,7 @@ export namespace Prisma {
      *     // ... filter to delete one Courier
      *   }
      * })
-     *
+     * 
      */
     delete<T extends CourierDeleteArgs>(args: SelectSubset<T, CourierDeleteArgs<ExtArgs>>): Prisma__CourierClient<$Result.GetResult<Prisma.$CourierPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -1647,7 +1739,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends CourierUpdateArgs>(args: SelectSubset<T, CourierUpdateArgs<ExtArgs>>): Prisma__CourierClient<$Result.GetResult<Prisma.$CourierPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -1661,7 +1753,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends CourierDeleteManyArgs>(args?: SelectSubset<T, CourierDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1680,7 +1772,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends CourierUpdateManyArgs>(args: SelectSubset<T, CourierUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -1769,7 +1861,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends CourierGroupByArgs,
@@ -1872,7 +1964,7 @@ export namespace Prisma {
 
   /**
    * Fields of the Courier model
-   */
+   */ 
   interface CourierFieldRefs {
     readonly id: FieldRef<"Courier", 'String'>
     readonly name: FieldRef<"Courier", 'String'>
@@ -1882,7 +1974,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"Courier", 'DateTime'>
     readonly updatedAt: FieldRef<"Courier", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -1939,31 +2031,31 @@ export namespace Prisma {
     where?: CourierWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Couriers to fetch.
      */
     orderBy?: CourierOrderByWithRelationInput | CourierOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for Couriers.
      */
     cursor?: CourierWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Couriers from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Couriers.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of Couriers.
      */
     distinct?: CourierScalarFieldEnum | CourierScalarFieldEnum[]
@@ -1987,31 +2079,31 @@ export namespace Prisma {
     where?: CourierWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Couriers to fetch.
      */
     orderBy?: CourierOrderByWithRelationInput | CourierOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for Couriers.
      */
     cursor?: CourierWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Couriers from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Couriers.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of Couriers.
      */
     distinct?: CourierScalarFieldEnum | CourierScalarFieldEnum[]
@@ -2035,25 +2127,25 @@ export namespace Prisma {
     where?: CourierWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of Couriers to fetch.
      */
     orderBy?: CourierOrderByWithRelationInput | CourierOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing Couriers.
      */
     cursor?: CourierWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` Couriers from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` Couriers.
      */
     skip?: number
@@ -2363,55 +2455,55 @@ export namespace Prisma {
     where?: ShippingRateWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingRates to fetch.
      */
     orderBy?: ShippingRateOrderByWithRelationInput | ShippingRateOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: ShippingRateWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingRates from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingRates.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned ShippingRates
     **/
     _count?: true | ShippingRateCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to average
     **/
     _avg?: ShippingRateAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to sum
     **/
     _sum?: ShippingRateSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ShippingRateMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: ShippingRateMaxAggregateInputType
@@ -2539,7 +2631,7 @@ export namespace Prisma {
 
   type ShippingRateGetPayload<S extends boolean | null | undefined | ShippingRateDefaultArgs> = $Result.GetResult<Prisma.$ShippingRatePayload, S>
 
-  type ShippingRateCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type ShippingRateCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<ShippingRateFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ShippingRateCountAggregateInputType | true
     }
@@ -2560,7 +2652,7 @@ export namespace Prisma {
     findUnique<T extends ShippingRateFindUniqueArgs>(args: SelectSubset<T, ShippingRateFindUniqueArgs<ExtArgs>>): Prisma__ShippingRateClient<$Result.GetResult<Prisma.$ShippingRatePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one ShippingRate that matches the filter or throw an error with `error.code='P2025'`
+     * Find one ShippingRate that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {ShippingRateFindUniqueOrThrowArgs} args - Arguments to find a ShippingRate
      * @example
@@ -2612,13 +2704,13 @@ export namespace Prisma {
      * @example
      * // Get all ShippingRates
      * const shippingRates = await prisma.shippingRate.findMany()
-     *
+     * 
      * // Get first 10 ShippingRates
      * const shippingRates = await prisma.shippingRate.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const shippingRateWithIdOnly = await prisma.shippingRate.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends ShippingRateFindManyArgs>(args?: SelectSubset<T, ShippingRateFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingRatePayload<ExtArgs>, T, "findMany">>
 
@@ -2632,7 +2724,7 @@ export namespace Prisma {
      *     // ... data to create a ShippingRate
      *   }
      * })
-     *
+     * 
      */
     create<T extends ShippingRateCreateArgs>(args: SelectSubset<T, ShippingRateCreateArgs<ExtArgs>>): Prisma__ShippingRateClient<$Result.GetResult<Prisma.$ShippingRatePayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -2646,7 +2738,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends ShippingRateCreateManyArgs>(args?: SelectSubset<T, ShippingRateCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2660,9 +2752,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many ShippingRates and only return the `id`
-     * const shippingRateWithIdOnly = await prisma.shippingRate.createManyAndReturn({
+     * const shippingRateWithIdOnly = await prisma.shippingRate.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -2670,7 +2762,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends ShippingRateCreateManyAndReturnArgs>(args?: SelectSubset<T, ShippingRateCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingRatePayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -2684,7 +2776,7 @@ export namespace Prisma {
      *     // ... filter to delete one ShippingRate
      *   }
      * })
-     *
+     * 
      */
     delete<T extends ShippingRateDeleteArgs>(args: SelectSubset<T, ShippingRateDeleteArgs<ExtArgs>>): Prisma__ShippingRateClient<$Result.GetResult<Prisma.$ShippingRatePayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -2701,7 +2793,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends ShippingRateUpdateArgs>(args: SelectSubset<T, ShippingRateUpdateArgs<ExtArgs>>): Prisma__ShippingRateClient<$Result.GetResult<Prisma.$ShippingRatePayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -2715,7 +2807,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends ShippingRateDeleteManyArgs>(args?: SelectSubset<T, ShippingRateDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2734,7 +2826,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends ShippingRateUpdateManyArgs>(args: SelectSubset<T, ShippingRateUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -2823,7 +2915,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends ShippingRateGroupByArgs,
@@ -2925,7 +3017,7 @@ export namespace Prisma {
 
   /**
    * Fields of the ShippingRate model
-   */
+   */ 
   interface ShippingRateFieldRefs {
     readonly id: FieldRef<"ShippingRate", 'String'>
     readonly courierId: FieldRef<"ShippingRate", 'String'>
@@ -2937,7 +3029,7 @@ export namespace Prisma {
     readonly estimatedDays: FieldRef<"ShippingRate", 'String'>
     readonly createdAt: FieldRef<"ShippingRate", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -2994,31 +3086,31 @@ export namespace Prisma {
     where?: ShippingRateWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingRates to fetch.
      */
     orderBy?: ShippingRateOrderByWithRelationInput | ShippingRateOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for ShippingRates.
      */
     cursor?: ShippingRateWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingRates from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingRates.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of ShippingRates.
      */
     distinct?: ShippingRateScalarFieldEnum | ShippingRateScalarFieldEnum[]
@@ -3042,31 +3134,31 @@ export namespace Prisma {
     where?: ShippingRateWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingRates to fetch.
      */
     orderBy?: ShippingRateOrderByWithRelationInput | ShippingRateOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for ShippingRates.
      */
     cursor?: ShippingRateWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingRates from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingRates.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of ShippingRates.
      */
     distinct?: ShippingRateScalarFieldEnum | ShippingRateScalarFieldEnum[]
@@ -3090,25 +3182,25 @@ export namespace Prisma {
     where?: ShippingRateWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingRates to fetch.
      */
     orderBy?: ShippingRateOrderByWithRelationInput | ShippingRateOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing ShippingRates.
      */
     cursor?: ShippingRateWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingRates from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingRates.
      */
     skip?: number
@@ -3428,55 +3520,55 @@ export namespace Prisma {
     where?: ShippingOrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingOrders to fetch.
      */
     orderBy?: ShippingOrderOrderByWithRelationInput | ShippingOrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: ShippingOrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingOrders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingOrders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned ShippingOrders
     **/
     _count?: true | ShippingOrderCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to average
     **/
     _avg?: ShippingOrderAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to sum
     **/
     _sum?: ShippingOrderSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ShippingOrderMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: ShippingOrderMaxAggregateInputType
@@ -3654,7 +3746,7 @@ export namespace Prisma {
 
   type ShippingOrderGetPayload<S extends boolean | null | undefined | ShippingOrderDefaultArgs> = $Result.GetResult<Prisma.$ShippingOrderPayload, S>
 
-  type ShippingOrderCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type ShippingOrderCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<ShippingOrderFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ShippingOrderCountAggregateInputType | true
     }
@@ -3675,7 +3767,7 @@ export namespace Prisma {
     findUnique<T extends ShippingOrderFindUniqueArgs>(args: SelectSubset<T, ShippingOrderFindUniqueArgs<ExtArgs>>): Prisma__ShippingOrderClient<$Result.GetResult<Prisma.$ShippingOrderPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one ShippingOrder that matches the filter or throw an error with `error.code='P2025'`
+     * Find one ShippingOrder that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {ShippingOrderFindUniqueOrThrowArgs} args - Arguments to find a ShippingOrder
      * @example
@@ -3727,13 +3819,13 @@ export namespace Prisma {
      * @example
      * // Get all ShippingOrders
      * const shippingOrders = await prisma.shippingOrder.findMany()
-     *
+     * 
      * // Get first 10 ShippingOrders
      * const shippingOrders = await prisma.shippingOrder.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const shippingOrderWithIdOnly = await prisma.shippingOrder.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends ShippingOrderFindManyArgs>(args?: SelectSubset<T, ShippingOrderFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingOrderPayload<ExtArgs>, T, "findMany">>
 
@@ -3747,7 +3839,7 @@ export namespace Prisma {
      *     // ... data to create a ShippingOrder
      *   }
      * })
-     *
+     * 
      */
     create<T extends ShippingOrderCreateArgs>(args: SelectSubset<T, ShippingOrderCreateArgs<ExtArgs>>): Prisma__ShippingOrderClient<$Result.GetResult<Prisma.$ShippingOrderPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -3761,7 +3853,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends ShippingOrderCreateManyArgs>(args?: SelectSubset<T, ShippingOrderCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3775,9 +3867,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many ShippingOrders and only return the `id`
-     * const shippingOrderWithIdOnly = await prisma.shippingOrder.createManyAndReturn({
+     * const shippingOrderWithIdOnly = await prisma.shippingOrder.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -3785,7 +3877,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends ShippingOrderCreateManyAndReturnArgs>(args?: SelectSubset<T, ShippingOrderCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingOrderPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -3799,7 +3891,7 @@ export namespace Prisma {
      *     // ... filter to delete one ShippingOrder
      *   }
      * })
-     *
+     * 
      */
     delete<T extends ShippingOrderDeleteArgs>(args: SelectSubset<T, ShippingOrderDeleteArgs<ExtArgs>>): Prisma__ShippingOrderClient<$Result.GetResult<Prisma.$ShippingOrderPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -3816,7 +3908,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends ShippingOrderUpdateArgs>(args: SelectSubset<T, ShippingOrderUpdateArgs<ExtArgs>>): Prisma__ShippingOrderClient<$Result.GetResult<Prisma.$ShippingOrderPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -3830,7 +3922,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends ShippingOrderDeleteManyArgs>(args?: SelectSubset<T, ShippingOrderDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3849,7 +3941,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends ShippingOrderUpdateManyArgs>(args: SelectSubset<T, ShippingOrderUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -3938,7 +4030,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends ShippingOrderGroupByArgs,
@@ -4041,7 +4133,7 @@ export namespace Prisma {
 
   /**
    * Fields of the ShippingOrder model
-   */
+   */ 
   interface ShippingOrderFieldRefs {
     readonly id: FieldRef<"ShippingOrder", 'String'>
     readonly orderId: FieldRef<"ShippingOrder", 'String'>
@@ -4062,7 +4154,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"ShippingOrder", 'DateTime'>
     readonly updatedAt: FieldRef<"ShippingOrder", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -4119,31 +4211,31 @@ export namespace Prisma {
     where?: ShippingOrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingOrders to fetch.
      */
     orderBy?: ShippingOrderOrderByWithRelationInput | ShippingOrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for ShippingOrders.
      */
     cursor?: ShippingOrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingOrders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingOrders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of ShippingOrders.
      */
     distinct?: ShippingOrderScalarFieldEnum | ShippingOrderScalarFieldEnum[]
@@ -4167,31 +4259,31 @@ export namespace Prisma {
     where?: ShippingOrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingOrders to fetch.
      */
     orderBy?: ShippingOrderOrderByWithRelationInput | ShippingOrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for ShippingOrders.
      */
     cursor?: ShippingOrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingOrders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingOrders.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of ShippingOrders.
      */
     distinct?: ShippingOrderScalarFieldEnum | ShippingOrderScalarFieldEnum[]
@@ -4215,25 +4307,25 @@ export namespace Prisma {
     where?: ShippingOrderWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingOrders to fetch.
      */
     orderBy?: ShippingOrderOrderByWithRelationInput | ShippingOrderOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing ShippingOrders.
      */
     cursor?: ShippingOrderWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingOrders from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingOrders.
      */
     skip?: number
@@ -4499,43 +4591,43 @@ export namespace Prisma {
     where?: ShippingStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingStatusHistories to fetch.
      */
     orderBy?: ShippingStatusHistoryOrderByWithRelationInput | ShippingStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: ShippingStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingStatusHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned ShippingStatusHistories
     **/
     _count?: true | ShippingStatusHistoryCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ShippingStatusHistoryMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: ShippingStatusHistoryMaxAggregateInputType
@@ -4654,7 +4746,7 @@ export namespace Prisma {
 
   type ShippingStatusHistoryGetPayload<S extends boolean | null | undefined | ShippingStatusHistoryDefaultArgs> = $Result.GetResult<Prisma.$ShippingStatusHistoryPayload, S>
 
-  type ShippingStatusHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type ShippingStatusHistoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<ShippingStatusHistoryFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: ShippingStatusHistoryCountAggregateInputType | true
     }
@@ -4675,7 +4767,7 @@ export namespace Prisma {
     findUnique<T extends ShippingStatusHistoryFindUniqueArgs>(args: SelectSubset<T, ShippingStatusHistoryFindUniqueArgs<ExtArgs>>): Prisma__ShippingStatusHistoryClient<$Result.GetResult<Prisma.$ShippingStatusHistoryPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one ShippingStatusHistory that matches the filter or throw an error with `error.code='P2025'`
+     * Find one ShippingStatusHistory that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {ShippingStatusHistoryFindUniqueOrThrowArgs} args - Arguments to find a ShippingStatusHistory
      * @example
@@ -4727,13 +4819,13 @@ export namespace Prisma {
      * @example
      * // Get all ShippingStatusHistories
      * const shippingStatusHistories = await prisma.shippingStatusHistory.findMany()
-     *
+     * 
      * // Get first 10 ShippingStatusHistories
      * const shippingStatusHistories = await prisma.shippingStatusHistory.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const shippingStatusHistoryWithIdOnly = await prisma.shippingStatusHistory.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends ShippingStatusHistoryFindManyArgs>(args?: SelectSubset<T, ShippingStatusHistoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingStatusHistoryPayload<ExtArgs>, T, "findMany">>
 
@@ -4747,7 +4839,7 @@ export namespace Prisma {
      *     // ... data to create a ShippingStatusHistory
      *   }
      * })
-     *
+     * 
      */
     create<T extends ShippingStatusHistoryCreateArgs>(args: SelectSubset<T, ShippingStatusHistoryCreateArgs<ExtArgs>>): Prisma__ShippingStatusHistoryClient<$Result.GetResult<Prisma.$ShippingStatusHistoryPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -4761,7 +4853,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends ShippingStatusHistoryCreateManyArgs>(args?: SelectSubset<T, ShippingStatusHistoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4775,9 +4867,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many ShippingStatusHistories and only return the `id`
-     * const shippingStatusHistoryWithIdOnly = await prisma.shippingStatusHistory.createManyAndReturn({
+     * const shippingStatusHistoryWithIdOnly = await prisma.shippingStatusHistory.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -4785,7 +4877,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends ShippingStatusHistoryCreateManyAndReturnArgs>(args?: SelectSubset<T, ShippingStatusHistoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingStatusHistoryPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -4799,7 +4891,7 @@ export namespace Prisma {
      *     // ... filter to delete one ShippingStatusHistory
      *   }
      * })
-     *
+     * 
      */
     delete<T extends ShippingStatusHistoryDeleteArgs>(args: SelectSubset<T, ShippingStatusHistoryDeleteArgs<ExtArgs>>): Prisma__ShippingStatusHistoryClient<$Result.GetResult<Prisma.$ShippingStatusHistoryPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -4816,7 +4908,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends ShippingStatusHistoryUpdateArgs>(args: SelectSubset<T, ShippingStatusHistoryUpdateArgs<ExtArgs>>): Prisma__ShippingStatusHistoryClient<$Result.GetResult<Prisma.$ShippingStatusHistoryPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -4830,7 +4922,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends ShippingStatusHistoryDeleteManyArgs>(args?: SelectSubset<T, ShippingStatusHistoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4849,7 +4941,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends ShippingStatusHistoryUpdateManyArgs>(args: SelectSubset<T, ShippingStatusHistoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -4938,7 +5030,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends ShippingStatusHistoryGroupByArgs,
@@ -5040,7 +5132,7 @@ export namespace Prisma {
 
   /**
    * Fields of the ShippingStatusHistory model
-   */
+   */ 
   interface ShippingStatusHistoryFieldRefs {
     readonly id: FieldRef<"ShippingStatusHistory", 'String'>
     readonly shippingOrderId: FieldRef<"ShippingStatusHistory", 'String'>
@@ -5051,7 +5143,7 @@ export namespace Prisma {
     readonly updatedBy: FieldRef<"ShippingStatusHistory", 'String'>
     readonly createdAt: FieldRef<"ShippingStatusHistory", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -5108,31 +5200,31 @@ export namespace Prisma {
     where?: ShippingStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingStatusHistories to fetch.
      */
     orderBy?: ShippingStatusHistoryOrderByWithRelationInput | ShippingStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for ShippingStatusHistories.
      */
     cursor?: ShippingStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingStatusHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of ShippingStatusHistories.
      */
     distinct?: ShippingStatusHistoryScalarFieldEnum | ShippingStatusHistoryScalarFieldEnum[]
@@ -5156,31 +5248,31 @@ export namespace Prisma {
     where?: ShippingStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingStatusHistories to fetch.
      */
     orderBy?: ShippingStatusHistoryOrderByWithRelationInput | ShippingStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for ShippingStatusHistories.
      */
     cursor?: ShippingStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingStatusHistories.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of ShippingStatusHistories.
      */
     distinct?: ShippingStatusHistoryScalarFieldEnum | ShippingStatusHistoryScalarFieldEnum[]
@@ -5204,25 +5296,25 @@ export namespace Prisma {
     where?: ShippingStatusHistoryWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of ShippingStatusHistories to fetch.
      */
     orderBy?: ShippingStatusHistoryOrderByWithRelationInput | ShippingStatusHistoryOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing ShippingStatusHistories.
      */
     cursor?: ShippingStatusHistoryWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` ShippingStatusHistories from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` ShippingStatusHistories.
      */
     skip?: number
@@ -5524,55 +5616,55 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the start position
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Count returned OutboxEvents
     **/
     _count?: true | OutboxEventCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to average
     **/
     _avg?: OutboxEventAvgAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to sum
     **/
     _sum?: OutboxEventSumAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: OutboxEventMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     *
+     * 
      * Select which fields to find the maximum value
     **/
     _max?: OutboxEventMaxAggregateInputType
@@ -5720,7 +5812,7 @@ export namespace Prisma {
 
   type OutboxEventGetPayload<S extends boolean | null | undefined | OutboxEventDefaultArgs> = $Result.GetResult<Prisma.$OutboxEventPayload, S>
 
-  type OutboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+  type OutboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
     Omit<OutboxEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
       select?: OutboxEventCountAggregateInputType | true
     }
@@ -5741,7 +5833,7 @@ export namespace Prisma {
     findUnique<T extends OutboxEventFindUniqueArgs>(args: SelectSubset<T, OutboxEventFindUniqueArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
 
     /**
-     * Find one OutboxEvent that matches the filter or throw an error with `error.code='P2025'`
+     * Find one OutboxEvent that matches the filter or throw an error with `error.code='P2025'` 
      * if no matches were found.
      * @param {OutboxEventFindUniqueOrThrowArgs} args - Arguments to find a OutboxEvent
      * @example
@@ -5793,13 +5885,13 @@ export namespace Prisma {
      * @example
      * // Get all OutboxEvents
      * const outboxEvents = await prisma.outboxEvent.findMany()
-     *
+     * 
      * // Get first 10 OutboxEvents
      * const outboxEvents = await prisma.outboxEvent.findMany({ take: 10 })
-     *
+     * 
      * // Only select the `id`
      * const outboxEventWithIdOnly = await prisma.outboxEvent.findMany({ select: { id: true } })
-     *
+     * 
      */
     findMany<T extends OutboxEventFindManyArgs>(args?: SelectSubset<T, OutboxEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "findMany">>
 
@@ -5813,7 +5905,7 @@ export namespace Prisma {
      *     // ... data to create a OutboxEvent
      *   }
      * })
-     *
+     * 
      */
     create<T extends OutboxEventCreateArgs>(args: SelectSubset<T, OutboxEventCreateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
 
@@ -5827,7 +5919,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     *     
      */
     createMany<T extends OutboxEventCreateManyArgs>(args?: SelectSubset<T, OutboxEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5841,9 +5933,9 @@ export namespace Prisma {
      *     // ... provide data here
      *   ]
      * })
-     *
+     * 
      * // Create many OutboxEvents and only return the `id`
-     * const outboxEventWithIdOnly = await prisma.outboxEvent.createManyAndReturn({
+     * const outboxEventWithIdOnly = await prisma.outboxEvent.createManyAndReturn({ 
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -5851,7 +5943,7 @@ export namespace Prisma {
      * })
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     *
+     * 
      */
     createManyAndReturn<T extends OutboxEventCreateManyAndReturnArgs>(args?: SelectSubset<T, OutboxEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "createManyAndReturn">>
 
@@ -5865,7 +5957,7 @@ export namespace Prisma {
      *     // ... filter to delete one OutboxEvent
      *   }
      * })
-     *
+     * 
      */
     delete<T extends OutboxEventDeleteArgs>(args: SelectSubset<T, OutboxEventDeleteArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
 
@@ -5882,7 +5974,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     update<T extends OutboxEventUpdateArgs>(args: SelectSubset<T, OutboxEventUpdateArgs<ExtArgs>>): Prisma__OutboxEventClient<$Result.GetResult<Prisma.$OutboxEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
 
@@ -5896,7 +5988,7 @@ export namespace Prisma {
      *     // ... provide filter here
      *   }
      * })
-     *
+     * 
      */
     deleteMany<T extends OutboxEventDeleteManyArgs>(args?: SelectSubset<T, OutboxEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -5915,7 +6007,7 @@ export namespace Prisma {
      *     // ... provide data here
      *   }
      * })
-     *
+     * 
      */
     updateMany<T extends OutboxEventUpdateManyArgs>(args: SelectSubset<T, OutboxEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
@@ -6004,7 +6096,7 @@ export namespace Prisma {
      *     _all: true
      *   },
      * })
-     *
+     * 
     **/
     groupBy<
       T extends OutboxEventGroupByArgs,
@@ -6105,7 +6197,7 @@ export namespace Prisma {
 
   /**
    * Fields of the OutboxEvent model
-   */
+   */ 
   interface OutboxEventFieldRefs {
     readonly id: FieldRef<"OutboxEvent", 'String'>
     readonly aggregateType: FieldRef<"OutboxEvent", 'String'>
@@ -6123,7 +6215,7 @@ export namespace Prisma {
     readonly createdAt: FieldRef<"OutboxEvent", 'DateTime'>
     readonly updatedAt: FieldRef<"OutboxEvent", 'DateTime'>
   }
-
+    
 
   // Custom InputTypes
   /**
@@ -6168,31 +6260,31 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OutboxEvents.
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OutboxEvents.
      */
     distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
@@ -6212,31 +6304,31 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for searching for OutboxEvents.
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     *
+     * 
      * Filter by unique combinations of OutboxEvents.
      */
     distinct?: OutboxEventScalarFieldEnum | OutboxEventScalarFieldEnum[]
@@ -6256,25 +6348,25 @@ export namespace Prisma {
     where?: OutboxEventWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     *
+     * 
      * Determine the order of OutboxEvents to fetch.
      */
     orderBy?: OutboxEventOrderByWithRelationInput | OutboxEventOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     *
+     * 
      * Sets the position for listing OutboxEvents.
      */
     cursor?: OutboxEventWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Take `±n` OutboxEvents from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     *
+     * 
      * Skip the first `n` OutboxEvents.
      */
     skip?: number
@@ -6411,6 +6503,997 @@ export namespace Prisma {
 
 
   /**
+   * Model ShippingQuote
+   */
+
+  export type AggregateShippingQuote = {
+    _count: ShippingQuoteCountAggregateOutputType | null
+    _avg: ShippingQuoteAvgAggregateOutputType | null
+    _sum: ShippingQuoteSumAggregateOutputType | null
+    _min: ShippingQuoteMinAggregateOutputType | null
+    _max: ShippingQuoteMaxAggregateOutputType | null
+  }
+
+  export type ShippingQuoteAvgAggregateOutputType = {
+    totalCost: Decimal | null
+  }
+
+  export type ShippingQuoteSumAggregateOutputType = {
+    totalCost: Decimal | null
+  }
+
+  export type ShippingQuoteMinAggregateOutputType = {
+    id: string | null
+    customerId: string | null
+    totalCost: Decimal | null
+    cartHash: string | null
+    status: string | null
+    expiresAt: Date | null
+    consumedAt: Date | null
+    consumedBy: string | null
+    createdAt: Date | null
+  }
+
+  export type ShippingQuoteMaxAggregateOutputType = {
+    id: string | null
+    customerId: string | null
+    totalCost: Decimal | null
+    cartHash: string | null
+    status: string | null
+    expiresAt: Date | null
+    consumedAt: Date | null
+    consumedBy: string | null
+    createdAt: Date | null
+  }
+
+  export type ShippingQuoteCountAggregateOutputType = {
+    id: number
+    customerId: number
+    destination: number
+    shipments: number
+    totalCost: number
+    cartHash: number
+    status: number
+    expiresAt: number
+    consumedAt: number
+    consumedBy: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type ShippingQuoteAvgAggregateInputType = {
+    totalCost?: true
+  }
+
+  export type ShippingQuoteSumAggregateInputType = {
+    totalCost?: true
+  }
+
+  export type ShippingQuoteMinAggregateInputType = {
+    id?: true
+    customerId?: true
+    totalCost?: true
+    cartHash?: true
+    status?: true
+    expiresAt?: true
+    consumedAt?: true
+    consumedBy?: true
+    createdAt?: true
+  }
+
+  export type ShippingQuoteMaxAggregateInputType = {
+    id?: true
+    customerId?: true
+    totalCost?: true
+    cartHash?: true
+    status?: true
+    expiresAt?: true
+    consumedAt?: true
+    consumedBy?: true
+    createdAt?: true
+  }
+
+  export type ShippingQuoteCountAggregateInputType = {
+    id?: true
+    customerId?: true
+    destination?: true
+    shipments?: true
+    totalCost?: true
+    cartHash?: true
+    status?: true
+    expiresAt?: true
+    consumedAt?: true
+    consumedBy?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type ShippingQuoteAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ShippingQuote to aggregate.
+     */
+    where?: ShippingQuoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ShippingQuotes to fetch.
+     */
+    orderBy?: ShippingQuoteOrderByWithRelationInput | ShippingQuoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ShippingQuoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ShippingQuotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ShippingQuotes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ShippingQuotes
+    **/
+    _count?: true | ShippingQuoteCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ShippingQuoteAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ShippingQuoteSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ShippingQuoteMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ShippingQuoteMaxAggregateInputType
+  }
+
+  export type GetShippingQuoteAggregateType<T extends ShippingQuoteAggregateArgs> = {
+        [P in keyof T & keyof AggregateShippingQuote]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateShippingQuote[P]>
+      : GetScalarType<T[P], AggregateShippingQuote[P]>
+  }
+
+
+
+
+  export type ShippingQuoteGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ShippingQuoteWhereInput
+    orderBy?: ShippingQuoteOrderByWithAggregationInput | ShippingQuoteOrderByWithAggregationInput[]
+    by: ShippingQuoteScalarFieldEnum[] | ShippingQuoteScalarFieldEnum
+    having?: ShippingQuoteScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ShippingQuoteCountAggregateInputType | true
+    _avg?: ShippingQuoteAvgAggregateInputType
+    _sum?: ShippingQuoteSumAggregateInputType
+    _min?: ShippingQuoteMinAggregateInputType
+    _max?: ShippingQuoteMaxAggregateInputType
+  }
+
+  export type ShippingQuoteGroupByOutputType = {
+    id: string
+    customerId: string
+    destination: JsonValue
+    shipments: JsonValue
+    totalCost: Decimal
+    cartHash: string
+    status: string
+    expiresAt: Date
+    consumedAt: Date | null
+    consumedBy: string | null
+    createdAt: Date
+    _count: ShippingQuoteCountAggregateOutputType | null
+    _avg: ShippingQuoteAvgAggregateOutputType | null
+    _sum: ShippingQuoteSumAggregateOutputType | null
+    _min: ShippingQuoteMinAggregateOutputType | null
+    _max: ShippingQuoteMaxAggregateOutputType | null
+  }
+
+  type GetShippingQuoteGroupByPayload<T extends ShippingQuoteGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ShippingQuoteGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ShippingQuoteGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ShippingQuoteGroupByOutputType[P]>
+            : GetScalarType<T[P], ShippingQuoteGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ShippingQuoteSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    customerId?: boolean
+    destination?: boolean
+    shipments?: boolean
+    totalCost?: boolean
+    cartHash?: boolean
+    status?: boolean
+    expiresAt?: boolean
+    consumedAt?: boolean
+    consumedBy?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["shippingQuote"]>
+
+  export type ShippingQuoteSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    customerId?: boolean
+    destination?: boolean
+    shipments?: boolean
+    totalCost?: boolean
+    cartHash?: boolean
+    status?: boolean
+    expiresAt?: boolean
+    consumedAt?: boolean
+    consumedBy?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["shippingQuote"]>
+
+  export type ShippingQuoteSelectScalar = {
+    id?: boolean
+    customerId?: boolean
+    destination?: boolean
+    shipments?: boolean
+    totalCost?: boolean
+    cartHash?: boolean
+    status?: boolean
+    expiresAt?: boolean
+    consumedAt?: boolean
+    consumedBy?: boolean
+    createdAt?: boolean
+  }
+
+
+  export type $ShippingQuotePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ShippingQuote"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      customerId: string
+      /**
+       * Destination snapshot: { addressId, city, province, postalCode }.
+       */
+      destination: Prisma.JsonValue
+      /**
+       * Per-seller shipment snapshot. Each entry carries sellerId, originCity,
+       * originProvince, courierCode, serviceCode, weightGrams, cost, and the
+       * productIds and quantities the weight was derived from.
+       */
+      shipments: Prisma.JsonValue
+      /**
+       * Sum of the per-seller costs. This is the only figure checkout may charge.
+       */
+      totalCost: Prisma.Decimal
+      /**
+       * Fingerprint of the cart the quote was computed for. Checkout recomputes it
+       * and refuses the quote when it no longer matches.
+       */
+      cartHash: string
+      status: string
+      expiresAt: Date
+      consumedAt: Date | null
+      consumedBy: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["shippingQuote"]>
+    composites: {}
+  }
+
+  type ShippingQuoteGetPayload<S extends boolean | null | undefined | ShippingQuoteDefaultArgs> = $Result.GetResult<Prisma.$ShippingQuotePayload, S>
+
+  type ShippingQuoteCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<ShippingQuoteFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: ShippingQuoteCountAggregateInputType | true
+    }
+
+  export interface ShippingQuoteDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ShippingQuote'], meta: { name: 'ShippingQuote' } }
+    /**
+     * Find zero or one ShippingQuote that matches the filter.
+     * @param {ShippingQuoteFindUniqueArgs} args - Arguments to find a ShippingQuote
+     * @example
+     * // Get one ShippingQuote
+     * const shippingQuote = await prisma.shippingQuote.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ShippingQuoteFindUniqueArgs>(args: SelectSubset<T, ShippingQuoteFindUniqueArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one ShippingQuote that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {ShippingQuoteFindUniqueOrThrowArgs} args - Arguments to find a ShippingQuote
+     * @example
+     * // Get one ShippingQuote
+     * const shippingQuote = await prisma.shippingQuote.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ShippingQuoteFindUniqueOrThrowArgs>(args: SelectSubset<T, ShippingQuoteFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first ShippingQuote that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteFindFirstArgs} args - Arguments to find a ShippingQuote
+     * @example
+     * // Get one ShippingQuote
+     * const shippingQuote = await prisma.shippingQuote.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ShippingQuoteFindFirstArgs>(args?: SelectSubset<T, ShippingQuoteFindFirstArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first ShippingQuote that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteFindFirstOrThrowArgs} args - Arguments to find a ShippingQuote
+     * @example
+     * // Get one ShippingQuote
+     * const shippingQuote = await prisma.shippingQuote.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ShippingQuoteFindFirstOrThrowArgs>(args?: SelectSubset<T, ShippingQuoteFindFirstOrThrowArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more ShippingQuotes that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ShippingQuotes
+     * const shippingQuotes = await prisma.shippingQuote.findMany()
+     * 
+     * // Get first 10 ShippingQuotes
+     * const shippingQuotes = await prisma.shippingQuote.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const shippingQuoteWithIdOnly = await prisma.shippingQuote.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ShippingQuoteFindManyArgs>(args?: SelectSubset<T, ShippingQuoteFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a ShippingQuote.
+     * @param {ShippingQuoteCreateArgs} args - Arguments to create a ShippingQuote.
+     * @example
+     * // Create one ShippingQuote
+     * const ShippingQuote = await prisma.shippingQuote.create({
+     *   data: {
+     *     // ... data to create a ShippingQuote
+     *   }
+     * })
+     * 
+     */
+    create<T extends ShippingQuoteCreateArgs>(args: SelectSubset<T, ShippingQuoteCreateArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many ShippingQuotes.
+     * @param {ShippingQuoteCreateManyArgs} args - Arguments to create many ShippingQuotes.
+     * @example
+     * // Create many ShippingQuotes
+     * const shippingQuote = await prisma.shippingQuote.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ShippingQuoteCreateManyArgs>(args?: SelectSubset<T, ShippingQuoteCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ShippingQuotes and returns the data saved in the database.
+     * @param {ShippingQuoteCreateManyAndReturnArgs} args - Arguments to create many ShippingQuotes.
+     * @example
+     * // Create many ShippingQuotes
+     * const shippingQuote = await prisma.shippingQuote.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ShippingQuotes and only return the `id`
+     * const shippingQuoteWithIdOnly = await prisma.shippingQuote.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ShippingQuoteCreateManyAndReturnArgs>(args?: SelectSubset<T, ShippingQuoteCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a ShippingQuote.
+     * @param {ShippingQuoteDeleteArgs} args - Arguments to delete one ShippingQuote.
+     * @example
+     * // Delete one ShippingQuote
+     * const ShippingQuote = await prisma.shippingQuote.delete({
+     *   where: {
+     *     // ... filter to delete one ShippingQuote
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ShippingQuoteDeleteArgs>(args: SelectSubset<T, ShippingQuoteDeleteArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one ShippingQuote.
+     * @param {ShippingQuoteUpdateArgs} args - Arguments to update one ShippingQuote.
+     * @example
+     * // Update one ShippingQuote
+     * const shippingQuote = await prisma.shippingQuote.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ShippingQuoteUpdateArgs>(args: SelectSubset<T, ShippingQuoteUpdateArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more ShippingQuotes.
+     * @param {ShippingQuoteDeleteManyArgs} args - Arguments to filter ShippingQuotes to delete.
+     * @example
+     * // Delete a few ShippingQuotes
+     * const { count } = await prisma.shippingQuote.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ShippingQuoteDeleteManyArgs>(args?: SelectSubset<T, ShippingQuoteDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ShippingQuotes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ShippingQuotes
+     * const shippingQuote = await prisma.shippingQuote.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ShippingQuoteUpdateManyArgs>(args: SelectSubset<T, ShippingQuoteUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one ShippingQuote.
+     * @param {ShippingQuoteUpsertArgs} args - Arguments to update or create a ShippingQuote.
+     * @example
+     * // Update or create a ShippingQuote
+     * const shippingQuote = await prisma.shippingQuote.upsert({
+     *   create: {
+     *     // ... data to create a ShippingQuote
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ShippingQuote we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ShippingQuoteUpsertArgs>(args: SelectSubset<T, ShippingQuoteUpsertArgs<ExtArgs>>): Prisma__ShippingQuoteClient<$Result.GetResult<Prisma.$ShippingQuotePayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of ShippingQuotes.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteCountArgs} args - Arguments to filter ShippingQuotes to count.
+     * @example
+     * // Count the number of ShippingQuotes
+     * const count = await prisma.shippingQuote.count({
+     *   where: {
+     *     // ... the filter for the ShippingQuotes we want to count
+     *   }
+     * })
+    **/
+    count<T extends ShippingQuoteCountArgs>(
+      args?: Subset<T, ShippingQuoteCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ShippingQuoteCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ShippingQuote.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ShippingQuoteAggregateArgs>(args: Subset<T, ShippingQuoteAggregateArgs>): Prisma.PrismaPromise<GetShippingQuoteAggregateType<T>>
+
+    /**
+     * Group by ShippingQuote.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ShippingQuoteGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ShippingQuoteGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ShippingQuoteGroupByArgs['orderBy'] }
+        : { orderBy?: ShippingQuoteGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ShippingQuoteGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetShippingQuoteGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ShippingQuote model
+   */
+  readonly fields: ShippingQuoteFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ShippingQuote.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ShippingQuoteClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ShippingQuote model
+   */ 
+  interface ShippingQuoteFieldRefs {
+    readonly id: FieldRef<"ShippingQuote", 'String'>
+    readonly customerId: FieldRef<"ShippingQuote", 'String'>
+    readonly destination: FieldRef<"ShippingQuote", 'Json'>
+    readonly shipments: FieldRef<"ShippingQuote", 'Json'>
+    readonly totalCost: FieldRef<"ShippingQuote", 'Decimal'>
+    readonly cartHash: FieldRef<"ShippingQuote", 'String'>
+    readonly status: FieldRef<"ShippingQuote", 'String'>
+    readonly expiresAt: FieldRef<"ShippingQuote", 'DateTime'>
+    readonly consumedAt: FieldRef<"ShippingQuote", 'DateTime'>
+    readonly consumedBy: FieldRef<"ShippingQuote", 'String'>
+    readonly createdAt: FieldRef<"ShippingQuote", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ShippingQuote findUnique
+   */
+  export type ShippingQuoteFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * Filter, which ShippingQuote to fetch.
+     */
+    where: ShippingQuoteWhereUniqueInput
+  }
+
+  /**
+   * ShippingQuote findUniqueOrThrow
+   */
+  export type ShippingQuoteFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * Filter, which ShippingQuote to fetch.
+     */
+    where: ShippingQuoteWhereUniqueInput
+  }
+
+  /**
+   * ShippingQuote findFirst
+   */
+  export type ShippingQuoteFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * Filter, which ShippingQuote to fetch.
+     */
+    where?: ShippingQuoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ShippingQuotes to fetch.
+     */
+    orderBy?: ShippingQuoteOrderByWithRelationInput | ShippingQuoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ShippingQuotes.
+     */
+    cursor?: ShippingQuoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ShippingQuotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ShippingQuotes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ShippingQuotes.
+     */
+    distinct?: ShippingQuoteScalarFieldEnum | ShippingQuoteScalarFieldEnum[]
+  }
+
+  /**
+   * ShippingQuote findFirstOrThrow
+   */
+  export type ShippingQuoteFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * Filter, which ShippingQuote to fetch.
+     */
+    where?: ShippingQuoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ShippingQuotes to fetch.
+     */
+    orderBy?: ShippingQuoteOrderByWithRelationInput | ShippingQuoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ShippingQuotes.
+     */
+    cursor?: ShippingQuoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ShippingQuotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ShippingQuotes.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ShippingQuotes.
+     */
+    distinct?: ShippingQuoteScalarFieldEnum | ShippingQuoteScalarFieldEnum[]
+  }
+
+  /**
+   * ShippingQuote findMany
+   */
+  export type ShippingQuoteFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * Filter, which ShippingQuotes to fetch.
+     */
+    where?: ShippingQuoteWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ShippingQuotes to fetch.
+     */
+    orderBy?: ShippingQuoteOrderByWithRelationInput | ShippingQuoteOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ShippingQuotes.
+     */
+    cursor?: ShippingQuoteWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ShippingQuotes from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ShippingQuotes.
+     */
+    skip?: number
+    distinct?: ShippingQuoteScalarFieldEnum | ShippingQuoteScalarFieldEnum[]
+  }
+
+  /**
+   * ShippingQuote create
+   */
+  export type ShippingQuoteCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * The data needed to create a ShippingQuote.
+     */
+    data: XOR<ShippingQuoteCreateInput, ShippingQuoteUncheckedCreateInput>
+  }
+
+  /**
+   * ShippingQuote createMany
+   */
+  export type ShippingQuoteCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ShippingQuotes.
+     */
+    data: ShippingQuoteCreateManyInput | ShippingQuoteCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ShippingQuote createManyAndReturn
+   */
+  export type ShippingQuoteCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many ShippingQuotes.
+     */
+    data: ShippingQuoteCreateManyInput | ShippingQuoteCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ShippingQuote update
+   */
+  export type ShippingQuoteUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * The data needed to update a ShippingQuote.
+     */
+    data: XOR<ShippingQuoteUpdateInput, ShippingQuoteUncheckedUpdateInput>
+    /**
+     * Choose, which ShippingQuote to update.
+     */
+    where: ShippingQuoteWhereUniqueInput
+  }
+
+  /**
+   * ShippingQuote updateMany
+   */
+  export type ShippingQuoteUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ShippingQuotes.
+     */
+    data: XOR<ShippingQuoteUpdateManyMutationInput, ShippingQuoteUncheckedUpdateManyInput>
+    /**
+     * Filter which ShippingQuotes to update
+     */
+    where?: ShippingQuoteWhereInput
+  }
+
+  /**
+   * ShippingQuote upsert
+   */
+  export type ShippingQuoteUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * The filter to search for the ShippingQuote to update in case it exists.
+     */
+    where: ShippingQuoteWhereUniqueInput
+    /**
+     * In case the ShippingQuote found by the `where` argument doesn't exist, create a new ShippingQuote with this data.
+     */
+    create: XOR<ShippingQuoteCreateInput, ShippingQuoteUncheckedCreateInput>
+    /**
+     * In case the ShippingQuote was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ShippingQuoteUpdateInput, ShippingQuoteUncheckedUpdateInput>
+  }
+
+  /**
+   * ShippingQuote delete
+   */
+  export type ShippingQuoteDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+    /**
+     * Filter which ShippingQuote to delete.
+     */
+    where: ShippingQuoteWhereUniqueInput
+  }
+
+  /**
+   * ShippingQuote deleteMany
+   */
+  export type ShippingQuoteDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ShippingQuotes to delete
+     */
+    where?: ShippingQuoteWhereInput
+  }
+
+  /**
+   * ShippingQuote without action
+   */
+  export type ShippingQuoteDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ShippingQuote
+     */
+    select?: ShippingQuoteSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -6511,6 +7594,23 @@ export namespace Prisma {
   export type OutboxEventScalarFieldEnum = (typeof OutboxEventScalarFieldEnum)[keyof typeof OutboxEventScalarFieldEnum]
 
 
+  export const ShippingQuoteScalarFieldEnum: {
+    id: 'id',
+    customerId: 'customerId',
+    destination: 'destination',
+    shipments: 'shipments',
+    totalCost: 'totalCost',
+    cartHash: 'cartHash',
+    status: 'status',
+    expiresAt: 'expiresAt',
+    consumedAt: 'consumedAt',
+    consumedBy: 'consumedBy',
+    createdAt: 'createdAt'
+  };
+
+  export type ShippingQuoteScalarFieldEnum = (typeof ShippingQuoteScalarFieldEnum)[keyof typeof ShippingQuoteScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -6552,7 +7652,7 @@ export namespace Prisma {
 
 
   /**
-   * Field references
+   * Field references 
    */
 
 
@@ -6560,84 +7660,84 @@ export namespace Prisma {
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
-
+    
 
 
   /**
    * Reference to a field of type 'String[]'
    */
   export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Json'
    */
   export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
-
+    
 
 
   /**
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
-
+    
 
 
   /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-
+    
 
 
   /**
    * Reference to a field of type 'DateTime[]'
    */
   export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-
+    
 
 
   /**
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Decimal'
    */
   export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
-
+    
 
 
   /**
    * Reference to a field of type 'Decimal[]'
    */
   export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
-
+    
 
 
   /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-
+    
 
 
   /**
    * Reference to a field of type 'Float[]'
    */
   export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-
+    
   /**
    * Deep Input Types
    */
@@ -7085,6 +8185,90 @@ export namespace Prisma {
     lastError?: StringNullableWithAggregatesFilter<"OutboxEvent"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"OutboxEvent"> | Date | string
+  }
+
+  export type ShippingQuoteWhereInput = {
+    AND?: ShippingQuoteWhereInput | ShippingQuoteWhereInput[]
+    OR?: ShippingQuoteWhereInput[]
+    NOT?: ShippingQuoteWhereInput | ShippingQuoteWhereInput[]
+    id?: StringFilter<"ShippingQuote"> | string
+    customerId?: StringFilter<"ShippingQuote"> | string
+    destination?: JsonFilter<"ShippingQuote">
+    shipments?: JsonFilter<"ShippingQuote">
+    totalCost?: DecimalFilter<"ShippingQuote"> | Decimal | DecimalJsLike | number | string
+    cartHash?: StringFilter<"ShippingQuote"> | string
+    status?: StringFilter<"ShippingQuote"> | string
+    expiresAt?: DateTimeFilter<"ShippingQuote"> | Date | string
+    consumedAt?: DateTimeNullableFilter<"ShippingQuote"> | Date | string | null
+    consumedBy?: StringNullableFilter<"ShippingQuote"> | string | null
+    createdAt?: DateTimeFilter<"ShippingQuote"> | Date | string
+  }
+
+  export type ShippingQuoteOrderByWithRelationInput = {
+    id?: SortOrder
+    customerId?: SortOrder
+    destination?: SortOrder
+    shipments?: SortOrder
+    totalCost?: SortOrder
+    cartHash?: SortOrder
+    status?: SortOrder
+    expiresAt?: SortOrder
+    consumedAt?: SortOrderInput | SortOrder
+    consumedBy?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ShippingQuoteWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ShippingQuoteWhereInput | ShippingQuoteWhereInput[]
+    OR?: ShippingQuoteWhereInput[]
+    NOT?: ShippingQuoteWhereInput | ShippingQuoteWhereInput[]
+    customerId?: StringFilter<"ShippingQuote"> | string
+    destination?: JsonFilter<"ShippingQuote">
+    shipments?: JsonFilter<"ShippingQuote">
+    totalCost?: DecimalFilter<"ShippingQuote"> | Decimal | DecimalJsLike | number | string
+    cartHash?: StringFilter<"ShippingQuote"> | string
+    status?: StringFilter<"ShippingQuote"> | string
+    expiresAt?: DateTimeFilter<"ShippingQuote"> | Date | string
+    consumedAt?: DateTimeNullableFilter<"ShippingQuote"> | Date | string | null
+    consumedBy?: StringNullableFilter<"ShippingQuote"> | string | null
+    createdAt?: DateTimeFilter<"ShippingQuote"> | Date | string
+  }, "id">
+
+  export type ShippingQuoteOrderByWithAggregationInput = {
+    id?: SortOrder
+    customerId?: SortOrder
+    destination?: SortOrder
+    shipments?: SortOrder
+    totalCost?: SortOrder
+    cartHash?: SortOrder
+    status?: SortOrder
+    expiresAt?: SortOrder
+    consumedAt?: SortOrderInput | SortOrder
+    consumedBy?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: ShippingQuoteCountOrderByAggregateInput
+    _avg?: ShippingQuoteAvgOrderByAggregateInput
+    _max?: ShippingQuoteMaxOrderByAggregateInput
+    _min?: ShippingQuoteMinOrderByAggregateInput
+    _sum?: ShippingQuoteSumOrderByAggregateInput
+  }
+
+  export type ShippingQuoteScalarWhereWithAggregatesInput = {
+    AND?: ShippingQuoteScalarWhereWithAggregatesInput | ShippingQuoteScalarWhereWithAggregatesInput[]
+    OR?: ShippingQuoteScalarWhereWithAggregatesInput[]
+    NOT?: ShippingQuoteScalarWhereWithAggregatesInput | ShippingQuoteScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"ShippingQuote"> | string
+    customerId?: StringWithAggregatesFilter<"ShippingQuote"> | string
+    destination?: JsonWithAggregatesFilter<"ShippingQuote">
+    shipments?: JsonWithAggregatesFilter<"ShippingQuote">
+    totalCost?: DecimalWithAggregatesFilter<"ShippingQuote"> | Decimal | DecimalJsLike | number | string
+    cartHash?: StringWithAggregatesFilter<"ShippingQuote"> | string
+    status?: StringWithAggregatesFilter<"ShippingQuote"> | string
+    expiresAt?: DateTimeWithAggregatesFilter<"ShippingQuote"> | Date | string
+    consumedAt?: DateTimeNullableWithAggregatesFilter<"ShippingQuote"> | Date | string | null
+    consumedBy?: StringNullableWithAggregatesFilter<"ShippingQuote"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"ShippingQuote"> | Date | string
   }
 
   export type CourierCreateInput = {
@@ -7600,6 +8784,104 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ShippingQuoteCreateInput = {
+    id?: string
+    customerId: string
+    destination: JsonNullValueInput | InputJsonValue
+    shipments: JsonNullValueInput | InputJsonValue
+    totalCost: Decimal | DecimalJsLike | number | string
+    cartHash: string
+    status?: string
+    expiresAt: Date | string
+    consumedAt?: Date | string | null
+    consumedBy?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ShippingQuoteUncheckedCreateInput = {
+    id?: string
+    customerId: string
+    destination: JsonNullValueInput | InputJsonValue
+    shipments: JsonNullValueInput | InputJsonValue
+    totalCost: Decimal | DecimalJsLike | number | string
+    cartHash: string
+    status?: string
+    expiresAt: Date | string
+    consumedAt?: Date | string | null
+    consumedBy?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ShippingQuoteUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    customerId?: StringFieldUpdateOperationsInput | string
+    destination?: JsonNullValueInput | InputJsonValue
+    shipments?: JsonNullValueInput | InputJsonValue
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    cartHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    consumedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consumedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ShippingQuoteUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    customerId?: StringFieldUpdateOperationsInput | string
+    destination?: JsonNullValueInput | InputJsonValue
+    shipments?: JsonNullValueInput | InputJsonValue
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    cartHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    consumedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consumedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ShippingQuoteCreateManyInput = {
+    id?: string
+    customerId: string
+    destination: JsonNullValueInput | InputJsonValue
+    shipments: JsonNullValueInput | InputJsonValue
+    totalCost: Decimal | DecimalJsLike | number | string
+    cartHash: string
+    status?: string
+    expiresAt: Date | string
+    consumedAt?: Date | string | null
+    consumedBy?: string | null
+    createdAt?: Date | string
+  }
+
+  export type ShippingQuoteUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    customerId?: StringFieldUpdateOperationsInput | string
+    destination?: JsonNullValueInput | InputJsonValue
+    shipments?: JsonNullValueInput | InputJsonValue
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    cartHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    consumedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consumedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ShippingQuoteUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    customerId?: StringFieldUpdateOperationsInput | string
+    destination?: JsonNullValueInput | InputJsonValue
+    shipments?: JsonNullValueInput | InputJsonValue
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    cartHash?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    consumedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    consumedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -7614,7 +8896,7 @@ export namespace Prisma {
     mode?: QueryMode
     not?: NestedStringFilter<$PrismaModel> | string
   }
-  export type JsonFilter<$PrismaModel = never> =
+  export type JsonFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
         Required<JsonFilterBase<$PrismaModel>>
@@ -7718,7 +9000,7 @@ export namespace Prisma {
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
   }
-  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+  export type JsonWithAggregatesFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
         Required<JsonWithAggregatesFilterBase<$PrismaModel>>
@@ -8111,6 +9393,52 @@ export namespace Prisma {
     attempts?: SortOrder
   }
 
+  export type ShippingQuoteCountOrderByAggregateInput = {
+    id?: SortOrder
+    customerId?: SortOrder
+    destination?: SortOrder
+    shipments?: SortOrder
+    totalCost?: SortOrder
+    cartHash?: SortOrder
+    status?: SortOrder
+    expiresAt?: SortOrder
+    consumedAt?: SortOrder
+    consumedBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ShippingQuoteAvgOrderByAggregateInput = {
+    totalCost?: SortOrder
+  }
+
+  export type ShippingQuoteMaxOrderByAggregateInput = {
+    id?: SortOrder
+    customerId?: SortOrder
+    totalCost?: SortOrder
+    cartHash?: SortOrder
+    status?: SortOrder
+    expiresAt?: SortOrder
+    consumedAt?: SortOrder
+    consumedBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ShippingQuoteMinOrderByAggregateInput = {
+    id?: SortOrder
+    customerId?: SortOrder
+    totalCost?: SortOrder
+    cartHash?: SortOrder
+    status?: SortOrder
+    expiresAt?: SortOrder
+    consumedAt?: SortOrder
+    consumedBy?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type ShippingQuoteSumOrderByAggregateInput = {
+    totalCost?: SortOrder
+  }
+
   export type ShippingRateCreateNestedManyWithoutCourierInput = {
     create?: XOR<ShippingRateCreateWithoutCourierInput, ShippingRateUncheckedCreateWithoutCourierInput> | ShippingRateCreateWithoutCourierInput[] | ShippingRateUncheckedCreateWithoutCourierInput[]
     connectOrCreate?: ShippingRateCreateOrConnectWithoutCourierInput | ShippingRateCreateOrConnectWithoutCourierInput[]
@@ -8372,7 +9700,7 @@ export namespace Prisma {
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntFilter<$PrismaModel> | number
   }
-  export type NestedJsonFilter<$PrismaModel = never> =
+  export type NestedJsonFilter<$PrismaModel = never> = 
     | PatchUndefined<
         Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
         Required<NestedJsonFilterBase<$PrismaModel>>
@@ -9172,6 +10500,10 @@ export namespace Prisma {
      * @deprecated Use OutboxEventDefaultArgs instead
      */
     export type OutboxEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = OutboxEventDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ShippingQuoteDefaultArgs instead
+     */
+    export type ShippingQuoteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ShippingQuoteDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

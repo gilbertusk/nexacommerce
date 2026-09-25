@@ -1,7 +1,15 @@
 import { orderRepository } from '../repositories/order.repository';
 import { prisma } from '../prisma/client';
-import { NotFoundError, ValidationError, ForbiddenError, ConflictError, buildInternalServiceHeaders } from '@nexacommerce/common';
+import {
+  NotFoundError,
+  ValidationError,
+  ForbiddenError,
+  ConflictError,
+  buildInternalServiceHeaders,
+  computeCartHash,
+} from '@nexacommerce/common';
 import { config } from '../config';
+import crypto from 'crypto';
 import { Prisma } from '../generated/client';
 import { publishOrderCreated } from '../messaging/rabbitmq';
 import { enqueueOrderCancelled, enqueueOrderCompleted, enqueueOrderPaid } from '../messaging/outbox';
@@ -32,23 +40,25 @@ export class OrderService {
     }
   }
 
+  /**
+   * Convert the authenticated customer's cart into an order.
+   *
+   * The shipping price is never taken from the request. The caller presents a
+   * quote id; this method recomputes the cart fingerprint, asks Shipping
+   * Service to consume that quote, and uses the price stored against it. A
+   * caller that tampers with the cart after quoting fails the hash check, and a
+   * caller that replays a quote finds it already consumed.
+   */
   async checkout(
     userId: string,
     body: {
       shippingAddressId: string;
+      shippingQuoteId: string;
       voucherCode?: string | null;
-      courierName?: string | null;
-      courierService?: string | null;
-      shippingCost?: number | null;
       notes?: string | null;
     }
   ) {
-    // Never trust a browser-supplied shipping price. Checkout must remain closed
-    // until a server-issued quote is implemented and can be revalidated here.
-    throw new ValidationError('Checkout is unavailable until a trusted shipping quote is implemented');
-
-    const { shippingAddressId, voucherCode, courierName, courierService, notes } = body;
-    const shippingCostVal = body.shippingCost || 0;
+    const { shippingAddressId, shippingQuoteId, voucherCode, notes } = body;
 
     // 1. Get Cart
     const cart = await this.makeRequest(config.cartServiceUrl, `/cart/internal/cart/${userId}`, 'GET');
@@ -98,6 +108,37 @@ export class OrderService {
     if (!customer) {
       throw new ValidationError('Customer account details not found');
     }
+
+    // 5b. Claim the shipping quote.
+    //
+    // The order id is generated here rather than by the database so the quote
+    // can be claimed before any dependent state exists. Claiming first means a
+    // quote is never consumed by two orders; if order creation fails
+    // afterwards, the customer simply requests a new quote, and a retry with
+    // the same order id is idempotent.
+    const orderId = crypto.randomUUID();
+    const cartHash = computeCartHash(
+      cart.items.map((item: any) => ({ productId: item.productId, quantity: item.quantity })),
+      {
+        addressId: shippingAddressId,
+        city: address.city,
+        province: address.province,
+        postalCode: address.postalCode,
+      },
+    );
+
+    const consumedQuote = await this.makeRequest(
+      config.shippingServiceUrl,
+      `/shipping/internal/quotes/${shippingQuoteId}/consume`,
+      'POST',
+      { customerId: userId, orderId, cartHash },
+    );
+
+    const shippingCostVal = Number(consumedQuote?.totalCost);
+    if (!Number.isFinite(shippingCostVal) || shippingCostVal < 0) {
+      throw new ValidationError('Shipping quote did not yield a usable shipping cost');
+    }
+    const shipments = Array.isArray(consumedQuote?.shipments) ? consumedQuote.shipments : [];
 
     // 6. Validate Voucher if code is supplied
     let voucher: any = null;
@@ -161,6 +202,7 @@ export class OrderService {
     const order = await prisma.$transaction(async (tx) => {
       return tx.order.create({
         data: {
+          id: orderId,
           orderNumber,
           customerId: userId,
           customerName: customer.name,
@@ -173,8 +215,13 @@ export class OrderService {
           voucherCode: voucher?.code || null,
           shippingAddressId: shippingAddressId,
           shippingAddress: address,
-          courierName: courierName || null,
-          courierService: courierService || null,
+          // Split shipment: the authoritative per-seller breakdown lives in
+          // `shipmentBreakdown`. These two columns keep the first shipment for
+          // the existing single-courier reads and are not the source of truth.
+          courierName: shipments[0]?.courierName ?? null,
+          courierService: shipments[0]?.serviceCode ?? null,
+          shippingQuoteId,
+          shipmentBreakdown: shipments,
           status: 'PENDING_PAYMENT',
           notes: notes || null,
           expiresAt,

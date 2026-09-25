@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { NextFunction, Request, RequestHandler, Response } from 'express';
+import { requestIdHeader } from './request-context';
 
 const DEVELOPMENT_INTERNAL_TOKEN = 'development-only-internal-token';
 
@@ -24,6 +25,9 @@ export function buildInternalServiceHeaders(serviceName: string): Record<string,
   return {
     'X-Internal-Service': serviceName,
     'X-Internal-Token': getInternalServiceToken(),
+    // Carry the caller's correlation id onward, so one customer action can be
+    // traced across every hop it causes. Empty outside a request context.
+    ...requestIdHeader(),
   };
 }
 

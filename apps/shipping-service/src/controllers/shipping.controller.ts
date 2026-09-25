@@ -1,8 +1,137 @@
 import { Request, Response } from 'express';
 import { shippingService } from '../services/shipping.service';
+import { shippingQuoteService, QuoteBlockedError } from '../services/shipping-quote.service';
 import { successResponse, ValidationError } from '@nexacommerce/common';
 
+/** Shape of a per-seller courier choice submitted with a quote request. */
+function parseSelections(raw: unknown) {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    throw new ValidationError('selections must be a non-empty array');
+  }
+  if (raw.length > 50) {
+    throw new ValidationError('selections may contain at most 50 entries');
+  }
+  return raw.map((entry: any) => {
+    const { sellerId, courierCode, serviceCode } = entry ?? {};
+    for (const [field, value] of Object.entries({ sellerId, courierCode, serviceCode })) {
+      if (typeof value !== 'string' || value.trim().length === 0 || value.length > 100) {
+        throw new ValidationError(`selections[].${field} must be a non-empty string`);
+      }
+    }
+    return { sellerId, courierCode, serviceCode };
+  });
+}
+
+/** Serialise a fail-closed quote refusal with the reason a human can act on. */
+function quoteBlockedResponse(res: Response, err: QuoteBlockedError) {
+  res.status(422).json({
+    success: false,
+    message: err.message,
+    reason: err.reason,
+    details: err.details,
+  });
+}
+
 export class ShippingController {
+  /**
+   * Issue a server-computed shipping quote for the authenticated customer.
+   *
+   * The response carries an opaque quote id and the per-seller breakdown. The
+   * browser never sends a price in, and the id is the only thing checkout
+   * accepts.
+   */
+  createQuote = async (req: Request, res: Response) => {
+    const customerId = req.headers['x-user-id'] as string;
+    if (!customerId) {
+      throw new ValidationError('Authentication required: user ID missing');
+    }
+
+    const { addressId, selections } = req.body ?? {};
+    if (typeof addressId !== 'string' || addressId.trim().length === 0) {
+      throw new ValidationError('addressId is required');
+    }
+
+    try {
+      const quote = await shippingQuoteService.issueQuote({
+        customerId,
+        addressId,
+        selections: parseSelections(selections),
+      });
+      res.status(201).json(
+        successResponse(
+          {
+            quoteId: quote.id,
+            totalCost: Number(quote.totalCost),
+            shipments: quote.shipments,
+            destination: quote.destination,
+            expiresAt: quote.expiresAt,
+          },
+          'Shipping quote issued',
+        ),
+      );
+    } catch (err) {
+      if (err instanceof QuoteBlockedError) {
+        quoteBlockedResponse(res, err);
+        return;
+      }
+      throw err;
+    }
+  };
+
+  /** Read back a quote the caller owns, without consuming it. */
+  getQuote = async (req: Request, res: Response) => {
+    const customerId = req.headers['x-user-id'] as string;
+    if (!customerId) {
+      throw new ValidationError('Authentication required: user ID missing');
+    }
+
+    const quote = await shippingQuoteService.getQuoteForCustomer(req.params.quoteId, customerId);
+    res.status(200).json(
+      successResponse(
+        {
+          quoteId: quote.id,
+          totalCost: Number(quote.totalCost),
+          shipments: quote.shipments,
+          destination: quote.destination,
+          status: quote.status,
+          expiresAt: quote.expiresAt,
+        },
+        'Shipping quote retrieved',
+      ),
+    );
+  };
+
+  /**
+   * Resolve and consume a quote on behalf of checkout.
+   *
+   * Internal only. Order Service supplies the customer, the order id, and the
+   * cart hash it independently computed; a mismatch means the cart changed
+   * after the quote was issued and the stored price no longer applies.
+   */
+  internalConsumeQuote = async (req: Request, res: Response) => {
+    const { quoteId } = req.params;
+    const { customerId, orderId, cartHash } = req.body ?? {};
+
+    for (const [field, value] of Object.entries({ customerId, orderId, cartHash })) {
+      if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new ValidationError(`${field} is required`);
+      }
+    }
+
+    const quote = await shippingQuoteService.consumeQuote({ quoteId, customerId, orderId, cartHash });
+    res.status(200).json(
+      successResponse(
+        {
+          quoteId: quote.id,
+          totalCost: Number(quote.totalCost),
+          shipments: quote.shipments,
+          destination: quote.destination,
+        },
+        'Shipping quote consumed',
+      ),
+    );
+  };
+
   getCouriers = async (req: Request, res: Response) => {
     const result = await shippingService.getCouriers();
     res.status(200).json(successResponse(result, 'Couriers retrieved successfully'));

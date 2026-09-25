@@ -29,31 +29,74 @@ Shared test utilities and fixtures (e.g., test tokens, database transaction clea
 
 ## 3. Local Test Environment Setup
 
-Integration tests require a running database instance. We use the test database `nexacommerce_test_db` to prevent corrupting development data.
+Integration tests run against **live** infrastructure. They are written to fail, not skip, when a
+dependency is unreachable: a suite that passes with no database proves nothing, and for a while this
+repository had several that did exactly that.
 
-### Step 3.1: Start Test Infrastructure
-Run only the database and cache infrastructure in Docker:
-```bash
-docker compose up -d postgres redis
+### 3.1 What each service expects
+
+Every service's `tests/setup.ts` defaults to one shared database with a **schema per service**:
+
+```
+postgresql://postgres:postgres123@localhost:5445/nexacommerce_db?schema=<service>_test
 ```
 
-### Step 3.2: Run All Tests
+Schemas: `auth_test`, `user_test`, `product_test`, `inventory_test`, `order_test`, `payment_test`,
+`voucher_test`, `shipping_test`, `review_test`, `notification_test`, `analytics_test`.
+
+Redis is expected at `localhost:6379` **without a password**, and Kafka at `localhost:9092`.
+`DATABASE_URL` is only a default (`??=`), so an explicit environment variable always wins.
+
+### 3.2 Start the infrastructure
+
 ```bash
-# Execute unit and integration tests across all workspaces
-npm test
+docker compose up -d postgres redis rabbitmq kafka
 ```
 
-### Step 3.3: Run Specific Tests
+The Compose PostgreSQL must use the password above, or every integration suite fails to connect.
+CI uses the same values, so nothing needs reconfiguring between the two.
+
+### 3.3 Deploy migrations into every test schema
+
+A schema with no tables is as useless as no database:
+
 ```bash
-# Run tests for a specific workspace (e.g. auth-service)
-npm run test:auth
-
-# Run only unit tests
-npm run test:unit
-
-# Run only integration tests
-npm run test:integration
+for entry in auth:auth_test user:user_test product:product_test inventory:inventory_test \
+             order:order_test payment:payment_test voucher:voucher_test shipping:shipping_test \
+             review:review_test notification:notification_test analytics:analytics_test; do
+  svc="${entry%%:*}"; schema="${entry##*:}"
+  DATABASE_URL="postgresql://postgres:postgres123@localhost:5445/nexacommerce_db?schema=${schema}" \
+    npx prisma migrate deploy --schema="apps/${svc}-service/prisma/schema.prisma"
+done
 ```
+
+### 3.4 Run the tests
+
+```bash
+npm test                                  # every workspace
+npm test --workspace=apps/order-service   # one workspace
+```
+
+### 3.5 Why every service runs `jest --runInBand`
+
+Jest's default parallel workers each open their own database pool and broker connection. Against a
+single local PostgreSQL that exhausts connections and suites time out — auth-service took over 270
+seconds and failed before this was changed, and passes in about 4 seconds serialised. All 14
+services therefore run `--runInBand`.
+
+### 3.6 Closing connections
+
+An integration suite that imports the service's Express app opens a Prisma pool, and Cart Service
+opens an ioredis connection. Both must be closed or Jest hangs:
+
+```typescript
+afterAll(async () => {
+  await prisma.$disconnect();
+});
+```
+
+No suite in this repository relies on `--forceExit`. If one starts hanging, find the open handle;
+forcing the exit hides the leak and can truncate in-flight work.
 
 ---
 

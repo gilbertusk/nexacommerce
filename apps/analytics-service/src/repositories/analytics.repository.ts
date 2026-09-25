@@ -1,6 +1,13 @@
 import { prisma } from '../prisma/client';
 import { Prisma } from '../generated/client';
 
+/**
+ * Either the ambient client or a transaction client. Write methods accept one
+ * so an event handler can commit its report mutations in the same transaction
+ * as the inbox record that marks the event consumed.
+ */
+export type AnalyticsWriteClient = Prisma.TransactionClient | typeof prisma;
+
 function todayDate(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -21,18 +28,18 @@ export const analyticsRepository = {
     totalCancelledOrders: number;
     totalRevenue: number;
     totalItemsSold: number;
-  }>) {
+  }>, client: AnalyticsWriteClient = prisma) {
     const day = new Date(date);
     day.setHours(0, 0, 0, 0);
 
-    const existing = await prisma.dailySalesReport.findUnique({ where: { date: day } });
+    const existing = await client.dailySalesReport.findUnique({ where: { date: day } });
 
     if (!existing) {
       const data: any = { date: day, ...update };
       if (data.totalOrders && data.totalRevenue != null) {
         data.averageOrderValue = data.totalOrders > 0 ? data.totalRevenue / data.totalOrders : 0;
       }
-      return prisma.dailySalesReport.create({ data });
+      return client.dailySalesReport.create({ data });
     }
 
     const totalOrders = existing.totalOrders + (update.totalOrders || 0);
@@ -42,7 +49,7 @@ export const analyticsRepository = {
     const totalItemsSold = existing.totalItemsSold + (update.totalItemsSold || 0);
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    return prisma.dailySalesReport.update({
+    return client.dailySalesReport.update({
       where: { date: day },
       data: { totalOrders, totalRevenue, totalCompletedOrders, totalCancelledOrders, totalItemsSold, averageOrderValue },
     });
@@ -78,15 +85,15 @@ export const analyticsRepository = {
     totalCancelledOrders: number;
     totalRevenue: number;
     totalItemsSold: number;
-  }>) {
-    const existing = await prisma.monthlySalesReport.findUnique({ where: { year_month: { year, month } } });
+  }>, client: AnalyticsWriteClient = prisma) {
+    const existing = await client.monthlySalesReport.findUnique({ where: { year_month: { year, month } } });
 
     if (!existing) {
       const data: any = { year, month, ...update };
       if (data.totalOrders && data.totalRevenue != null) {
         data.averageOrderValue = data.totalOrders > 0 ? data.totalRevenue / data.totalOrders : 0;
       }
-      return prisma.monthlySalesReport.create({ data });
+      return client.monthlySalesReport.create({ data });
     }
 
     const totalOrders = existing.totalOrders + (update.totalOrders || 0);
@@ -96,7 +103,7 @@ export const analyticsRepository = {
     const totalItemsSold = existing.totalItemsSold + (update.totalItemsSold || 0);
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    return prisma.monthlySalesReport.update({
+    return client.monthlySalesReport.update({
       where: { year_month: { year, month } },
       data: { totalOrders, totalRevenue, totalCompletedOrders, totalCancelledOrders, totalItemsSold, averageOrderValue },
     });
@@ -133,12 +140,12 @@ export const analyticsRepository = {
     totalUnitsSold?: number;
     totalRevenue?: number;
     averageRating?: number;
-  }) {
+  }, client: AnalyticsWriteClient = prisma) {
     const where = { productId_periodType_periodDate: { productId, periodType, periodDate: periodDate as any } };
-    const existing = await prisma.productSalesReport.findUnique({ where });
+    const existing = await client.productSalesReport.findUnique({ where });
 
     if (!existing) {
-      return prisma.productSalesReport.create({
+      return client.productSalesReport.create({
         data: {
           productId,
           productName: update.productName || '',
@@ -156,7 +163,7 @@ export const analyticsRepository = {
       });
     }
 
-    return prisma.productSalesReport.update({
+    return client.productSalesReport.update({
       where,
       data: {
         productName: update.productName || existing.productName,
@@ -192,15 +199,15 @@ export const analyticsRepository = {
     totalCancelled?: number;
     totalReviews?: number;
     averageRating?: number;
-  }) {
+  }, client: AnalyticsWriteClient = prisma) {
     const where = { sellerId_periodType_periodDate: { sellerId, periodType, periodDate: periodDate as any } };
-    const existing = await prisma.sellerPerformanceReport.findUnique({ where });
+    const existing = await client.sellerPerformanceReport.findUnique({ where });
 
     if (!existing) {
       const totalOrders = update.totalOrders || 0;
       const totalCancelled = update.totalCancelled || 0;
       const cancellationRate = totalOrders > 0 ? (totalCancelled / totalOrders) * 100 : 0;
-      return prisma.sellerPerformanceReport.create({
+      return client.sellerPerformanceReport.create({
         data: {
           sellerId,
           sellerName: update.sellerName || '',
@@ -221,7 +228,7 @@ export const analyticsRepository = {
     const totalCancelled = existing.totalCancelled + (update.totalCancelled || 0);
     const cancellationRate = totalOrders > 0 ? (totalCancelled / totalOrders) * 100 : 0;
 
-    return prisma.sellerPerformanceReport.update({
+    return client.sellerPerformanceReport.update({
       where,
       data: {
         sellerName: update.sellerName || existing.sellerName,
@@ -257,11 +264,11 @@ export const analyticsRepository = {
     failedCount?: number;
     expiredCount?: number;
     amount?: number;
-  }) {
+  }, client: AnalyticsWriteClient = prisma) {
     const day = new Date(date);
     day.setHours(0, 0, 0, 0);
 
-    const existing = await prisma.paymentReport.findUnique({ where: { date: day } });
+    const existing = await client.paymentReport.findUnique({ where: { date: day } });
 
     if (!existing) {
       const successCount = update.successCount || 0;
@@ -271,7 +278,7 @@ export const analyticsRepository = {
       const totalAmount = update.amount || 0;
       const successRate = totalTransactions > 0 ? (successCount / totalTransactions) * 100 : 0;
       const averageAmount = successCount > 0 ? totalAmount / successCount : 0;
-      return prisma.paymentReport.create({
+      return client.paymentReport.create({
         data: { date: day, totalTransactions, successCount, failedCount, expiredCount, successRate, totalAmount, averageAmount },
       });
     }
@@ -284,7 +291,7 @@ export const analyticsRepository = {
     const successRate = totalTransactions > 0 ? (successCount / totalTransactions) * 100 : 0;
     const averageAmount = successCount > 0 ? totalAmount / successCount : 0;
 
-    return prisma.paymentReport.update({
+    return client.paymentReport.update({
       where: { date: day },
       data: { successCount, failedCount, expiredCount, totalTransactions, totalAmount, averageAmount, successRate },
     });
@@ -309,12 +316,12 @@ export const analyticsRepository = {
     totalOrders?: number;
     totalRevenue?: number;
     totalUnitsSold?: number;
-  }) {
+  }, client: AnalyticsWriteClient = prisma) {
     const where = { categoryId_periodType_periodDate: { categoryId, periodType, periodDate: periodDate as any } };
-    const existing = await prisma.categoryPerformanceReport.findUnique({ where });
+    const existing = await client.categoryPerformanceReport.findUnique({ where });
 
     if (!existing) {
-      return prisma.categoryPerformanceReport.create({
+      return client.categoryPerformanceReport.create({
         data: {
           categoryId,
           categoryName: update.categoryName || '',
@@ -327,7 +334,7 @@ export const analyticsRepository = {
       });
     }
 
-    return prisma.categoryPerformanceReport.update({
+    return client.categoryPerformanceReport.update({
       where,
       data: {
         categoryName: update.categoryName || existing.categoryName,
@@ -349,18 +356,4 @@ export const analyticsRepository = {
   },
 
   // ── Analytics Events ───────────────────────────────────────────────────
-  async saveEvent(eventId: string, eventName: string, eventData: any) {
-    return prisma.analyticsEvent.upsert({
-      where: { eventId },
-      update: {},
-      create: { eventId, eventName, eventData, isProcessed: false },
-    });
-  },
-
-  async markEventProcessed(id: string) {
-    return prisma.analyticsEvent.update({
-      where: { id },
-      data: { isProcessed: true, processedAt: new Date() },
-    });
-  },
 };

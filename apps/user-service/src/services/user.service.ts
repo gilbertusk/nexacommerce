@@ -154,6 +154,38 @@ export class UserService {
   }
 
   // --- Seller Profiles ---
+  /**
+   * Dispatch origins for shipping quotes.
+   *
+   * Every requested seller appears in the result. `dispatchReady` is true only
+   * for an active seller with a verified structured origin, so the caller can
+   * refuse a quote and name the seller responsible instead of substituting a
+   * default location.
+   */
+  async getDispatchOrigins(sellerIds: string[]) {
+    const profiles = await sellerRepository.findDispatchOrigins(sellerIds);
+    const byUserId = new Map(profiles.map((p) => [p.userId, p]));
+
+    return sellerIds.map((sellerId) => {
+      const profile = byUserId.get(sellerId);
+      const dispatchReady = Boolean(
+        profile &&
+          profile.status === 'ACTIVE' &&
+          profile.originCity &&
+          profile.originProvince &&
+          profile.originVerifiedAt,
+      );
+      return {
+        sellerId,
+        storeName: profile?.storeName ?? null,
+        status: profile?.status ?? null,
+        originCity: dispatchReady ? profile!.originCity : null,
+        originProvince: dispatchReady ? profile!.originProvince : null,
+        dispatchReady,
+      };
+    });
+  }
+
   async createSellerProfile(userId: string, data: any) {
     const existing = await sellerRepository.findByUserId(userId);
     if (existing) {
@@ -176,6 +208,30 @@ export class UserService {
       throw new NotFoundError('Seller profile not found');
     }
     return sellerRepository.update(userId, data);
+  }
+
+  /**
+   * Set the seller's own dispatch origin. Always leaves it unverified, so a
+   * seller cannot self-certify the location that prices customer shipping.
+   */
+  async setSellerDispatchOrigin(userId: string, originCity: string, originProvince: string) {
+    const existing = await sellerRepository.findByUserId(userId);
+    if (!existing) {
+      throw new NotFoundError('Seller profile not found');
+    }
+    return sellerRepository.setDispatchOrigin(userId, originCity, originProvince);
+  }
+
+  /** Administrator decision on a proposed dispatch origin. */
+  async verifySellerDispatchOrigin(id: string, verified: boolean) {
+    const profile = await sellerRepository.findById(id);
+    if (!profile) {
+      throw new NotFoundError('Seller profile not found');
+    }
+    if (verified && (!profile.originCity || !profile.originProvince)) {
+      throw new ValidationError('Cannot verify a dispatch origin that has not been provided');
+    }
+    return sellerRepository.setDispatchOriginVerification(id, verified);
   }
 
   async getAddressById(addressId: string) {
