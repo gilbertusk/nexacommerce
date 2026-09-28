@@ -45,12 +45,13 @@ jobs:
       - run: npm ci
       - name: Build shared packages
         run: |
-          npm run build --workspace=packages/common --if-present
+          # common imports logger and event-contracts, so build them first.
           npm run build --workspace=packages/types --if-present
           npm run build --workspace=packages/config --if-present
           npm run build --workspace=packages/logger --if-present
           npm run build --workspace=packages/validation --if-present
           npm run build --workspace=packages/event-contracts --if-present
+          npm run build --workspace=packages/common --if-present
       - name: Typecheck every workspace
         run: npm run typecheck
       - name: Lint every workspace
@@ -128,12 +129,13 @@ jobs:
       - run: npm ci
       - name: Build shared packages
         run: |
-          npm run build --workspace=packages/common --if-present
+          # common imports logger and event-contracts, so build them first.
           npm run build --workspace=packages/types --if-present
           npm run build --workspace=packages/config --if-present
           npm run build --workspace=packages/logger --if-present
           npm run build --workspace=packages/validation --if-present
           npm run build --workspace=packages/event-contracts --if-present
+          npm run build --workspace=packages/common --if-present
       - name: Provision Kafka stream topics
         shell: bash
         run: |

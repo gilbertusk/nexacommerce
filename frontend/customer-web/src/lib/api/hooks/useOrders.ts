@@ -248,7 +248,7 @@ export function useOrders() {
     queryKey: ["orders"],
     queryFn: async (): Promise<OrdersListResponse> => {
       const raw = await apiGet<RawOrdersResponse>("/orders", token ?? undefined);
-      return { success: raw.success, data: { orders: raw.data.orders.map(normalizeOrder) } };
+      return { success: raw.success, data: { orders: raw.data.orders.map((order) => normalizeOrder(order)) } };
     },
     enabled: Boolean(token),
     staleTime: 1000 * 30,
