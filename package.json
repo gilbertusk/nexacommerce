@@ -2,7 +2,7 @@
   "name": "nexacommerce",
   "version": "1.0.0",
   "private": true,
-  "description": "NexaCommerce — Enterprise E-Commerce Microservice Platform",
+  "description": "NexaCommerce \u2014 Enterprise E-Commerce Microservice Platform",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -39,7 +39,9 @@
     "seed:reset": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/seed-reset.ts",
     "docker:dev": "docker compose up -d",
     "docker:prod": "docker compose --profile production up -d --build",
-    "docker:down": "docker compose --profile production down"
+    "docker:down": "docker compose --profile production down",
+    "rabbitmq:topology": "ts-node -O \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/rabbitmq-topology.ts",
+    "test:live": "npm run test:live -w packages/common && npm run test:live -w apps/order-service && npm run test:live -w apps/api-gateway"
   },
   "keywords": [],
   "author": "",

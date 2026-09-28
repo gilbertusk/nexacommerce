@@ -237,6 +237,58 @@ describe('OrderService', () => {
       expect(mockPrisma.order.create).not.toHaveBeenCalled();
     });
 
+    describe('retried checkout for the same quote', () => {
+      const finalizedOrder = {
+        ...mockOrder,
+        id: 'order-existing',
+        customerId: 'user-1',
+        status: 'PENDING_PAYMENT',
+        grandTotal: 118000,
+        checkoutFinalizedAt: new Date(),
+      };
+
+      it('returns the existing order and its idempotent payment without starting a second saga', async () => {
+        // Arrange
+        const calls = stubServices();
+        mockOrderRepo.findByShippingQuoteId.mockResolvedValue(finalizedOrder as any);
+        mockPrisma.order.create = jest.fn();
+
+        // Act
+        const result: any = await service.checkout('user-1', body);
+
+        // Assert
+        expect(result).toMatchObject({ order: { id: 'order-existing' }, replayed: true });
+        expect(mockPrisma.order.create).not.toHaveBeenCalled();
+        expect(calls.map((call) => call.url)).toEqual([expect.stringContaining('/payments/internal/payments/create')]);
+        expect(calls[0].body).toEqual({ orderId: 'order-existing', customerId: 'user-1', amount: 118000 });
+      });
+
+      it('answers 409 while the first attempt is still between insert and finalization', async () => {
+        stubServices();
+        mockOrderRepo.findByShippingQuoteId.mockResolvedValue({ ...finalizedOrder, checkoutFinalizedAt: null } as any);
+
+        await expect(service.checkout('user-1', body)).rejects.toMatchObject({
+          statusCode: 409,
+          message: expect.stringMatching(/still being processed/),
+        });
+      });
+
+      it('refuses to revive a compensated checkout', async () => {
+        stubServices();
+        mockOrderRepo.findByShippingQuoteId.mockResolvedValue({ ...finalizedOrder, status: 'CANCELLED' } as any);
+
+        await expect(service.checkout('user-1', body)).rejects.toThrow(/request a new shipping quote/);
+      });
+
+      it("does not replay another customer's order", async () => {
+        const calls = stubServices({ quoteStatus: 400 });
+        mockOrderRepo.findByShippingQuoteId.mockResolvedValue({ ...finalizedOrder, customerId: 'someone-else' } as any);
+
+        await expect(service.checkout('user-1', body)).rejects.toThrow();
+        expect(calls.some((call) => call.url.includes('/payments/'))).toBe(false);
+      });
+    });
+
     it('rejects an empty cart before consuming a quote', async () => {
       // Arrange
       const calls: Array<{ url: string }> = [];

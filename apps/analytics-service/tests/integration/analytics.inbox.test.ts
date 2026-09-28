@@ -156,6 +156,32 @@ describe('analytics inbox (live PostgreSQL)', () => {
     expect(await inboxRow('evt-retry')).toMatchObject({ status: 'PROCESSED' });
   });
 
+  it('lets only one of many concurrent redeliveries take over a previously failed event', async () => {
+    // Arrange: a FAILED inbox row exists, as after a rolled-back first attempt.
+    await expect(
+      processWithInbox(analyticsInbox, CONSUMER, paymentEvent('evt-failed-race', 50), async () => {
+        throw new Error('first attempt failed');
+      }),
+    ).rejects.toThrow('first attempt failed');
+    expect(await inboxRow('evt-failed-race')).toMatchObject({ status: 'FAILED' });
+
+    // Act: the takeover path, not the insert path, is what races here.
+    const outcomes = await Promise.all(
+      Array.from({ length: 8 }, () => processWithInbox(
+        analyticsInbox,
+        CONSUMER,
+        paymentEvent('evt-failed-race', 50),
+        applyRevenue(50),
+      )),
+    );
+
+    // Assert
+    expect(outcomes.filter((outcome) => outcome === 'PROCESSED')).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome === 'SKIPPED_DUPLICATE')).toHaveLength(7);
+    expect(await revenueOnReportDate()).toBe(50);
+    expect(await inboxRow('evt-failed-race')).toMatchObject({ status: 'PROCESSED' });
+  });
+
   it('keeps deduplication independent per consumer', async () => {
     // Act
     await processWithInbox(analyticsInbox, CONSUMER, paymentEvent('evt-shared', 400), applyRevenue(400));

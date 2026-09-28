@@ -16,6 +16,7 @@ jest.mock('@nexacommerce/common', () => ({
   connectRabbitMQ: mockConnectRabbitMQ,
   setupExchangeAndQueues: mockSetupExchangeAndQueues,
   createConsumer: mockCreateConsumer,
+  setDependencyReady: jest.fn(),
 }));
 
 const mockEnsureKafka = jest.fn();

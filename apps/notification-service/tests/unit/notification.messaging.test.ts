@@ -10,6 +10,13 @@ jest.mock('@nexacommerce/common', () => {
     createConsumer: jest.fn(async (_channel, _queue, handler) => {
       capturedHandler = handler;
     }),
+    // The service attaches consumers through the reconnecting wrapper; run its
+    // setup on every start so each test captures a fresh handler.
+    createResilientConsumer: jest.fn((options: { setup: (channel: unknown) => Promise<void> }) => ({
+      start: async () => options.setup(channel),
+      stop: async () => undefined,
+      isReady: () => true,
+    })),
     buildInternalServiceHeaders: jest.fn(() => ({})),
   };
 });

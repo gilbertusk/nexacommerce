@@ -6,6 +6,7 @@ import {
   prepareAnalyticsEvent,
 } from '../../src/services/analytics.service';
 import { analyticsRepository } from '../../src/repositories/analytics.repository';
+import { dailyDeltaFor } from '../../src/services/kafka-projection';
 
 const mockAnalyticsRepo = analyticsRepository as jest.Mocked<typeof analyticsRepository>;
 const CLIENT = { tx: true } as any;
@@ -111,6 +112,25 @@ describe('analytics event projection', () => {
       // Assert
       expect(mockAnalyticsRepo.upsertProductSalesReport).toHaveBeenCalledTimes(2);
       expect(mockAnalyticsRepo.upsertSellerPerformanceReport).toHaveBeenCalledTimes(2);
+    });
+
+    it('counts a cancelled announced order but not a compensated checkout that was never announced', async () => {
+      const announced = await prepareAnalyticsEvent('OrderCancelled', { orderId: 'o-1', checkoutFinalized: true });
+      const legacy = await prepareAnalyticsEvent('OrderCancelled', { orderId: 'o-2' });
+      const compensated = await prepareAnalyticsEvent('OrderCancelled', { orderId: 'o-3', checkoutFinalized: false });
+
+      await applyAnalyticsEvent(CLIENT, announced);
+      await applyAnalyticsEvent(CLIENT, legacy);
+      await applyAnalyticsEvent(CLIENT, compensated);
+
+      expect(mockAnalyticsRepo.upsertDailyReport).toHaveBeenCalledTimes(2);
+      expect(mockAnalyticsRepo.upsertDailyReport).toHaveBeenCalledWith(expect.any(Date), { totalCancelledOrders: 1 }, CLIENT);
+    });
+
+    it('applies the same cancellation rule in the Kafka daily projection', () => {
+      const envelope = (payload: Record<string, unknown>) => ({ eventName: 'OrderCancelled', payload } as any);
+      expect(dailyDeltaFor(envelope({ orderId: 'o-1' }))).toEqual({ totalCancelledOrders: 1 });
+      expect(dailyDeltaFor(envelope({ orderId: 'o-3', checkoutFinalized: false }))).toBeNull();
     });
 
     it('writes nothing for an ignored event', async () => {

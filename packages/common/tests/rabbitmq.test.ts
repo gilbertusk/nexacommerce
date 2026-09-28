@@ -4,6 +4,7 @@ import {
   createPublisher,
   DEAD_LETTER_EXCHANGE,
   DEFAULT_RETRY_DELAY_MS,
+  NonRetryableEventError,
   RETRY_EXCHANGE,
   setupExchangeAndQueues,
 } from '../src/rabbitmq';
@@ -154,5 +155,33 @@ describe('RabbitMQ reliability helpers', () => {
     await deliver(message);
     expect(channel.ack).not.toHaveBeenCalled();
     expect(channel.nack).toHaveBeenCalledWith(message, false, true);
+  });
+
+  it('dead-letters malformed and non-retryable deliveries without spending the retry budget', async () => {
+    const { channel, deliver } = makeChannel();
+    const handler = jest.fn(async () => { throw new NonRetryableEventError('payload can never apply'); });
+    await createConsumer(channel, QUEUES.SHIPPING_ORDER_EVENTS, handler); // default budget: 5
+
+    await deliver(makeMessage({ body: '{broken' }));
+    await deliver(makeMessage({ body: { eventName: 'OrderPaid' } })); // no eventId
+    await deliver(makeMessage());
+
+    const exchanges = channel.publish.mock.calls.map((call: any[]) => call[0]);
+    expect(exchanges).toEqual([DEAD_LETTER_EXCHANGE, DEAD_LETTER_EXCHANGE, DEAD_LETTER_EXCHANGE]);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(channel.ack).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not throw out of the consume callback when nack hits a closed channel', async () => {
+    const { channel, deliver } = makeChannel();
+    channel.publish.mockImplementation((...args: any[]) => {
+      (args[4] as (error: Error | null) => void)?.(new Error('NOT_FOUND - no exchange'));
+      return true;
+    });
+    channel.nack.mockImplementation(() => { throw new Error('Channel closed'); });
+    await createConsumer(channel, QUEUES.SHIPPING_ORDER_EVENTS, async () => { throw new Error('transient'); });
+
+    await expect(deliver(makeMessage())).resolves.toBeUndefined();
+    expect(channel.ack).not.toHaveBeenCalled();
   });
 });

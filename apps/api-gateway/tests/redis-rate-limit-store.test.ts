@@ -15,7 +15,7 @@ describe('RedisRateLimitStore', () => {
 
     const result = await store.increment('ip:127.0.0.1');
 
-    expect(redis.eval).toHaveBeenCalledWith(expect.stringContaining('INCR'), 1, 'gateway:auth:ip:127.0.0.1', 60_000);
+    expect(redis.eval).toHaveBeenCalledWith(expect.stringContaining('INCR'), 1, 'rate-limit:gateway:auth:ip:127.0.0.1', 60_000);
     expect(result.totalHits).toBe(2);
     expect(result.resetTime?.getTime()).toBeGreaterThan(Date.now() + 29_000);
   });
@@ -33,7 +33,7 @@ describe('RedisRateLimitStore', () => {
     const store = new RedisRateLimitStore(redis, 'gateway:checkout', 60_000);
     await store.decrement('client');
     await store.resetKey('client');
-    expect(redis.del).toHaveBeenCalledWith('gateway:checkout:client');
+    expect(redis.del).toHaveBeenCalledWith('rate-limit:gateway:checkout:client');
 
     redis.eval.mockRejectedValueOnce(new Error('connection refused'));
     await expect(store.increment('offline')).rejects.toBeInstanceOf(RateLimitStoreUnavailableError);

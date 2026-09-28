@@ -8,6 +8,8 @@ const config: Config = {
   testTimeout: 30000,
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/*.test.ts'],
+  // Live broker acceptance runs separately via `npm run test:live`.
+  testPathIgnorePatterns: ['/node_modules/', '/tests/live/'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: './tsconfig.json' }],
   },
