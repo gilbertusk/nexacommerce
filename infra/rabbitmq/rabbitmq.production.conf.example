@@ -1,0 +1,48 @@
+# NexaCommerce - RabbitMQ production template (Phase 3).
+#
+# NOT used by docker-compose.yml, which runs a single development node. A
+# single node can host quorum queues but provides NO node-failure tolerance;
+# do not describe it as highly available. Replace every <placeholder>; never
+# commit real hostnames, certificates, or credentials.
+
+## Cluster: an odd number of nodes (3 or 5) in separate failure domains.
+cluster_formation.peer_discovery_backend = classic_config
+cluster_formation.classic_config.nodes.1 = rabbit@<node-1-hostname>
+cluster_formation.classic_config.nodes.2 = rabbit@<node-2-hostname>
+cluster_formation.classic_config.nodes.3 = rabbit@<node-3-hostname>
+# Pause the minority side of a partition rather than let both sides diverge.
+cluster_partition_handling = pause_minority
+
+## Quorum queues: new queues default to quorum even if a client omits the
+## argument (services already request it explicitly).
+default_queue_type = quorum
+# Keep a replica on every node for the queues the services declare.
+quorum_queue.initial_cluster_size = 3
+
+## TLS only for AMQP; disable the plaintext listener.
+listeners.tcp = none
+listeners.ssl.default = 5671
+ssl_options.cacertfile = /etc/rabbitmq/tls/ca.pem
+ssl_options.certfile   = /etc/rabbitmq/tls/server.pem
+ssl_options.keyfile    = /etc/rabbitmq/tls/server-key.pem
+ssl_options.verify     = verify_peer
+ssl_options.fail_if_no_peer_cert = false
+
+## Management UI/API: TLS, internal network only, never on a public interface.
+management.ssl.port       = 15671
+management.ssl.cacertfile = /etc/rabbitmq/tls/ca.pem
+management.ssl.certfile   = /etc/rabbitmq/tls/server.pem
+management.ssl.keyfile    = /etc/rabbitmq/tls/server-key.pem
+management.tcp.port       = none
+
+## Default-deny: remove the bootstrap guest user; create one user per service
+## with permissions limited to its own queues (see docs/phase-3-reliability.md).
+loopback_users.guest = true
+default_user = <bootstrap-admin-user-rotated-after-provisioning>
+default_pass = <from-secret-manager>
+
+## Resource alarms: block publishers before the node runs out of disk/memory.
+## Publishers use confirms and the outbox retries, so a blocked publish delays
+## events rather than losing them.
+disk_free_limit.absolute = 5GB
+vm_memory_high_watermark.relative = 0.6

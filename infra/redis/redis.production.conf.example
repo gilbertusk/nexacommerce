@@ -1,0 +1,43 @@
+# NexaCommerce - Redis production template (Phase 3).
+#
+# Redis holds only ephemeral state: carts (TTL), rate-limit counters (TTL),
+# and short-lived coordination. Orders, payments, stock, and events live in
+# PostgreSQL. Losing Redis must never lose a commerce fact; it may reset carts
+# and rate-limit windows. Replace every <placeholder>; commit no secrets.
+
+## Replication + automatic failover: one primary, >=2 replicas, and >=3
+## Sentinels (or a managed Redis with multi-AZ failover). Clients must connect
+## through Sentinel/the managed endpoint so a failover is followed.
+# replicaof <primary-host> 6379            (on replicas)
+# masterauth <from-secret-manager>          (on replicas)
+
+## Eviction: do NOT use allkeys-lru for the limiter. Evicting counters under
+## memory pressure silently resets windows (the limiter fails open). With
+## noeviction a full Redis rejects writes and the gateway answers 503 (fails
+## closed). Size memory for peak carts + counters, or run the limiter on its
+## own instance.
+maxmemory <sized-for-peak>mb
+maxmemory-policy noeviction
+
+## Persistence is optional for ephemeral data; AOF keeps carts across a
+## restart. Expiries are absolute, so a restored counter never outlives its window.
+appendonly yes
+appendfsync everysec
+
+## Security: TLS only, ACL default-deny, no default user.
+port 0
+tls-port 6379
+tls-cert-file /etc/redis/tls/server.pem
+tls-key-file /etc/redis/tls/server-key.pem
+tls-ca-cert-file /etc/redis/tls/ca.pem
+tls-auth-clients optional
+aclfile /etc/redis/users.acl
+# users.acl example (one user per service, key-prefix scoped):
+#   user default off
+#   user api-gateway on >{secret} ~rate-limit:* +@read +@write +eval +evalsha +pttl +pexpire +ping +client|setname
+#   user cart-service on >{secret} ~cart:* +@read +@write +ping
+protected-mode yes
+bind <private-interface-address>
+rename-command FLUSHALL ""
+rename-command FLUSHDB ""
+rename-command CONFIG ""

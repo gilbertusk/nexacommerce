@@ -47,7 +47,25 @@ docker compose --profile production ps
 ```
 Verify that all services display the `healthy` status.
 
-### Step 2.5: Analytics Kafka read cutover
+### Step 2.5: Broker and proxy checks (Phase 3)
+
+- Set `TRUST_PROXY` to match what is in front of the API Gateway: empty for direct exposure, the
+  hop count (`1` for one load balancer), or the balancer CIDRs. `true` is refused at startup.
+- Before switching traffic to a broker, audit the queue topology (read-only):
+
+  ```bash
+  RABBITMQ_MANAGEMENT_URL=https://<user>:<password>@<internal-mgmt-host> \
+    npm run rabbitmq:topology -- audit --vhost /
+  ```
+
+  `CLASSIC_NEEDS_MIGRATION` means a pre-quorum queue exists under a production name; services will
+  refuse to start against it (they never delete queues). Follow "Classic-to-quorum migration" in
+  `docs/phase-3-reliability.md`.
+- The Compose stack runs one RabbitMQ node and one Redis instance with published ports. It is a
+  development/validation topology, not HA. Production requirements and templates:
+  `docs/phase-3-reliability.md` and `infra/rabbitmq/`, `infra/redis/`.
+
+### Step 2.6: Analytics Kafka read cutover
 
 The safe default is:
 

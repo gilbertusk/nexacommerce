@@ -146,3 +146,18 @@ Generate Jest test coverage reports across the entire monorepo:
 npm run test:coverage
 ```
 The reports are aggregated and output to the `/coverage` directory.
+
+## Live broker acceptance (Phase 3)
+
+`npm test` never needs RabbitMQ or Redis. The live suites are separate and **fail instead of
+skipping** when their configuration is missing:
+
+| Command | Needs | Covers |
+|---|---|---|
+| `npm run test:live -w packages/common` | `RABBITMQ_LIVE_URL`, `RABBITMQ_MANAGEMENT_URL`, `PHASE3_RABBITMQ_CONTAINER` | quorum topology, audit, classic-to-quorum migration, poison DLQ, retry budget, failed-forward requeue, crash before ack, broker restart, consumer reconnect |
+| `npm run test:live -w apps/order-service` | the above plus `DATABASE_URL` (migrated order schema) | duplicate delivery, crash after commit before ack, backlog after restart, `OrderCreated` through a broker outage |
+| `npm run test:live -w apps/api-gateway` | `REDIS_LIVE_URL`, `PHASE3_REDIS_CONTAINER` | atomic cross-replica limits, TTL, namespaces, outage 503, reconnect, restart |
+
+`npm run test:live` at the root runs all three. Each RabbitMQ suite creates and deletes its own
+vhost; the Redis suite deletes its own key namespace; container control is restricted to names
+starting with `phase3-test-`. Setup commands are in `docs/phase-3-reliability.md`.

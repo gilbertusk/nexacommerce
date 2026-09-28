@@ -4,6 +4,10 @@
 - Baseline commit: `216a53d` (`first commit`)
 - Active branch: `feat/phase-2-5-shipping-quotes-inbox-kafka`
 
+Header correction (2026-09-28, Phase 3 completion pass): that pass ran in a Linux cloud container
+on branch `claude/beautiful-hamilton-7thjf0` at `835d146` (merge of PR #3), with a clean working
+tree. The Phase 2 work described in the 2026-09-28 entries was already committed there.
+
 Header correction (2026-09-25): this document previously recorded branch `master` at baseline
 `dc9706f`. The actual checkout is branch `main` at `216a53d`, with a clean working tree; the
 Phase 0-4 work that was previously uncommitted is contained in `216a53d`. No work was lost.
@@ -17,15 +21,15 @@ Updated 2026-09-28.
 | Phase 0 - Baseline and production-readiness audit | Complete |
 | Phase 1 - Security and payment hardening | Complete (local acceptance) |
 | Phase 2 - Product completion and real frontend integration | In progress - checkout reopened on a server-issued shipping quote and physical return receipt is enforced before refund; remaining gates are business data, provider acceptance, and E2E |
-| Phase 3 - Redis and RabbitMQ reliability | In progress - producer outboxes (including checkout finalization) and atomic inboxes implemented; live broker/Redis fault acceptance outstanding |
+| Phase 3 - Redis and RabbitMQ reliability | **Local implementation and single-node runtime acceptance complete** (2026-09-28) - live RabbitMQ, Redis, and PostgreSQL fault suites pass; production HA acceptance (multi-node broker, Redis failover, TLS/ACL) is external and not done |
 | Phase 4 - Kafka event streaming | In progress - database-backed Analytics projection implemented and proven on live Kafka + PostgreSQL; production cluster is external acceptance |
 | Phase 5 - Production infrastructure and operations | In progress - migrations, backup/restore drill, request correlation, and CI verified; deployment target undecided |
 | Phase 6 - Production acceptance and limited beta | Not started - requires environments and credentials that have not been supplied |
 
 Phase 0 completion: **100%**.
 Phase 1 completion: **100% for local implementation and static acceptance**.
-Estimated local implementation completeness: **86%**.
-Estimated public-production readiness: **59%**, up from 55%.
+Estimated local implementation completeness: **88%** (86% before the 2026-09-28 Phase 3 completion pass).
+Estimated public-production readiness: **61%**, up from 59% (see the Phase 3 completion entry).
 
 The readiness estimate measures production safety, not the number of screens or source files. The
 increase reflects gates that moved from unproven to proven against live infrastructure: migrations
@@ -48,7 +52,7 @@ Midtrans sandbox, and Phase 6 acceptance remain open.
 | 2 | Admin origin/rate management is implemented, but no real seller origins or verified tariff rows were supplied; quoting therefore still fails closed for unconfigured routes | Business - enter and approve origins and tariffs |
 | 2 | Paid single-seller labels use the quote snapshot; multi-seller orders are explicitly blocked because `shipping_orders` is still one row per order | Implementation - migrate to one shipment per seller and update fulfillment APIs/UIs |
 | 2 | Production media storage acceptance | External - S3-compatible credentials |
-| 3 | Live RabbitMQ and Redis fault acceptance (DLQ, broker restart, failover, cross-instance rate limiting) | Runtime acceptance - Docker Engine and broker ports are currently unavailable |
+| 3 | ~~Live RabbitMQ and Redis fault acceptance~~ done 2026-09-28 on single nodes. Remaining: multi-node RabbitMQ and Redis failover/partition acceptance, TLS/ACL/credentials, and running the classic-to-quorum procedure on a real legacy broker if one exists | External - needs a production-like cluster |
 | 4 | Cutover comparison tooling is implemented; representative rebuild/comparison evidence is still required before reads move to Kafka | Runtime acceptance |
 | 4 | Production cluster topology, TLS/SASL/ACLs, DR | External - no cluster provided |
 | 5 | Deployment target undecided; HTTP RED metrics now cover all services and starter alert rules exist, but domain backlog metrics, tracing, collector/Alertmanager, dashboards, and live alert delivery remain | Decision, implementation, and runtime acceptance |
@@ -56,6 +60,60 @@ Midtrans sandbox, and Phase 6 acceptance remain open.
 | 6 | Everything - full-stack E2E, Midtrans sandbox, SMTP, load/soak/DR, legal approval | External |
 
 Nothing above is marked complete on the strength of a passing build.
+
+### 2026-09-28 continuation - Phase 3 completion pass (Redis/RabbitMQ reliability)
+
+Corrections to earlier entries, verified against the code and live brokers rather than this tracker:
+
+- `OrderCreated` finalization through the outbox (recorded 2026-09-27) is confirmed in code and
+  now proven over a live broker outage. The 2026-09-24 note that it "intentionally remains a
+  confirmed fail-closed checkout-saga publish" is superseded.
+- The 2026-09-25 inbox claimed exactly-once under real concurrency. That held for first
+  deliveries, but **a previously FAILED event could be applied twice by two racing redeliveries**,
+  and failure bookkeeping could downgrade a PROCESSED row. Both are fixed; a live test reproduces
+  the old defect and passes on the new port.
+- "Malformed/exhausted messages go to DLQ" was only half true: malformed messages spent the full
+  retry budget first. They are now dead-lettered on first delivery.
+- Analytics, Notification, and Product consumers never re-attached after a broker restart. They
+  now use a shared reconnecting consumer, proven across a live restart.
+
+Implemented:
+
+- Shared `createPrismaInboxPort`, `NonRetryableEventError`, guarded nack, `createResilientConsumer`,
+  reliability metrics (consumer/inbox/outbox counters, outbox and email backlog with oldest age,
+  dependency readiness), and a topology spec used by both declaration and the read-only audit.
+- Order: inbox-guarded payment and shipping consumers, monotonic `OrderDelivered`, idempotent
+  checkout replay per quote, stalled-checkout recovery sweep with a finalize-vs-recover row claim,
+  and `OrderCancelled.checkoutFinalized=false` for compensated checkouts (Analytics' RabbitMQ and
+  Kafka projections no longer count them). Migration `20260928140000_add_order_inbox`.
+- Shipping: all seller labels and the inbox marker in one transaction. Migrations
+  `20260928160000_add_shipping_inbox` and `20260928161000_align_shipping_rates_updated_at`
+  (removes pre-existing fresh-deploy drift).
+- Product: no fabricated 0/0 rating on lookup failure.
+- API Gateway: validated `TRUST_PROXY`, `rate-limit:` key namespace, explicit Redis connect,
+  readiness, limiter error counter, shared 503 handler.
+- `npm run rabbitmq:topology -- audit|move` (never deletes), a documented and live-proven
+  classic-to-quorum procedure, and production RabbitMQ/Redis templates without secrets.
+- Live suites: `npm run test:live` (common RabbitMQ, Order PostgreSQL+RabbitMQ, gateway Redis).
+
+Evidence (disposable Docker containers, all removed afterwards):
+
+| Check | Result |
+|---|---|
+| Prisma validate / `migrate deploy` from empty / `migrate status` / drift diff, all 11 schemas (39 migrations) | pass / pass / up to date / no difference |
+| Live RabbitMQ (quorum topology, audit, classic refusal, migration, persistent id, poison DLQ, retry budget + single DLQ copy, failed forward requeue, crash-before-ack, broker restart backlog, resilient reconnect) | 12/12 |
+| Live Order over PostgreSQL + RabbitMQ (duplicate delivery, crash after commit before ack, backlog after restart, `OrderCreated` through broker outage) | 4/4 |
+| Live Redis (atomic cross-client increments, TTL not extended, expiry, namespaces, two-replica limit, outage 503 + reconnect, restart) | 8/8, no open handles |
+| Order 90/90, Shipping 68/68, Analytics 60/60 (incl. live Kafka), Notification 43/43, Product 40/40, Common 36/36, Payment 31/31, Auth 29/29, Inventory 24/24, Event Stream 21/21, Review 17/17, Voucher 17/17, User 14/14, Gateway 11/11, Cart 6/6 (live Redis) | all pass |
+| Workspace build, typecheck (24), lint | pass; 0 lint errors, 6 pre-existing font warnings |
+
+Phase 3 status: local implementation and single-node runtime acceptance are complete. Production
+HA acceptance is **not** done and cannot be shown on one node. Details:
+`docs/phase-3-reliability.md` ("Phase 3 completion pass").
+
+Estimated local implementation completeness: 86% -> **88%**. Estimated public-production
+readiness: 59% -> **61%** (broker/Redis delivery semantics are now proven live; HA, TLS/ACL,
+monitoring delivery, deployment, and the Phase 2/6 external gates are unchanged).
 
 ### 2026-09-28 continuation - verified shipping-rate administration
 
@@ -727,6 +785,11 @@ Exit criteria:
 ## Immediate Next Step
 
 Next, migrate fulfillment persistence and APIs from one shipment per order to one shipment per seller, then enter real verified seller origins and shipping-rate rows through the implemented admin surfaces. After that, configure and test a real S3-compatible media endpoint/bucket/CDN and run customer/seller/admin browser E2E plus Midtrans and SMTP sandbox acceptance. The physical return-receipt gate is implemented and database-tested locally, but the actual warehouse operating procedure and a real Midtrans refund remain production acceptance items. Redis/RabbitMQ reliability remains Phase 3 and Kafka remains Phase 4.
+
+Update 2026-09-28: Phase 3 local implementation and single-node runtime acceptance are complete.
+The next Phase 3 step is production HA acceptance on a real 3-node RabbitMQ cluster and a Redis
+deployment with failover (node loss during publish/consume, partitions, TLS/ACL credentials), plus
+running `npm run rabbitmq:topology -- audit` against the target broker.
 
 Admin notifications continuation (2026-09-24): pagination reads backend `total` metadata and displays the current range; category filters are sent to Notification Service and applied before pagination instead of filtering only the loaded page. The endpoint validates bounded, non-empty type filters and OpenAPI documents the query parameter. A repository unit test verifies the filter applies to both row selection and filtered total while unread count remains global. Admin also exposes the existing batch mark-all-read endpoint and refreshes its list on success. Notification Service tests pass 20/20 with `--forceExit`, service TypeScript build passes, Admin Dashboard production build passes, and focused ESLint passes. Route tests still tolerate unavailable PostgreSQL, and Jest reports an existing open handle, so persisted runtime query remains unverified.
 

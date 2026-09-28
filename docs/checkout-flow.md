@@ -46,6 +46,12 @@ Order Service coordinates a SAGA-like transaction:
 1. **Client Request:** `POST /orders/checkout` with `shippingAddressId`, `shippingQuoteId`, and
    optionally `voucherCode` and `notes`. The schema is strict: a request carrying `shippingCost`,
    `courierName`, or `courierService` is rejected with `400`, not silently accepted.
+   **Idempotent replay:** before any saga step, Order Service looks up an order already created
+   from this `shippingQuoteId` for this customer. A finalized order is returned again (with the
+   existing payment invoice — payment creation is idempotent per order id) and no second saga
+   starts; an order still between insert and finalization answers `409`; a compensated
+   (cancelled) one answers `409` asking for a new quote. Another customer's quote falls through
+   to the normal quote refusal.
 2. **Fetch Active Cart:** Cart Service (`GET /cart/internal/cart/:userId`). An empty cart terminates
    with `400` before anything else happens.
 3. **Fetch Product Metadata:** Product Service (`POST /internal/products/batch`) for prices, weights,
@@ -81,6 +87,23 @@ Order Service coordinates a SAGA-like transaction:
     best-effort; it cannot roll back a finalized checkout. The request returns the order and payment
     details without waiting for RabbitMQ. The outbox dispatcher publishes later with confirms and
     retry, so a broker outage cannot lose the fact or fail an otherwise completed checkout.
+
+### Saga boundary
+
+| Stage | Transaction | On failure |
+|---|---|---|
+| Quote consume | Shipping Service, bound to the generated order id | Nothing to undo; the customer requests a new quote |
+| Order insert | Order DB, own transaction (`checkout_finalized_at IS NULL`) | Checkout stops |
+| Inventory, voucher, payment | Each in its owning service | Compensation below; the order is cancelled with `checkoutFinalized: false` |
+| **Finalization** | Order DB: finalized marker + history + `OrderCreated` outbox row | Conditional on `PENDING_PAYMENT` and not yet finalized; a lost race returns 409 and publishes nothing |
+| Publication | Outbox dispatcher, confirms, retry with backoff | Row stays PENDING; broker outage delays, never loses |
+
+**Interrupted sagas.** If the process dies after the order insert but before finalization, the
+Order Service recovery sweep (every 5 minutes) cancels unfinalized `PENDING_PAYMENT` orders older
+than `CHECKOUT_FINALIZATION_TIMEOUT_MS` (default 15 minutes). The cancellation claims the row only
+while `checkout_finalized_at IS NULL`, so it can never cancel an order that finalized
+concurrently. Its `OrderCancelled` (with `checkoutFinalized: false`) makes Inventory release the
+reservation; the voucher is released by an idempotent call.
 
 ## 3. Sequence Diagram
 
@@ -182,7 +205,11 @@ Because the checkout process spans multiple physical microservices, if any step 
 | **Inventory Reservation fails** | Release any reserved stock for this order; cancel Order database record. | Order Service |
 | **Voucher Application fails** | Call `POST /internal/inventory/release` to revert reserved stock; cancel Order. | Order Service |
 | **Payment Token Generation fails** | Revert reserved stock; release voucher usage; set Order database record status to `CANCELLED`. | Order Service |
-| **Timeout / Connection loss** | SAGA orchestrator tracks the transaction status. An auto-cancellation daemon scans for unpaid orders and automatically triggers stock release and voucher release. | Order Service / Cron Daemon |
+| **Timeout / Connection loss / crash before finalization** | The recovery sweep cancels unfinalized checkouts older than `CHECKOUT_FINALIZATION_TIMEOUT_MS`; `OrderCancelled` releases stock through Inventory's consumer and the voucher is released idempotently. Finalized but unpaid orders are cancelled by the payment-expiry cron. | Order Service |
+| **Finalization loses the race to recovery** | Nothing is published; the request returns 409. The recovery's `OrderCancelled` already released the stock. | Order Service |
+
+Compensating cancellations carry `checkoutFinalized: false`, so Analytics does not count an order
+that was never announced by `OrderCreated`.
 
 ---
 
