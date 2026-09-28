@@ -27,6 +27,25 @@ describe('Analytics Routes (integration)', () => {
     });
   });
 
+  describe('GET /metrics', () => {
+    it('rejects an unauthenticated scraper', async () => {
+      const res = await request(app).get('/metrics');
+      expect(res.status).toBe(403);
+    });
+
+    it('returns Prometheus text to the authenticated scraper identity', async () => {
+      const res = await request(app)
+        .get('/metrics')
+        .set('x-internal-service', 'prometheus')
+        .set('x-internal-token', 'development-only-internal-token');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toContain('text/plain');
+      expect(res.text).toContain('# TYPE nexacommerce_http_requests_total counter');
+      expect(res.text).toContain('# TYPE nexacommerce_analytics_kafka_projection_connected gauge');
+    });
+  });
+
   describe('GET /analytics/dashboard', () => {
     it('returns 403 for non-ADMIN', async () => {
       const res = await request(app)
@@ -72,6 +91,24 @@ describe('Analytics Routes (integration)', () => {
         .get('/analytics/products/top-selling')
         .set(adminHeaders);
       expect([200, 500]).toContain(res.status);
+    });
+  });
+
+  describe('GET /analytics/projections/daily/comparison', () => {
+    it('rejects non-admin callers before querying projection data', async () => {
+      const res = await request(app)
+        .get('/analytics/projections/daily/comparison')
+        .set(sellerHeaders);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects invalid calendar dates', async () => {
+      const res = await request(app)
+        .get('/analytics/projections/daily/comparison?startDate=2026-02-30')
+        .set(adminHeaders);
+
+      expect(res.status).toBe(400);
     });
   });
 });

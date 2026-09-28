@@ -14,6 +14,7 @@ jest.mock('../../src/prisma/client', () => ({ prisma: mockPrisma }));
 import {
   claimOrderOutboxBatch,
   enqueueOrderCompleted,
+  enqueueOrderCreated,
   markOrderOutboxPublished,
   releaseOrderOutboxClaim,
   rescheduleOrderOutbox,
@@ -45,6 +46,37 @@ describe('order outbox', () => {
       eventPayload: expect.objectContaining({ eventName: 'OrderCompleted' }),
     }));
     expect(data.id).toBe(data.eventPayload.eventId);
+  });
+
+  it('uses one deterministic outbox identity for OrderCreated finalization', async () => {
+    const tx = { outboxEvent: mockOutboxEvent } as any;
+    const payload = {
+      orderId: 'order-1',
+      customerId: 'customer-1',
+      items: [{ productId: 'product-1', quantity: 2, price: 50000 }],
+      subtotal: 100000,
+      discount: 0,
+      shippingCost: 15000,
+      grandTotal: 115000,
+      voucherId: null,
+      shippingAddressId: 'address-1',
+    };
+
+    await enqueueOrderCreated(tx, payload);
+
+    const data = mockOutboxEvent.create.mock.calls[0][0].data;
+    expect(data).toEqual(expect.objectContaining({
+      id: 'order-created:order-1',
+      aggregateType: 'Order',
+      aggregateId: 'order-1',
+      eventName: 'OrderCreated',
+      routingKey: 'order.created',
+      eventPayload: expect.objectContaining({
+        eventId: 'order-created:order-1',
+        eventName: 'OrderCreated',
+        payload,
+      }),
+    }));
   });
 
   it('returns only rows owned by this worker lock token', async () => {

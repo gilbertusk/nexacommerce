@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import type { Channel, ChannelModel } from 'amqplib';
 import {
   connectRabbitMQ,
@@ -6,7 +5,7 @@ import {
   createPublisher,
   setupExchangeAndQueues,
 } from '@nexacommerce/common';
-import { EXCHANGE_NAME, type OrderCreated, QUEUES } from '@nexacommerce/event-contracts';
+import { EXCHANGE_NAME, QUEUES } from '@nexacommerce/event-contracts';
 import { createLogger } from '@nexacommerce/logger';
 import { config } from '../config';
 import { orderService } from '../services/order.service';
@@ -47,7 +46,9 @@ async function setupConsumers(consumerChannel: Channel): Promise<void> {
 
   await createConsumer(consumerChannel, QUEUES.ORDER_SHIPPING_EVENTS, async (event: any) => {
     logger.info(`[RabbitMQ] Handling shipping event: ${event.eventName}`);
-    if (event.eventName === 'OrderDelivered') {
+    if (event.eventName === 'OrderShipped') {
+      await orderService.handleOrderShipped(event.payload.orderId);
+    } else if (event.eventName === 'OrderDelivered') {
       await orderService.handleOrderDelivered(event.payload.orderId);
     }
   });
@@ -89,19 +90,6 @@ async function ensureMessaging(): Promise<void> {
   });
 
   return connectPromise;
-}
-
-// Checkout remains fail-closed and its multi-service saga needs a separate
-// finalization design before OrderCreated can be transactionally enqueued.
-export async function publishOrderCreated(payload: OrderCreated['payload']): Promise<void> {
-  const event: OrderCreated = {
-    eventId: crypto.randomUUID(),
-    eventName: 'OrderCreated',
-    timestamp: new Date().toISOString(),
-    payload,
-  };
-  await ensureMessaging();
-  await publishEvent!('order.created', event);
 }
 
 export async function dispatchOrderOutboxOnce(): Promise<number> {

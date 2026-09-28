@@ -11,8 +11,12 @@ import {
 import { config } from '../config';
 import crypto from 'crypto';
 import { Prisma } from '../generated/client';
-import { publishOrderCreated } from '../messaging/rabbitmq';
-import { enqueueOrderCancelled, enqueueOrderCompleted, enqueueOrderPaid } from '../messaging/outbox';
+import {
+  enqueueOrderCancelled,
+  enqueueOrderCompleted,
+  enqueueOrderPaid,
+} from '../messaging/outbox';
+import { finalizeCheckoutWithOrderCreated } from './checkout-finalization';
 
 export class OrderService {
   private async makeRequest(serviceUrl: string, path: string, method: string, body?: any) {
@@ -327,19 +331,19 @@ export class OrderService {
       throw new ValidationError(`Payment invoice creation failed: ${err.message}`);
     }
 
-    // 12. Clear Cart
-    await this.makeRequest(config.cartServiceUrl, `/cart/internal/cart/${userId}`, 'DELETE').catch((e) =>
-      console.error(`Clearing cart failed: ${e.message}`)
-    );
-
-    // 13. Publish OrderCreated event
+    // 12. Finalize the checkout saga and durably enqueue OrderCreated.
+    //
+    // No broker call belongs on this request path. Once inventory, voucher,
+    // and payment setup have succeeded, the finalization marker and event are
+    // committed atomically. RabbitMQ can be offline; the dispatcher retries
+    // the durable event later without losing a completed checkout.
     const eventItems = order.items.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
       price: Number(item.productPrice),
     }));
 
-    await publishOrderCreated({
+    await finalizeCheckoutWithOrderCreated({
       orderId: order.id,
       customerId: order.customerId,
       items: eventItems,
@@ -350,6 +354,12 @@ export class OrderService {
       voucherId: order.voucherId,
       shippingAddressId: order.shippingAddressId,
     });
+
+    // 13. Clear the cart only after finalization is durable. Cart cleanup is
+    // best effort and must not roll back a completed checkout.
+    await this.makeRequest(config.cartServiceUrl, `/cart/internal/cart/${userId}`, 'DELETE').catch((e) =>
+      console.error(`Clearing cart failed: ${e.message}`)
+    );
 
     return {
       order,
@@ -407,6 +417,10 @@ export class OrderService {
       if (!hasSellerItem) {
         throw new ForbiddenError('Access denied: You do not own any items in this order');
       }
+      return {
+        ...order,
+        items: order.items.filter((item) => item.sellerId === actor.userId),
+      };
     }
 
     return order;
@@ -437,8 +451,15 @@ export class OrderService {
       dateTo: query.dateTo,
     });
 
+    const visibleItems = actor.role === 'SELLER'
+      ? items.map((order) => ({
+        ...order,
+        items: order.items.filter((item) => item.sellerId === actor.userId),
+      }))
+      : items;
+
     return {
-      orders: items,
+      orders: visibleItems,
       total,
       page: query.page,
       limit: query.limit,
@@ -630,10 +651,6 @@ export class OrderService {
   async updateOrderStatus(id: string, actor: { userId: string; role: string }, toStatus: string, note?: string) {
     const order = await this.getOrderById(id, actor);
 
-    if (actor.role === 'SELLER' && order.items.some((item) => item.sellerId !== actor.userId)) {
-      throw new ForbiddenError('Seller cannot update a multi-seller order');
-    }
-
     const allowedNextStatuses: Record<string, string[]> = {
       PAID: ['PROCESSING'],
       PROCESSING: ['PACKED', 'SHIPPED'],
@@ -649,11 +666,12 @@ export class OrderService {
         `/shipping/internal/shipping/${encodeURIComponent(id)}`,
         'GET',
       );
-      if (!shipment?.trackingNumber) {
+      const shipments = Array.isArray(shipment?.shipments) ? shipment.shipments : [shipment];
+      if (shipments.length === 0 || shipments.some((entry: any) => !entry?.trackingNumber)) {
         throw new ValidationError('Order cannot be marked shipped without a registered tracking number');
       }
-      if (!['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
-        throw new ValidationError('Shipment must be handed to the courier before the order can be marked shipped');
+      if (shipments.some((entry: any) => !['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'].includes(entry.status))) {
+        throw new ValidationError('Every seller shipment must be handed to the courier before the order can be marked shipped');
       }
     }
 
@@ -712,6 +730,34 @@ export class OrderService {
     });
 
     return updated;
+  }
+
+  async handleOrderShipped(orderId: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found');
+    if (['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(order.status)) return order;
+    if (!['PAID', 'PROCESSING', 'PACKED'].includes(order.status)) {
+      throw new ValidationError(`Order cannot be marked shipped from status: ${order.status}`);
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: { in: ['PAID', 'PROCESSING', 'PACKED'] } },
+        data: { status: 'SHIPPED' },
+      });
+      if (claimed.count !== 1) return tx.order.findUniqueOrThrow({ where: { id: orderId } });
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: order.status,
+          toStatus: 'SHIPPED',
+          note: 'All seller shipments handed to couriers',
+          changedBy: 'SYSTEM',
+        },
+      });
+      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
+    });
   }
 
   async handleOrderCompleted(orderId: string, actor: string = 'SYSTEM') {
@@ -878,12 +924,56 @@ export class OrderService {
     return orderRepository.findById(orderId);
   }
 
+  async confirmReturnReceipt(orderId: string, adminId: string, note?: string) {
+    const order = await orderRepository.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found');
+
+    // A retry after a successful confirmation is safe and does not duplicate
+    // the audit entry. Later refund states retain the immutable receipt data.
+    if (order.returnReceivedAt) return order;
+    if (order.status !== 'RETURN_APPROVED') {
+      throw new ValidationError(
+        `Physical return receipt requires RETURN_APPROVED order. Current status: ${order.status}`,
+      );
+    }
+
+    const receivedAt = new Date();
+    const receiptNote = note?.trim() || 'Physical return received and verified by admin';
+
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.order.updateMany({
+        where: { id: orderId, status: 'RETURN_APPROVED', returnReceivedAt: null },
+        data: {
+          status: 'RETURN_RECEIVED',
+          returnReceivedAt: receivedAt,
+          returnReceivedBy: adminId,
+          returnReceiptNote: receiptNote,
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictError('Physical return receipt was already confirmed or the order changed');
+      }
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: 'RETURN_APPROVED',
+          toStatus: 'RETURN_RECEIVED',
+          note: receiptNote,
+          changedBy: adminId,
+        },
+      });
+    });
+
+    return orderRepository.findById(orderId);
+  }
+
   async markRefundCompleted(orderId: string) {
     const order = await orderRepository.findById(orderId);
     if (!order) throw new NotFoundError('Order not found');
     if (order.status === 'REFUNDED') return order;
-    if (!['RETURN_APPROVED', 'PARTIALLY_REFUNDED'].includes(order.status)) {
-      throw new ValidationError(`Refund completion requires an approved return. Current status: ${order.status}`);
+    if (!['RETURN_RECEIVED', 'PARTIALLY_REFUNDED'].includes(order.status) || !order.returnReceivedAt) {
+      throw new ValidationError(`Refund completion requires a physically received return. Current status: ${order.status}`);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -906,8 +996,8 @@ export class OrderService {
     const order = await orderRepository.findById(orderId);
     if (!order) throw new NotFoundError('Order not found');
     if (order.status === 'PARTIALLY_REFUNDED') return order;
-    if (order.status !== 'RETURN_APPROVED') {
-      throw new ValidationError(`Partial refund requires RETURN_APPROVED order. Current status: ${order.status}`);
+    if (order.status !== 'RETURN_RECEIVED' || !order.returnReceivedAt) {
+      throw new ValidationError(`Partial refund requires a physically received return. Current status: ${order.status}`);
     }
 
     await prisma.$transaction(async (tx) => {

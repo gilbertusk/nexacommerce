@@ -14,6 +14,8 @@ model Courier {
   code      String          @unique
   services  Json // Array of service options: [{ code: "REG", name: "Regular", estimatedDays: "2-3" }]
   isActive  Boolean         @default(true) @map("is_active")
+  createdBy String?         @map("created_by")
+  updatedBy String?         @map("updated_by")
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")
   rates     ShippingRate[]
@@ -32,14 +34,22 @@ model ShippingRate {
   weight          Int // weight in grams
   cost            Decimal  @db.Decimal(12, 2)
   estimatedDays   String   @map("estimated_days")
+  createdBy       String?  @map("created_by")
+  updatedBy       String?  @map("updated_by")
   createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
+  @@unique([courierId, originCity, destinationCity, serviceCode, weight], map: "shipping_rates_route_service_weight_key")
+  @@index([originCity, destinationCity])
   @@map("shipping_rates")
 }
 
 model ShippingOrder {
   id                 String                  @id @default(uuid())
-  orderId            String                  @unique @map("order_id")
+  orderId            String                  @map("order_id")
+  /// Seller whose parcel this row represents. Nullable only for rows created
+  /// before split-shipment support; all new writes require it.
+  sellerId           String?                 @map("seller_id")
   courierId          String                  @map("courier_id")
   courier            Courier                 @relation(fields: [courierId], references: [id])
   courierName        String                  @map("courier_name")
@@ -59,6 +69,9 @@ model ShippingOrder {
   updatedAt          DateTime                @updatedAt @map("updated_at")
   history            ShippingStatusHistory[]
 
+  @@unique([orderId, sellerId], map: "shipping_orders_order_id_seller_id_key")
+  @@index([orderId])
+  @@index([sellerId])
   @@map("shipping_orders")
 }
 

@@ -21,8 +21,8 @@ export class PaymentService {
     const body = await response.json() as { data?: any };
     const order = body?.data;
     if (!order || order.customerId !== customerId) throw new ValidationError('Order and payment customer do not match');
-    if (!['RETURN_APPROVED', 'PARTIALLY_REFUNDED'].includes(order.status)) {
-      throw new ValidationError('Refunds may only be issued for an approved return');
+    if (!['RETURN_RECEIVED', 'PARTIALLY_REFUNDED'].includes(order.status) || !order.returnReceivedAt) {
+      throw new ValidationError('Refunds may only be issued after the physical return is received');
     }
     return order;
   }

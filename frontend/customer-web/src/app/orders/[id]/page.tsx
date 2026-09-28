@@ -213,7 +213,10 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <p role="status" className="bg-amber-50 border border-amber-200 text-amber-900 p-4 rounded-sm text-sm">Permintaan retur Anda sedang ditinjau.</p>
           )}
           {order.status.toUpperCase() === "RETURN_APPROVED" && (
-            <p role="status" className="bg-violet-50 border border-violet-200 text-violet-900 p-4 rounded-sm text-sm">Retur disetujui. Pengembalian dana masih menunggu pemrosesan provider pembayaran.</p>
+            <p role="status" className="bg-violet-50 border border-violet-200 text-violet-900 p-4 rounded-sm text-sm">Retur disetujui. Kirimkan barang sesuai instruksi retur; refund baru dapat diajukan setelah admin mengonfirmasi barang sudah diterima.</p>
+          )}
+          {order.status.toUpperCase() === "RETURN_RECEIVED" && (
+            <p role="status" className="bg-teal-50 border border-teal-200 text-teal-900 p-4 rounded-sm text-sm">Barang retur sudah diterima dan diverifikasi. Pengembalian dana menunggu pemrosesan provider pembayaran.</p>
           )}
           <OrderComplaintPanel orderId={id} orderStatus={order.status} />
           {/* Items card */}
@@ -266,33 +269,37 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
               </div>
             )}
 
-            {/* Courier info */}
-            {order.shippingInfo && (
-              <div className="bg-surface border border-hairline p-6 rounded-sm">
+            {/* One tracking card per seller shipment. */}
+            {order.shipments && order.shipments.length > 0 && (
+              <div className="bg-surface border border-hairline p-6 rounded-sm flex flex-col gap-4">
                 <h3 className="text-xs uppercase font-bold tracking-widest text-ink-primary mb-4 pb-2 border-b border-hairline">
-                  Informasi Kurir
+                  Informasi Pengiriman ({order.shipments.length} Paket)
                 </h3>
-                <div className="text-xs text-ink-primary">
-                  <p className="font-semibold">
-                    {order.shippingInfo.courier}
-                    {order.shippingInfo.service ? ` — ${order.shippingInfo.service}` : ""}
-                  </p>
-                  {order.shippingInfo.etd && (
-                    <p className="text-ink-secondary mt-0.5">Estimasi Tiba: {order.shippingInfo.etd}</p>
-                  )}
-                  {order.shippingInfo.trackingNumber ? (
-                    <div className="mt-4 pt-3 border-t border-hairline flex justify-between items-center">
-                      <span className="text-[10px] text-ink-secondary uppercase">Nomor Resi</span>
-                      <span className="font-mono text-xs font-bold text-primary select-all">
-                        {order.shippingInfo.trackingNumber}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-[10px] text-ink-secondary/70 italic mt-4">
-                      Nomor resi pengiriman akan terbit setelah pembayaran dikonfirmasi.
+                {order.shipments.map((shipment, index) => (
+                  <div key={shipment.sellerId ?? `${shipment.courier}-${index}`} className="text-xs text-ink-primary border-b border-hairline last:border-b-0 pb-4 last:pb-0">
+                    <p className="font-semibold">{shipment.storeName ?? `Paket ${index + 1}`}</p>
+                    <p className="mt-1">
+                      {shipment.courier}{shipment.service ? ` — ${shipment.service}` : ""}
                     </p>
-                  )}
-                </div>
+                    {(shipment.originCity || shipment.originProvince) && (
+                      <p className="text-ink-secondary mt-0.5">
+                        Dikirim dari {[shipment.originCity, shipment.originProvince].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                    {shipment.etd && <p className="text-ink-secondary mt-0.5">Estimasi: {shipment.etd}</p>}
+                    {shipment.status && <p className="text-ink-secondary mt-0.5">Status: {shipment.status}</p>}
+                    {shipment.trackingNumber ? (
+                      <div className="mt-3 pt-3 border-t border-hairline flex justify-between items-center gap-3">
+                        <span className="text-[10px] text-ink-secondary uppercase">Nomor Resi</span>
+                        <span className="font-mono text-xs font-bold text-primary select-all">{shipment.trackingNumber}</span>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-ink-secondary/70 italic mt-3">
+                        Nomor resi paket ini belum tersedia.
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

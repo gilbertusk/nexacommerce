@@ -1282,7 +1282,11 @@ export namespace Prisma {
     paidAt: Date | null
     cancelledAt: Date | null
     completedAt: Date | null
+    returnReceivedAt: Date | null
+    returnReceivedBy: string | null
+    returnReceiptNote: string | null
     expiresAt: Date | null
+    checkoutFinalizedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1308,7 +1312,11 @@ export namespace Prisma {
     paidAt: Date | null
     cancelledAt: Date | null
     completedAt: Date | null
+    returnReceivedAt: Date | null
+    returnReceivedBy: string | null
+    returnReceiptNote: string | null
     expiresAt: Date | null
+    checkoutFinalizedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -1336,7 +1344,11 @@ export namespace Prisma {
     paidAt: number
     cancelledAt: number
     completedAt: number
+    returnReceivedAt: number
+    returnReceivedBy: number
+    returnReceiptNote: number
     expiresAt: number
+    checkoutFinalizedAt: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -1378,7 +1390,11 @@ export namespace Prisma {
     paidAt?: true
     cancelledAt?: true
     completedAt?: true
+    returnReceivedAt?: true
+    returnReceivedBy?: true
+    returnReceiptNote?: true
     expiresAt?: true
+    checkoutFinalizedAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1404,7 +1420,11 @@ export namespace Prisma {
     paidAt?: true
     cancelledAt?: true
     completedAt?: true
+    returnReceivedAt?: true
+    returnReceivedBy?: true
+    returnReceiptNote?: true
     expiresAt?: true
+    checkoutFinalizedAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -1432,7 +1452,11 @@ export namespace Prisma {
     paidAt?: true
     cancelledAt?: true
     completedAt?: true
+    returnReceivedAt?: true
+    returnReceivedBy?: true
+    returnReceiptNote?: true
     expiresAt?: true
+    checkoutFinalizedAt?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -1547,7 +1571,11 @@ export namespace Prisma {
     paidAt: Date | null
     cancelledAt: Date | null
     completedAt: Date | null
+    returnReceivedAt: Date | null
+    returnReceivedBy: string | null
+    returnReceiptNote: string | null
     expiresAt: Date
+    checkoutFinalizedAt: Date | null
     createdAt: Date
     updatedAt: Date
     _count: OrderCountAggregateOutputType | null
@@ -1594,7 +1622,11 @@ export namespace Prisma {
     paidAt?: boolean
     cancelledAt?: boolean
     completedAt?: boolean
+    returnReceivedAt?: boolean
+    returnReceivedBy?: boolean
+    returnReceiptNote?: boolean
     expiresAt?: boolean
+    checkoutFinalizedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     items?: boolean | Order$itemsArgs<ExtArgs>
@@ -1626,7 +1658,11 @@ export namespace Prisma {
     paidAt?: boolean
     cancelledAt?: boolean
     completedAt?: boolean
+    returnReceivedAt?: boolean
+    returnReceivedBy?: boolean
+    returnReceiptNote?: boolean
     expiresAt?: boolean
+    checkoutFinalizedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["order"]>
@@ -1654,7 +1690,11 @@ export namespace Prisma {
     paidAt?: boolean
     cancelledAt?: boolean
     completedAt?: boolean
+    returnReceivedAt?: boolean
+    returnReceivedBy?: boolean
+    returnReceiptNote?: boolean
     expiresAt?: boolean
+    checkoutFinalizedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -1703,7 +1743,16 @@ export namespace Prisma {
       paidAt: Date | null
       cancelledAt: Date | null
       completedAt: Date | null
+      returnReceivedAt: Date | null
+      returnReceivedBy: string | null
+      returnReceiptNote: string | null
       expiresAt: Date
+      /**
+       * Set only when inventory reservation, optional voucher application, and
+       * payment invoice creation have all succeeded. OrderCreated is inserted
+       * into the outbox in the same transaction as this marker.
+       */
+      checkoutFinalizedAt: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["order"]>
@@ -2124,7 +2173,11 @@ export namespace Prisma {
     readonly paidAt: FieldRef<"Order", 'DateTime'>
     readonly cancelledAt: FieldRef<"Order", 'DateTime'>
     readonly completedAt: FieldRef<"Order", 'DateTime'>
+    readonly returnReceivedAt: FieldRef<"Order", 'DateTime'>
+    readonly returnReceivedBy: FieldRef<"Order", 'String'>
+    readonly returnReceiptNote: FieldRef<"Order", 'String'>
     readonly expiresAt: FieldRef<"Order", 'DateTime'>
+    readonly checkoutFinalizedAt: FieldRef<"Order", 'DateTime'>
     readonly createdAt: FieldRef<"Order", 'DateTime'>
     readonly updatedAt: FieldRef<"Order", 'DateTime'>
   }
@@ -6593,7 +6646,11 @@ export namespace Prisma {
     paidAt: 'paidAt',
     cancelledAt: 'cancelledAt',
     completedAt: 'completedAt',
+    returnReceivedAt: 'returnReceivedAt',
+    returnReceivedBy: 'returnReceivedBy',
+    returnReceiptNote: 'returnReceiptNote',
     expiresAt: 'expiresAt',
+    checkoutFinalizedAt: 'checkoutFinalizedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -6828,7 +6885,11 @@ export namespace Prisma {
     paidAt?: DateTimeNullableFilter<"Order"> | Date | string | null
     cancelledAt?: DateTimeNullableFilter<"Order"> | Date | string | null
     completedAt?: DateTimeNullableFilter<"Order"> | Date | string | null
+    returnReceivedAt?: DateTimeNullableFilter<"Order"> | Date | string | null
+    returnReceivedBy?: StringNullableFilter<"Order"> | string | null
+    returnReceiptNote?: StringNullableFilter<"Order"> | string | null
     expiresAt?: DateTimeFilter<"Order"> | Date | string
+    checkoutFinalizedAt?: DateTimeNullableFilter<"Order"> | Date | string | null
     createdAt?: DateTimeFilter<"Order"> | Date | string
     updatedAt?: DateTimeFilter<"Order"> | Date | string
     items?: OrderItemListRelationFilter
@@ -6859,7 +6920,11 @@ export namespace Prisma {
     paidAt?: SortOrderInput | SortOrder
     cancelledAt?: SortOrderInput | SortOrder
     completedAt?: SortOrderInput | SortOrder
+    returnReceivedAt?: SortOrderInput | SortOrder
+    returnReceivedBy?: SortOrderInput | SortOrder
+    returnReceiptNote?: SortOrderInput | SortOrder
     expiresAt?: SortOrder
+    checkoutFinalizedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     items?: OrderItemOrderByRelationAggregateInput
@@ -6893,7 +6958,11 @@ export namespace Prisma {
     paidAt?: DateTimeNullableFilter<"Order"> | Date | string | null
     cancelledAt?: DateTimeNullableFilter<"Order"> | Date | string | null
     completedAt?: DateTimeNullableFilter<"Order"> | Date | string | null
+    returnReceivedAt?: DateTimeNullableFilter<"Order"> | Date | string | null
+    returnReceivedBy?: StringNullableFilter<"Order"> | string | null
+    returnReceiptNote?: StringNullableFilter<"Order"> | string | null
     expiresAt?: DateTimeFilter<"Order"> | Date | string
+    checkoutFinalizedAt?: DateTimeNullableFilter<"Order"> | Date | string | null
     createdAt?: DateTimeFilter<"Order"> | Date | string
     updatedAt?: DateTimeFilter<"Order"> | Date | string
     items?: OrderItemListRelationFilter
@@ -6924,7 +6993,11 @@ export namespace Prisma {
     paidAt?: SortOrderInput | SortOrder
     cancelledAt?: SortOrderInput | SortOrder
     completedAt?: SortOrderInput | SortOrder
+    returnReceivedAt?: SortOrderInput | SortOrder
+    returnReceivedBy?: SortOrderInput | SortOrder
+    returnReceiptNote?: SortOrderInput | SortOrder
     expiresAt?: SortOrder
+    checkoutFinalizedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: OrderCountOrderByAggregateInput
@@ -6960,7 +7033,11 @@ export namespace Prisma {
     paidAt?: DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
     cancelledAt?: DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
     completedAt?: DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
+    returnReceivedAt?: DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
+    returnReceivedBy?: StringNullableWithAggregatesFilter<"Order"> | string | null
+    returnReceiptNote?: StringNullableWithAggregatesFilter<"Order"> | string | null
     expiresAt?: DateTimeWithAggregatesFilter<"Order"> | Date | string
+    checkoutFinalizedAt?: DateTimeNullableWithAggregatesFilter<"Order"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Order"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Order"> | Date | string
   }
@@ -7330,7 +7407,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: OrderItemCreateNestedManyWithoutOrderInput
@@ -7361,7 +7442,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: OrderItemUncheckedCreateNestedManyWithoutOrderInput
@@ -7392,7 +7477,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUpdateManyWithoutOrderNestedInput
@@ -7423,7 +7512,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUncheckedUpdateManyWithoutOrderNestedInput
@@ -7454,7 +7547,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -7482,7 +7579,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -7510,7 +7611,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -8069,7 +8174,11 @@ export namespace Prisma {
     paidAt?: SortOrder
     cancelledAt?: SortOrder
     completedAt?: SortOrder
+    returnReceivedAt?: SortOrder
+    returnReceivedBy?: SortOrder
+    returnReceiptNote?: SortOrder
     expiresAt?: SortOrder
+    checkoutFinalizedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8102,7 +8211,11 @@ export namespace Prisma {
     paidAt?: SortOrder
     cancelledAt?: SortOrder
     completedAt?: SortOrder
+    returnReceivedAt?: SortOrder
+    returnReceivedBy?: SortOrder
+    returnReceiptNote?: SortOrder
     expiresAt?: SortOrder
+    checkoutFinalizedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8128,7 +8241,11 @@ export namespace Prisma {
     paidAt?: SortOrder
     cancelledAt?: SortOrder
     completedAt?: SortOrder
+    returnReceivedAt?: SortOrder
+    returnReceivedBy?: SortOrder
+    returnReceiptNote?: SortOrder
     expiresAt?: SortOrder
+    checkoutFinalizedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -9145,7 +9262,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     statusHistory?: OrderStatusHistoryCreateNestedManyWithoutOrderInput
@@ -9175,7 +9296,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     statusHistory?: OrderStatusHistoryUncheckedCreateNestedManyWithoutOrderInput
@@ -9221,7 +9346,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     statusHistory?: OrderStatusHistoryUpdateManyWithoutOrderNestedInput
@@ -9251,7 +9380,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     statusHistory?: OrderStatusHistoryUncheckedUpdateManyWithoutOrderNestedInput
@@ -9281,7 +9414,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: OrderItemCreateNestedManyWithoutOrderInput
@@ -9311,7 +9448,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: OrderItemUncheckedCreateNestedManyWithoutOrderInput
@@ -9357,7 +9498,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUpdateManyWithoutOrderNestedInput
@@ -9387,7 +9532,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUncheckedUpdateManyWithoutOrderNestedInput
@@ -9417,7 +9566,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: OrderItemCreateNestedManyWithoutOrderInput
@@ -9447,7 +9600,11 @@ export namespace Prisma {
     paidAt?: Date | string | null
     cancelledAt?: Date | string | null
     completedAt?: Date | string | null
+    returnReceivedAt?: Date | string | null
+    returnReceivedBy?: string | null
+    returnReceiptNote?: string | null
     expiresAt: Date | string
+    checkoutFinalizedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: OrderItemUncheckedCreateNestedManyWithoutOrderInput
@@ -9493,7 +9650,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUpdateManyWithoutOrderNestedInput
@@ -9523,7 +9684,11 @@ export namespace Prisma {
     paidAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     cancelledAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    returnReceivedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    returnReceiptNote?: NullableStringFieldUpdateOperationsInput | string | null
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    checkoutFinalizedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: OrderItemUncheckedUpdateManyWithoutOrderNestedInput

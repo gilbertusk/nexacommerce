@@ -20,6 +20,20 @@ const analyticsEnvSchema = z.object({
   KAFKA_CLIENT_ID: z.string().default('nexacommerce-analytics'),
   KAFKA_TOPIC_PREFIX: z.string().default('nexacommerce'),
   KAFKA_PROJECTION_GROUP_ID: z.string().default('analytics-daily-projection-v1'),
+  ANALYTICS_DAILY_READ_MODEL: z.enum(['RABBITMQ', 'KAFKA']).default('RABBITMQ'),
+  ANALYTICS_KAFKA_CUTOVER_WINDOW_DAYS: z.preprocess(
+    (v) => (v ? parseInt(v as string, 10) : undefined),
+    z.number().int().min(1).max(366).default(30),
+  ),
+  ANALYTICS_RABBITMQ_CONSUMER_ENABLED: z.enum(['true', 'false']).default('true'),
+}).superRefine((value, ctx) => {
+  if (value.ANALYTICS_DAILY_READ_MODEL === 'RABBITMQ' && value.ANALYTICS_RABBITMQ_CONSUMER_ENABLED === 'false') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['ANALYTICS_RABBITMQ_CONSUMER_ENABLED'],
+      message: 'RabbitMQ consumer cannot be disabled while RabbitMQ is the daily read model',
+    });
+  }
 });
 
 const env = validateEnv(analyticsEnvSchema);
@@ -39,6 +53,9 @@ export const config = {
   kafkaClientId: env.KAFKA_CLIENT_ID,
   kafkaTopicPrefix: env.KAFKA_TOPIC_PREFIX,
   kafkaProjectionGroupId: env.KAFKA_PROJECTION_GROUP_ID,
+  dailyReadModel: env.ANALYTICS_DAILY_READ_MODEL,
+  kafkaCutoverWindowDays: env.ANALYTICS_KAFKA_CUTOVER_WINDOW_DAYS,
+  rabbitMqConsumerEnabled: env.ANALYTICS_RABBITMQ_CONSUMER_ENABLED === 'true',
 };
 
 export default config;

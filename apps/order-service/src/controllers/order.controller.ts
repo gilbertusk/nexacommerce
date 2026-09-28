@@ -209,6 +209,22 @@ export class OrderController {
     res.status(200).json(successResponse(order, `Return request ${action}d successfully`));
   };
 
+  confirmReturnReceipt = async (req: Request, res: Response) => {
+    const adminId = req.headers['x-user-id'] as string;
+    if (!adminId) throw new ValidationError('Authentication required: user ID missing');
+
+    const { note } = req.body ?? {};
+    if (note !== undefined && typeof note !== 'string') {
+      throw new ValidationError('note must be a string');
+    }
+    if (typeof note === 'string' && note.trim().length > 1000) {
+      throw new ValidationError('note must not exceed 1000 characters');
+    }
+
+    const order = await orderService.confirmReturnReceipt(req.params.id, adminId, note);
+    res.status(200).json(successResponse(order, 'Physical return receipt confirmed successfully'));
+  };
+
   createComplaint = async (req: Request, res: Response) => {
     const customerId = req.headers['x-user-id'] as string;
     if (!customerId) throw new ValidationError('Authentication required: user ID missing');

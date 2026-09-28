@@ -27,6 +27,18 @@ function stubResponse(status: number, body: unknown) {
   );
 }
 
+async function captureApiError(request: Promise<unknown>): Promise<ApiError> {
+  try {
+    await request;
+  } catch (error: unknown) {
+    expect(error).toBeInstanceOf(ApiError);
+    if (error instanceof ApiError) return error;
+    throw error;
+  }
+
+  throw new Error("Expected API request to fail");
+}
+
 describe("api client error handling", () => {
   it("preserves the reason and details from a refused request", async () => {
     // Arrange: the shape Shipping Service returns when it fails a quote closed.
@@ -38,10 +50,9 @@ describe("api client error handling", () => {
     });
 
     // Act
-    const error = await apiPost("/shipping/quotes", {}).catch((err) => err);
+    const error = await captureApiError(apiPost("/shipping/quotes", {}));
 
     // Assert
-    expect(error).toBeInstanceOf(ApiError);
     expect(error.reason).toBe("SELLER_ORIGIN_UNVERIFIED");
     expect(error.status).toBe(422);
     expect(error.details).toEqual({ sellerId: "seller-1", storeName: "Toko API" });
@@ -53,10 +64,9 @@ describe("api client error handling", () => {
     stubResponse(400, { success: false, message: "Shipping quote has expired" });
 
     // Act
-    const error = await apiPost("/orders/checkout", {}).catch((err) => err);
+    const error = await captureApiError(apiPost("/orders/checkout", {}));
 
     // Assert
-    expect(error).toBeInstanceOf(ApiError);
     expect(error.reason).toBeUndefined();
     expect(error.message).toBe("Shipping quote has expired");
   });
@@ -66,7 +76,7 @@ describe("api client error handling", () => {
     stubResponse(500, { success: false });
 
     // Act
-    const error = await apiPost("/orders/checkout", {}).catch((err) => err);
+    const error = await captureApiError(apiPost("/orders/checkout", {}));
 
     // Assert
     expect(error.message).toBe("Terjadi kesalahan pada server.");

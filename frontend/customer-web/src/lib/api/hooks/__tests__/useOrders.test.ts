@@ -42,4 +42,30 @@ describe("normalizeOrder", () => {
       timeline: [{ title: "PENDING_PAYMENT", isActive: true }],
     });
   });
+
+  it("keeps one post-checkout tracking card per seller and merges live labels", () => {
+    const raw: RawOrder = {
+      id: "order-split",
+      status: "PROCESSING",
+      grandTotal: 150000,
+      subtotal: 110000,
+      shippingCost: 40000,
+      discount: 0,
+      items: [],
+      shipmentBreakdown: [
+        { sellerId: "seller-a", storeName: "Toko A", originCity: "Bandung", courierName: "JNE", serviceCode: "REG", cost: 18000 },
+        { sellerId: "seller-b", storeName: "Toko B", originCity: "Bogor", courierName: "SiCepat", serviceCode: "BEST", cost: 22000 },
+      ],
+    };
+
+    const normalized = normalizeOrder(raw, [
+      { sellerId: "seller-a", courierName: "JNE", serviceCode: "REG", serviceName: "Regular", cost: 18000, trackingNumber: "TRACK-A", status: "PICKED_UP" },
+      { sellerId: "seller-b", courierName: "SiCepat", serviceCode: "BEST", serviceName: "Besok Sampai", cost: 22000, trackingNumber: "TRACK-B", status: "WAITING_PICKUP" },
+    ]);
+
+    expect(normalized.shipments).toEqual([
+      expect.objectContaining({ sellerId: "seller-a", storeName: "Toko A", trackingNumber: "TRACK-A", status: "PICKED_UP" }),
+      expect.objectContaining({ sellerId: "seller-b", storeName: "Toko B", trackingNumber: "TRACK-B", status: "WAITING_PICKUP" }),
+    ]);
+  });
 });

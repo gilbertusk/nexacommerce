@@ -42,6 +42,14 @@ router.get('/track/:trackingNumber', asyncHandler(shippingController.trackByTrac
 router.post('/quotes', restrictTo('CUSTOMER'), asyncHandler(shippingController.createQuote));
 router.get('/quotes/:quoteId', restrictTo('CUSTOMER'), asyncHandler(shippingController.getQuote));
 
+// --- ADMIN-managed authoritative courier/rate table ---
+router.get('/admin/couriers', restrictTo('ADMIN'), asyncHandler(shippingController.adminListCouriers));
+router.post('/admin/couriers', restrictTo('ADMIN'), asyncHandler(shippingController.adminCreateCourier));
+router.get('/admin/rates', restrictTo('ADMIN'), asyncHandler(shippingController.adminListRates));
+router.post('/admin/rates', restrictTo('ADMIN'), asyncHandler(shippingController.adminCreateRate));
+router.patch('/admin/rates/:rateId', restrictTo('ADMIN'), asyncHandler(shippingController.adminUpdateRate));
+router.delete('/admin/rates/:rateId', restrictTo('ADMIN'), asyncHandler(shippingController.adminDeleteRate));
+
 // --- Authenticated & Guarded Endpoints ---
 router.get('/seller/orders', restrictTo('SELLER'), asyncHandler(shippingController.getSellerShippingOrders));
 router.get('/admin/orders', restrictTo('ADMIN'), asyncHandler(shippingController.getAdminShippingOrders));

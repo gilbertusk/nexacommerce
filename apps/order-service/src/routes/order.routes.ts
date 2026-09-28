@@ -61,6 +61,7 @@ router.patch('/:id/complete', restrictTo('CUSTOMER'), asyncHandler(orderControll
 router.patch('/:id/status', restrictTo('SELLER', 'ADMIN'), asyncHandler(orderController.updateStatus));
 router.post('/:id/return-request', restrictTo('CUSTOMER'), asyncHandler(orderController.requestReturn));
 router.patch('/:id/return-request', restrictTo('SELLER', 'ADMIN'), asyncHandler(orderController.updateReturnRequest));
+router.post('/:id/return-receipt', restrictTo('ADMIN'), asyncHandler(orderController.confirmReturnReceipt));
 router.post('/:id/complaints', restrictTo('CUSTOMER'), asyncHandler(orderController.createComplaint));
 router.get('/:id/complaints', restrictTo('CUSTOMER'), asyncHandler(orderController.getOrderComplaint));
 

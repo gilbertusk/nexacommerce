@@ -25,6 +25,84 @@ describe('Order Routes (integration)', () => {
       expect(res.status).toBe(200);
       expect(res.body.openapi).toBe('3.0.3');
       expect(res.body.paths['/orders/admin/complaints']).toBeDefined();
+      expect(res.body.paths['/orders/{id}/return-receipt']).toBeDefined();
+    });
+  });
+
+  describe('POST /orders/:id/return-receipt', () => {
+    it('requires an admin role', async () => {
+      const res = await request(app)
+        .post('/orders/order-1/return-receipt')
+        .set(customerHeaders)
+        .send({ note: 'Package received' });
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects a note longer than the audit field allows', async () => {
+      const res = await request(app)
+        .post('/orders/order-1/return-receipt')
+        .set(adminHeaders)
+        .send({ note: 'x'.repeat(1001) });
+      expect(res.status).toBe(400);
+    });
+
+    it('atomically records the admin, timestamp, note, status, and one audit entry', async () => {
+      const orderId = 'return-receipt-integration-order';
+      await prisma.order.deleteMany({ where: { id: orderId } });
+      await prisma.order.create({
+        data: {
+          id: orderId,
+          orderNumber: 'NXC-RETURN-RECEIPT-INTEGRATION',
+          customerId: 'customer-return-test',
+          customerName: 'Return Test',
+          customerEmail: 'return-test@example.com',
+          subtotal: 100000,
+          discount: 0,
+          shippingCost: 10000,
+          grandTotal: 110000,
+          shippingAddressId: 'address-return-test',
+          shippingAddress: { city: 'Bandung' },
+          status: 'RETURN_APPROVED',
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      });
+
+      try {
+        const first = await request(app)
+          .post(`/orders/${orderId}/return-receipt`)
+          .set(adminHeaders)
+          .send({ note: 'Package and contents verified' });
+        expect(first.status).toBe(200);
+        expect(first.body.data).toMatchObject({
+          status: 'RETURN_RECEIVED',
+          returnReceivedBy: 'admin-1',
+          returnReceiptNote: 'Package and contents verified',
+        });
+        expect(first.body.data.returnReceivedAt).toBeTruthy();
+
+        const retry = await request(app)
+          .post(`/orders/${orderId}/return-receipt`)
+          .set(adminHeaders)
+          .send({ note: 'Retry must not overwrite audit data' });
+        expect(retry.status).toBe(200);
+
+        const stored = await prisma.order.findUniqueOrThrow({
+          where: { id: orderId },
+          include: { statusHistory: true },
+        });
+        expect(stored.status).toBe('RETURN_RECEIVED');
+        expect(stored.returnReceivedBy).toBe('admin-1');
+        expect(stored.returnReceiptNote).toBe('Package and contents verified');
+        expect(stored.statusHistory).toHaveLength(1);
+        expect(stored.statusHistory[0]).toMatchObject({
+          fromStatus: 'RETURN_APPROVED',
+          toStatus: 'RETURN_RECEIVED',
+          changedBy: 'admin-1',
+          note: 'Package and contents verified',
+        });
+      } finally {
+        await prisma.order.deleteMany({ where: { id: orderId } });
+      }
     });
   });
 

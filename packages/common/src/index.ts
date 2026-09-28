@@ -8,3 +8,4 @@ export * from './security';
 export * from './inbox';
 export * from './shipping-quote-hash';
 export * from './request-context';
+export * from './http-metrics';

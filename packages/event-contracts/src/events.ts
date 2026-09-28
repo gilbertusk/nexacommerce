@@ -172,6 +172,13 @@ export interface OrderShipped {
     courierName: string;
     serviceName: string;
     estimatedDelivery?: string;
+    /** Present for split orders; legacy scalar fields describe the final parcel that completed handoff. */
+    shipments?: Array<{
+      sellerId: string;
+      trackingNumber: string;
+      courierName: string;
+      serviceName: string;
+    }>;
   };
 }
 

@@ -1,0 +1,64 @@
+groups:
+  - name: nexacommerce-analytics
+    rules:
+      - alert: AnalyticsMetricsMissing
+        expr: absent(nexacommerce_analytics_kafka_projection_connected)
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Analytics metrics target is missing
+          description: The Analytics exporter has not been scraped successfully for five minutes.
+
+      - alert: AnalyticsKafkaProjectionDisconnected
+        expr: nexacommerce_analytics_kafka_projection_connected == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Analytics Kafka projection is disconnected
+          description: Kafka projection connectivity has remained down for five minutes.
+
+      - alert: AnalyticsKafkaProjectionFailure
+        expr: increase(nexacommerce_analytics_kafka_failures_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Analytics Kafka projection is failing
+          description: At least one projection transaction failed without advancing its offset.
+
+      - alert: AnalyticsKafkaConsumerLagHigh
+        expr: max(nexacommerce_analytics_kafka_consumer_lag) > 100
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: Analytics Kafka consumer lag is high
+          description: At least one Analytics topic partition has remained more than 100 records behind for ten minutes.
+
+      - alert: AnalyticsKafkaMessageRejected
+        expr: increase(nexacommerce_analytics_kafka_rejected_total[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: Analytics rejected a Kafka message
+          description: A malformed or unsupported message was stepped over; investigate producer/consumer schema compatibility.
+
+      - alert: ServiceHttpErrorRateHigh
+        expr: sum by (service) (rate(nexacommerce_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum by (service) (rate(nexacommerce_http_requests_total[5m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: NexaCommerce service HTTP error rate is high
+          description: More than five percent of requests to {{ $labels.service }} have returned 5xx for ten minutes.
+
+      - alert: ServiceHttpLatencyHigh
+        expr: histogram_quantile(0.95, sum by (service, le) (rate(nexacommerce_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: NexaCommerce service p95 latency is high
+          description: The p95 request latency for {{ $labels.service }} has exceeded one second for ten minutes.

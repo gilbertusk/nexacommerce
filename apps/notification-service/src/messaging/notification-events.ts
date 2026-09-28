@@ -148,8 +148,12 @@ export async function prepareNotificationEvent(
     }
 
     case 'OrderShipped': {
-      const { orderId, customerId, trackingNumber, courierName, serviceName } = payload;
+      const { orderId, customerId, trackingNumber, courierName, serviceName, shipments } = payload;
       const customer = await fetchUser(customerId);
+      const splitShipments = Array.isArray(shipments) ? shipments : [];
+      const message = splitShipments.length > 1
+        ? `${splitShipments.length} paket untuk Order #${orderId} telah diserahkan ke kurir.`
+        : `Your Order #${orderId} has been shipped via ${courierName}. Resi: ${trackingNumber}`;
       return {
         kind: 'Notifications',
         notifications: [
@@ -157,8 +161,8 @@ export async function prepareNotificationEvent(
             userId: customerId,
             type: 'ORDER_SHIPPED',
             title: 'Order Shipped',
-            message: `Your Order #${orderId} has been shipped via ${courierName}. Resi: ${trackingNumber}`,
-            data: { orderId, trackingNumber, courierName },
+            message,
+            data: { orderId, trackingNumber, courierName, shipments: splitShipments },
             channel: 'BOTH',
             emailTo: customer.email,
             emailTemplateName: 'ORDER_SHIPPED',
