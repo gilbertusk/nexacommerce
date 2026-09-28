@@ -13,6 +13,11 @@
  * to depend on here.
  */
 
+import { createLogger } from '@nexacommerce/logger';
+import { recordInboxOutcome } from './reliability-metrics';
+
+const logger = createLogger('inbox');
+
 /** Result of attempting to take ownership of an event for one consumer. */
 export type InboxClaimOutcome = 'CLAIMED' | 'DUPLICATE';
 
@@ -109,24 +114,39 @@ export async function processWithInbox<TTx>(
   const key: InboxKey = { eventId: event.eventId, consumer };
   const meta: InboxEventMeta = { eventName: event.eventName, payload: event.payload };
 
+  // Only identifiers and a fixed outcome are logged; payloads may carry
+  // customer data and are never written to the log stream.
+  const logContext = { eventId: key.eventId, consumer, eventName: event.eventName };
+
   try {
-    return await port.runInTransaction(async (tx) => {
+    const outcome = await port.runInTransaction(async (tx) => {
       const claim = await port.claim(tx, key, meta);
-      if (claim === 'DUPLICATE') return 'SKIPPED_DUPLICATE';
+      if (claim === 'DUPLICATE') return 'SKIPPED_DUPLICATE' as const;
 
       await handler(tx);
       await port.markProcessed(tx, key);
-      return 'PROCESSED';
+      return 'PROCESSED' as const;
     });
+    recordInboxOutcome(consumer, outcome);
+    logger.info('Inbox event settled', { ...logContext, outcome });
+    return outcome;
   } catch (err) {
     if (port.isUniqueViolation(err)) {
       // Another worker committed this same (eventId, consumer) first. Its
       // transaction owns the mutation; ours rolled back, so this is a
       // duplicate delivery and not an error.
+      recordInboxOutcome(consumer, 'SKIPPED_DUPLICATE');
+      logger.info('Inbox event settled', { ...logContext, outcome: 'SKIPPED_DUPLICATE', reason: 'concurrent-claim' });
       return 'SKIPPED_DUPLICATE';
     }
 
     const error = err instanceof Error ? err : new Error(String(err));
+    recordInboxOutcome(consumer, 'FAILED');
+    logger.warn('Inbox event failed; transaction rolled back', {
+      ...logContext,
+      outcome: 'FAILED',
+      error: error.message.slice(0, 300),
+    });
     try {
       await port.recordFailure(key, meta, error);
     } catch {
@@ -134,4 +154,124 @@ export async function processWithInbox<TTx>(
     }
     throw error;
   }
+}
+
+/**
+ * Minimal structural view of a generated Prisma client that owns an
+ * `inbox_events` table with the shared layout (see Analytics' migration
+ * `add_analytics_inbox`). Typed loosely on purpose: each service generates its
+ * own client, and there is no common nominal type to import here.
+ */
+export interface PrismaInboxClient {
+  $transaction<T>(fn: (tx: any) => Promise<T>, options?: { timeout?: number; maxWait?: number }): Promise<T>;
+  inboxEvent: any;
+}
+
+export interface PrismaInboxPortOptions {
+  /** Upper bound on one event's transaction; network work happens before it. */
+  transactionTimeoutMs?: number;
+  /** The service's own P2002 detector (its generated Prisma namespace). */
+  isUniqueViolation(err: unknown): boolean;
+}
+
+/**
+ * Build an {@link InboxPort} over a service's generated Prisma client.
+ *
+ * Takeover of an unfinished (FAILED/PROCESSING) row is a conditional update
+ * guarded by `status <> 'PROCESSED'`. Under PostgreSQL READ COMMITTED a second
+ * concurrent transaction blocks on the row lock and then re-evaluates that
+ * predicate against the committed version, so exactly one of two racing
+ * redeliveries of a previously failed event can claim it.
+ */
+export function createPrismaInboxPort<TTx = any>(
+  client: PrismaInboxClient,
+  options: PrismaInboxPortOptions,
+): InboxPort<TTx> {
+  const timeout = options.transactionTimeoutMs ?? 15_000;
+  const whereKey = (key: InboxKey) => ({ eventId_consumer: { eventId: key.eventId, consumer: key.consumer } });
+
+  return {
+    runInTransaction(fn) {
+      return client.$transaction((tx) => fn(tx as TTx), { timeout });
+    },
+
+    async claim(tx: any, key, meta) {
+      const existing = await tx.inboxEvent.findUnique({ where: whereKey(key), select: { id: true, status: true } });
+      if (!existing) {
+        // A concurrent insert of the same key raises P2002 here or at commit;
+        // processWithInbox reads that as a duplicate delivery.
+        await tx.inboxEvent.create({
+          data: {
+            eventId: key.eventId,
+            consumer: key.consumer,
+            eventName: meta.eventName,
+            payload: (meta.payload ?? {}) as object,
+            status: 'PROCESSING',
+          },
+        });
+        return 'CLAIMED';
+      }
+      if (existing.status === 'PROCESSED') return 'DUPLICATE';
+
+      // The previous attempt rolled back, so none of its mutations exist.
+      const taken = await tx.inboxEvent.updateMany({
+        where: { id: existing.id, status: { not: 'PROCESSED' } },
+        data: { status: 'PROCESSING', eventName: meta.eventName, payload: (meta.payload ?? {}) as object },
+      });
+      return taken.count === 1 ? 'CLAIMED' : 'DUPLICATE';
+    },
+
+    async markProcessed(tx: any, key) {
+      await tx.inboxEvent.update({
+        where: whereKey(key),
+        data: { status: 'PROCESSED', processedAt: new Date(), lastError: null },
+      });
+    },
+
+    async recordFailure(key, meta, error) {
+      // Runs after the rollback; the claim row may not exist. Never downgrade
+      // a row another worker has since committed as PROCESSED.
+      const lastError = error.message.slice(0, 1000);
+      const updated = await client.inboxEvent.updateMany({
+        where: { eventId: key.eventId, consumer: key.consumer, status: { not: 'PROCESSED' } },
+        data: { status: 'FAILED', attempts: { increment: 1 }, lastError },
+      });
+      if (updated.count > 0) return;
+      try {
+        await client.inboxEvent.create({
+          data: {
+            eventId: key.eventId,
+            consumer: key.consumer,
+            eventName: meta.eventName,
+            payload: (meta.payload ?? {}) as object,
+            status: 'FAILED',
+            attempts: 1,
+            lastError,
+          },
+        });
+      } catch (createError) {
+        // The row appeared concurrently (possibly PROCESSED); leave it alone.
+        if (!options.isUniqueViolation(createError)) throw createError;
+      }
+    },
+
+    // Only a conflict on the inbox key itself means "another worker already
+    // owns this event". A unique violation from the handler's own tables (a
+    // colliding tracking number, a duplicate business row) must surface as a
+    // failure and be retried; reading it as a duplicate would acknowledge an
+    // event whose mutation never committed.
+    isUniqueViolation: (err) => options.isUniqueViolation(err) && isInboxKeyConflict(err),
+  };
+}
+
+/** True when a Prisma P2002 names the inbox table or its `(event_id, consumer)` key. */
+export function isInboxKeyConflict(err: unknown): boolean {
+  const meta = (err as { meta?: { modelName?: unknown; target?: unknown } } | null)?.meta;
+  if (!meta) return false;
+  if (meta.modelName === 'InboxEvent') return true;
+  const target = meta.target;
+  if (Array.isArray(target)) {
+    return target.some((field) => field === 'event_id' || field === 'eventId');
+  }
+  return typeof target === 'string' && target.includes('inbox_events');
 }

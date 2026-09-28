@@ -146,6 +146,14 @@ export interface OrderCancelled {
     customerId: string;
     reason: string;
     cancelledAt: string;
+    /**
+     * False when the order is cancelled by checkout compensation before the
+     * saga finalized, i.e. before OrderCreated was ever announced. Stock and
+     * voucher consumers must still release; order-count projections must not
+     * count it. Absent on events produced before this field existed, which
+     * are treated as finalized orders.
+     */
+    checkoutFinalized?: boolean;
   };
 }
 

@@ -3,12 +3,20 @@ import {
   connectRabbitMQ,
   createConsumer,
   createPublisher,
+  OUTBOX_BACKLOG_SQL,
+  processWithInbox,
+  recordOutboxDispatch,
+  registerBacklogProvider,
+  setDependencyReady,
   setupExchangeAndQueues,
+  toBacklogStats,
 } from '@nexacommerce/common';
 import { EXCHANGE_NAME, QUEUES } from '@nexacommerce/event-contracts';
 import { createLogger } from '@nexacommerce/logger';
 import { config } from '../config';
 import { orderService } from '../services/order.service';
+import { prisma } from '../prisma/client';
+import { ORDER_PAYMENT_CONSUMER, ORDER_SHIPPING_CONSUMER, orderInbox } from './inbox';
 import {
   claimOrderOutboxBatch,
   markOrderOutboxPublished,
@@ -25,34 +33,65 @@ let connectPromise: Promise<void> | undefined;
 let dispatcherTimer: NodeJS.Timeout | undefined;
 let dispatching = false;
 
-async function setupConsumers(consumerChannel: Channel): Promise<void> {
-  await createConsumer(consumerChannel, QUEUES.ORDER_PAYMENT_EVENTS, async (event: any) => {
-    logger.info(`[RabbitMQ] Handling payment event: ${event.eventName}`);
-    const { orderId } = event.payload;
+/**
+ * Apply a payment event exactly once per event id. The order transition, its
+ * history row, the resulting OrderPaid/OrderCancelled outbox row, and the inbox
+ * marker commit together.
+ */
+export async function handleOrderPaymentEvent(event: any): Promise<void> {
+  const { orderId } = event.payload ?? {};
+  if (typeof orderId !== 'string') throw new Error('Payment event is missing payload.orderId');
 
+  await processWithInbox(orderInbox, ORDER_PAYMENT_CONSUMER, event, async (tx) => {
     if (event.eventName === 'PaymentSuccess') {
       const { paidAt, amount } = event.payload;
-      await orderService.handlePaymentSuccess(orderId, paidAt, amount);
+      await orderService.handlePaymentSuccess(orderId, paidAt, amount, tx);
     } else if (event.eventName === 'PaymentFailed') {
-      await orderService.handlePaymentFailedOrExpired(orderId, 'FAILED');
+      await orderService.handlePaymentFailedOrExpired(orderId, 'FAILED', tx);
     } else if (event.eventName === 'PaymentExpired') {
-      await orderService.handlePaymentFailedOrExpired(orderId, 'EXPIRED');
+      await orderService.handlePaymentFailedOrExpired(orderId, 'EXPIRED', tx);
     }
   });
 
+  // The voucher lives in another service and cannot join the transaction.
+  // Release runs after commit on every delivery, including duplicates: it is
+  // idempotent per order, and a failure rethrows so the broker retries until
+  // the release succeeds (the inbox prevents re-applying the transition).
+  if (event.eventName === 'PaymentFailed' || event.eventName === 'PaymentExpired') {
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true, voucherId: true } });
+    if (order?.status === 'CANCELLED' && order.voucherId) {
+      await orderService.releaseVoucherForOrder(orderId);
+    }
+  }
+}
+
+export async function handleOrderShippingEvent(event: any): Promise<void> {
+  const orderId = event.payload?.orderId;
+  if (typeof orderId !== 'string') throw new Error('Shipping event is missing payload.orderId');
+
+  await processWithInbox(orderInbox, ORDER_SHIPPING_CONSUMER, event, async (tx) => {
+    if (event.eventName === 'OrderShipped') {
+      await orderService.handleOrderShipped(orderId, tx);
+    } else if (event.eventName === 'OrderDelivered') {
+      await orderService.handleOrderDelivered(orderId, tx);
+    }
+  });
+}
+
+async function setupConsumers(consumerChannel: Channel): Promise<void> {
+  await createConsumer(consumerChannel, QUEUES.ORDER_PAYMENT_EVENTS, handleOrderPaymentEvent);
+
+  // Stock events are informational for Order Service today: no state changes,
+  // so no inbox is needed.
   await createConsumer(consumerChannel, QUEUES.ORDER_STOCK_EVENTS, async (event: any) => {
     logger.info(`[RabbitMQ] Handling stock event: ${event.eventName}`);
   });
 
-  await createConsumer(consumerChannel, QUEUES.ORDER_SHIPPING_EVENTS, async (event: any) => {
-    logger.info(`[RabbitMQ] Handling shipping event: ${event.eventName}`);
-    if (event.eventName === 'OrderShipped') {
-      await orderService.handleOrderShipped(event.payload.orderId);
-    } else if (event.eventName === 'OrderDelivered') {
-      await orderService.handleOrderDelivered(event.payload.orderId);
-    }
-  });
+  await createConsumer(consumerChannel, QUEUES.ORDER_SHIPPING_EVENTS, handleOrderShippingEvent);
 }
+
+registerBacklogProvider('outbox', 'order-service', async () =>
+  toBacklogStats(await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(OUTBOX_BACKLOG_SQL)));
 
 async function ensureMessaging(): Promise<void> {
   if (publishEvent) return;
@@ -76,6 +115,7 @@ async function ensureMessaging(): Promise<void> {
         channel = undefined;
         connection = undefined;
         publishEvent = undefined;
+        setDependencyReady('rabbitmq', false);
       }
     };
     nextConnection.on('close', resetMessaging);
@@ -84,6 +124,7 @@ async function ensureMessaging(): Promise<void> {
     connection = nextConnection;
     channel = nextChannel;
     publishEvent = createPublisher(nextChannel, EXCHANGE_NAME);
+    setDependencyReady('rabbitmq', true);
     logger.info('[RabbitMQ] Order messaging initialized successfully.');
   })().finally(() => {
     connectPromise = undefined;
@@ -108,9 +149,18 @@ export async function dispatchOrderOutboxOnce(): Promise<number> {
       try {
         await publishEvent!(event.routingKey, event.eventPayload);
         await markOrderOutboxPublished(event.id, lockToken);
+        recordOutboxDispatch('order-service', 'PUBLISHED');
         published += 1;
       } catch (error) {
         await rescheduleOrderOutbox(event.id, lockToken, event.attempts, error);
+        recordOutboxDispatch('order-service', 'RESCHEDULED');
+        logger.warn('[Outbox] Publish failed; event rescheduled', {
+          eventId: event.id,
+          eventName: event.eventName,
+          aggregateId: event.aggregateId,
+          attempt: event.attempts + 1,
+          outcome: 'RESCHEDULED',
+        });
         await Promise.all(events.slice(index + 1).map((pending) => pending.lockToken
           ? releaseOrderOutboxClaim(pending.id, pending.lockToken)
           : Promise.resolve()));
@@ -152,6 +202,7 @@ export async function stopRabbitMQ(): Promise<void> {
   const activeConnection = connection;
   channel = undefined;
   connection = undefined;
+  setDependencyReady('rabbitmq', false);
   if (activeChannel) await activeChannel.close().catch(() => undefined);
   if (activeConnection) await activeConnection.close().catch(() => undefined);
 }

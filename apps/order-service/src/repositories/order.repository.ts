@@ -14,6 +14,26 @@ export class OrderRepository {
     });
   }
 
+  async findByShippingQuoteId(shippingQuoteId: string) {
+    return prisma.order.findUnique({
+      where: { shippingQuoteId },
+      include: { items: true },
+    });
+  }
+
+  /**
+   * Checkouts that inserted an order but never reached finalization. Served by
+   * the `(status, checkout_finalized_at)` index.
+   */
+  async findUnfinalizedCheckoutsOlderThan(before: Date, limit: number) {
+    return prisma.order.findMany({
+      where: { status: 'PENDING_PAYMENT', checkoutFinalizedAt: null, createdAt: { lt: before } },
+      orderBy: { createdAt: 'asc' },
+      take: limit,
+      select: { id: true, voucherId: true },
+    });
+  }
+
   async findByOrderNumber(orderNumber: string) {
     return prisma.order.findUnique({
       where: { orderNumber },

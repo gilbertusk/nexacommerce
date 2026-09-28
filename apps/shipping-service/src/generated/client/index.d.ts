@@ -49,6 +49,13 @@ export type OutboxEvent = $Result.DefaultSelection<Prisma.$OutboxEventPayload>
  * address, or rate table rather than silently honouring a stale price.
  */
 export type ShippingQuote = $Result.DefaultSelection<Prisma.$ShippingQuotePayload>
+/**
+ * Model InboxEvent
+ * Consumption record for one broker event as seen by one named consumer.
+ * Reaches PROCESSED in the same transaction as the seller labels it created,
+ * so a redelivered OrderPaid is skipped instead of re-creating labels.
+ */
+export type InboxEvent = $Result.DefaultSelection<Prisma.$InboxEventPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -232,6 +239,16 @@ export class PrismaClient<
     * ```
     */
   get shippingQuote(): Prisma.ShippingQuoteDelegate<ExtArgs>;
+
+  /**
+   * `prisma.inboxEvent`: Exposes CRUD operations for the **InboxEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more InboxEvents
+    * const inboxEvents = await prisma.inboxEvent.findMany()
+    * ```
+    */
+  get inboxEvent(): Prisma.InboxEventDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -678,7 +695,8 @@ export namespace Prisma {
     ShippingOrder: 'ShippingOrder',
     ShippingStatusHistory: 'ShippingStatusHistory',
     OutboxEvent: 'OutboxEvent',
-    ShippingQuote: 'ShippingQuote'
+    ShippingQuote: 'ShippingQuote',
+    InboxEvent: 'InboxEvent'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -694,7 +712,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "courier" | "shippingRate" | "shippingOrder" | "shippingStatusHistory" | "outboxEvent" | "shippingQuote"
+      modelProps: "courier" | "shippingRate" | "shippingOrder" | "shippingStatusHistory" | "outboxEvent" | "shippingQuote" | "inboxEvent"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1115,6 +1133,76 @@ export namespace Prisma {
           count: {
             args: Prisma.ShippingQuoteCountArgs<ExtArgs>
             result: $Utils.Optional<ShippingQuoteCountAggregateOutputType> | number
+          }
+        }
+      }
+      InboxEvent: {
+        payload: Prisma.$InboxEventPayload<ExtArgs>
+        fields: Prisma.InboxEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.InboxEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.InboxEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          findFirst: {
+            args: Prisma.InboxEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.InboxEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          findMany: {
+            args: Prisma.InboxEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>[]
+          }
+          create: {
+            args: Prisma.InboxEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          createMany: {
+            args: Prisma.InboxEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.InboxEventCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>[]
+          }
+          delete: {
+            args: Prisma.InboxEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          update: {
+            args: Prisma.InboxEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.InboxEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.InboxEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.InboxEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$InboxEventPayload>
+          }
+          aggregate: {
+            args: Prisma.InboxEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateInboxEvent>
+          }
+          groupBy: {
+            args: Prisma.InboxEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<InboxEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.InboxEventCountArgs<ExtArgs>
+            result: $Utils.Optional<InboxEventCountAggregateOutputType> | number
           }
         }
       }
@@ -7570,6 +7658,986 @@ export namespace Prisma {
 
 
   /**
+   * Model InboxEvent
+   */
+
+  export type AggregateInboxEvent = {
+    _count: InboxEventCountAggregateOutputType | null
+    _avg: InboxEventAvgAggregateOutputType | null
+    _sum: InboxEventSumAggregateOutputType | null
+    _min: InboxEventMinAggregateOutputType | null
+    _max: InboxEventMaxAggregateOutputType | null
+  }
+
+  export type InboxEventAvgAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type InboxEventSumAggregateOutputType = {
+    attempts: number | null
+  }
+
+  export type InboxEventMinAggregateOutputType = {
+    id: string | null
+    eventId: string | null
+    consumer: string | null
+    eventName: string | null
+    status: string | null
+    attempts: number | null
+    lastError: string | null
+    processedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type InboxEventMaxAggregateOutputType = {
+    id: string | null
+    eventId: string | null
+    consumer: string | null
+    eventName: string | null
+    status: string | null
+    attempts: number | null
+    lastError: string | null
+    processedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type InboxEventCountAggregateOutputType = {
+    id: number
+    eventId: number
+    consumer: number
+    eventName: number
+    payload: number
+    status: number
+    attempts: number
+    lastError: number
+    processedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type InboxEventAvgAggregateInputType = {
+    attempts?: true
+  }
+
+  export type InboxEventSumAggregateInputType = {
+    attempts?: true
+  }
+
+  export type InboxEventMinAggregateInputType = {
+    id?: true
+    eventId?: true
+    consumer?: true
+    eventName?: true
+    status?: true
+    attempts?: true
+    lastError?: true
+    processedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type InboxEventMaxAggregateInputType = {
+    id?: true
+    eventId?: true
+    consumer?: true
+    eventName?: true
+    status?: true
+    attempts?: true
+    lastError?: true
+    processedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type InboxEventCountAggregateInputType = {
+    id?: true
+    eventId?: true
+    consumer?: true
+    eventName?: true
+    payload?: true
+    status?: true
+    attempts?: true
+    lastError?: true
+    processedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type InboxEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which InboxEvent to aggregate.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned InboxEvents
+    **/
+    _count?: true | InboxEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: InboxEventAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: InboxEventSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: InboxEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: InboxEventMaxAggregateInputType
+  }
+
+  export type GetInboxEventAggregateType<T extends InboxEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateInboxEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateInboxEvent[P]>
+      : GetScalarType<T[P], AggregateInboxEvent[P]>
+  }
+
+
+
+
+  export type InboxEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: InboxEventWhereInput
+    orderBy?: InboxEventOrderByWithAggregationInput | InboxEventOrderByWithAggregationInput[]
+    by: InboxEventScalarFieldEnum[] | InboxEventScalarFieldEnum
+    having?: InboxEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: InboxEventCountAggregateInputType | true
+    _avg?: InboxEventAvgAggregateInputType
+    _sum?: InboxEventSumAggregateInputType
+    _min?: InboxEventMinAggregateInputType
+    _max?: InboxEventMaxAggregateInputType
+  }
+
+  export type InboxEventGroupByOutputType = {
+    id: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonValue
+    status: string
+    attempts: number
+    lastError: string | null
+    processedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: InboxEventCountAggregateOutputType | null
+    _avg: InboxEventAvgAggregateOutputType | null
+    _sum: InboxEventSumAggregateOutputType | null
+    _min: InboxEventMinAggregateOutputType | null
+    _max: InboxEventMaxAggregateOutputType | null
+  }
+
+  type GetInboxEventGroupByPayload<T extends InboxEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<InboxEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof InboxEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], InboxEventGroupByOutputType[P]>
+            : GetScalarType<T[P], InboxEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type InboxEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    consumer?: boolean
+    eventName?: boolean
+    payload?: boolean
+    status?: boolean
+    attempts?: boolean
+    lastError?: boolean
+    processedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["inboxEvent"]>
+
+  export type InboxEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    eventId?: boolean
+    consumer?: boolean
+    eventName?: boolean
+    payload?: boolean
+    status?: boolean
+    attempts?: boolean
+    lastError?: boolean
+    processedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["inboxEvent"]>
+
+  export type InboxEventSelectScalar = {
+    id?: boolean
+    eventId?: boolean
+    consumer?: boolean
+    eventName?: boolean
+    payload?: boolean
+    status?: boolean
+    attempts?: boolean
+    lastError?: boolean
+    processedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+
+  export type $InboxEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "InboxEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      eventId: string
+      consumer: string
+      eventName: string
+      payload: Prisma.JsonValue
+      status: string
+      attempts: number
+      lastError: string | null
+      processedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["inboxEvent"]>
+    composites: {}
+  }
+
+  type InboxEventGetPayload<S extends boolean | null | undefined | InboxEventDefaultArgs> = $Result.GetResult<Prisma.$InboxEventPayload, S>
+
+  type InboxEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<InboxEventFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: InboxEventCountAggregateInputType | true
+    }
+
+  export interface InboxEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['InboxEvent'], meta: { name: 'InboxEvent' } }
+    /**
+     * Find zero or one InboxEvent that matches the filter.
+     * @param {InboxEventFindUniqueArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends InboxEventFindUniqueArgs>(args: SelectSubset<T, InboxEventFindUniqueArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one InboxEvent that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {InboxEventFindUniqueOrThrowArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends InboxEventFindUniqueOrThrowArgs>(args: SelectSubset<T, InboxEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first InboxEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventFindFirstArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends InboxEventFindFirstArgs>(args?: SelectSubset<T, InboxEventFindFirstArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first InboxEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventFindFirstOrThrowArgs} args - Arguments to find a InboxEvent
+     * @example
+     * // Get one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends InboxEventFindFirstOrThrowArgs>(args?: SelectSubset<T, InboxEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more InboxEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all InboxEvents
+     * const inboxEvents = await prisma.inboxEvent.findMany()
+     * 
+     * // Get first 10 InboxEvents
+     * const inboxEvents = await prisma.inboxEvent.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const inboxEventWithIdOnly = await prisma.inboxEvent.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends InboxEventFindManyArgs>(args?: SelectSubset<T, InboxEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a InboxEvent.
+     * @param {InboxEventCreateArgs} args - Arguments to create a InboxEvent.
+     * @example
+     * // Create one InboxEvent
+     * const InboxEvent = await prisma.inboxEvent.create({
+     *   data: {
+     *     // ... data to create a InboxEvent
+     *   }
+     * })
+     * 
+     */
+    create<T extends InboxEventCreateArgs>(args: SelectSubset<T, InboxEventCreateArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many InboxEvents.
+     * @param {InboxEventCreateManyArgs} args - Arguments to create many InboxEvents.
+     * @example
+     * // Create many InboxEvents
+     * const inboxEvent = await prisma.inboxEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends InboxEventCreateManyArgs>(args?: SelectSubset<T, InboxEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many InboxEvents and returns the data saved in the database.
+     * @param {InboxEventCreateManyAndReturnArgs} args - Arguments to create many InboxEvents.
+     * @example
+     * // Create many InboxEvents
+     * const inboxEvent = await prisma.inboxEvent.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many InboxEvents and only return the `id`
+     * const inboxEventWithIdOnly = await prisma.inboxEvent.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends InboxEventCreateManyAndReturnArgs>(args?: SelectSubset<T, InboxEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a InboxEvent.
+     * @param {InboxEventDeleteArgs} args - Arguments to delete one InboxEvent.
+     * @example
+     * // Delete one InboxEvent
+     * const InboxEvent = await prisma.inboxEvent.delete({
+     *   where: {
+     *     // ... filter to delete one InboxEvent
+     *   }
+     * })
+     * 
+     */
+    delete<T extends InboxEventDeleteArgs>(args: SelectSubset<T, InboxEventDeleteArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one InboxEvent.
+     * @param {InboxEventUpdateArgs} args - Arguments to update one InboxEvent.
+     * @example
+     * // Update one InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends InboxEventUpdateArgs>(args: SelectSubset<T, InboxEventUpdateArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more InboxEvents.
+     * @param {InboxEventDeleteManyArgs} args - Arguments to filter InboxEvents to delete.
+     * @example
+     * // Delete a few InboxEvents
+     * const { count } = await prisma.inboxEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends InboxEventDeleteManyArgs>(args?: SelectSubset<T, InboxEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more InboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many InboxEvents
+     * const inboxEvent = await prisma.inboxEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends InboxEventUpdateManyArgs>(args: SelectSubset<T, InboxEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one InboxEvent.
+     * @param {InboxEventUpsertArgs} args - Arguments to update or create a InboxEvent.
+     * @example
+     * // Update or create a InboxEvent
+     * const inboxEvent = await prisma.inboxEvent.upsert({
+     *   create: {
+     *     // ... data to create a InboxEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the InboxEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends InboxEventUpsertArgs>(args: SelectSubset<T, InboxEventUpsertArgs<ExtArgs>>): Prisma__InboxEventClient<$Result.GetResult<Prisma.$InboxEventPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of InboxEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventCountArgs} args - Arguments to filter InboxEvents to count.
+     * @example
+     * // Count the number of InboxEvents
+     * const count = await prisma.inboxEvent.count({
+     *   where: {
+     *     // ... the filter for the InboxEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends InboxEventCountArgs>(
+      args?: Subset<T, InboxEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], InboxEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a InboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends InboxEventAggregateArgs>(args: Subset<T, InboxEventAggregateArgs>): Prisma.PrismaPromise<GetInboxEventAggregateType<T>>
+
+    /**
+     * Group by InboxEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {InboxEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends InboxEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: InboxEventGroupByArgs['orderBy'] }
+        : { orderBy?: InboxEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, InboxEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetInboxEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the InboxEvent model
+   */
+  readonly fields: InboxEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for InboxEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__InboxEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the InboxEvent model
+   */ 
+  interface InboxEventFieldRefs {
+    readonly id: FieldRef<"InboxEvent", 'String'>
+    readonly eventId: FieldRef<"InboxEvent", 'String'>
+    readonly consumer: FieldRef<"InboxEvent", 'String'>
+    readonly eventName: FieldRef<"InboxEvent", 'String'>
+    readonly payload: FieldRef<"InboxEvent", 'Json'>
+    readonly status: FieldRef<"InboxEvent", 'String'>
+    readonly attempts: FieldRef<"InboxEvent", 'Int'>
+    readonly lastError: FieldRef<"InboxEvent", 'String'>
+    readonly processedAt: FieldRef<"InboxEvent", 'DateTime'>
+    readonly createdAt: FieldRef<"InboxEvent", 'DateTime'>
+    readonly updatedAt: FieldRef<"InboxEvent", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * InboxEvent findUnique
+   */
+  export type InboxEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent findUniqueOrThrow
+   */
+  export type InboxEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent findFirst
+   */
+  export type InboxEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for InboxEvents.
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of InboxEvents.
+     */
+    distinct?: InboxEventScalarFieldEnum | InboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * InboxEvent findFirstOrThrow
+   */
+  export type InboxEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvent to fetch.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for InboxEvents.
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of InboxEvents.
+     */
+    distinct?: InboxEventScalarFieldEnum | InboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * InboxEvent findMany
+   */
+  export type InboxEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter, which InboxEvents to fetch.
+     */
+    where?: InboxEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of InboxEvents to fetch.
+     */
+    orderBy?: InboxEventOrderByWithRelationInput | InboxEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing InboxEvents.
+     */
+    cursor?: InboxEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` InboxEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` InboxEvents.
+     */
+    skip?: number
+    distinct?: InboxEventScalarFieldEnum | InboxEventScalarFieldEnum[]
+  }
+
+  /**
+   * InboxEvent create
+   */
+  export type InboxEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to create a InboxEvent.
+     */
+    data: XOR<InboxEventCreateInput, InboxEventUncheckedCreateInput>
+  }
+
+  /**
+   * InboxEvent createMany
+   */
+  export type InboxEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many InboxEvents.
+     */
+    data: InboxEventCreateManyInput | InboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * InboxEvent createManyAndReturn
+   */
+  export type InboxEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many InboxEvents.
+     */
+    data: InboxEventCreateManyInput | InboxEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * InboxEvent update
+   */
+  export type InboxEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * The data needed to update a InboxEvent.
+     */
+    data: XOR<InboxEventUpdateInput, InboxEventUncheckedUpdateInput>
+    /**
+     * Choose, which InboxEvent to update.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent updateMany
+   */
+  export type InboxEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update InboxEvents.
+     */
+    data: XOR<InboxEventUpdateManyMutationInput, InboxEventUncheckedUpdateManyInput>
+    /**
+     * Filter which InboxEvents to update
+     */
+    where?: InboxEventWhereInput
+  }
+
+  /**
+   * InboxEvent upsert
+   */
+  export type InboxEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * The filter to search for the InboxEvent to update in case it exists.
+     */
+    where: InboxEventWhereUniqueInput
+    /**
+     * In case the InboxEvent found by the `where` argument doesn't exist, create a new InboxEvent with this data.
+     */
+    create: XOR<InboxEventCreateInput, InboxEventUncheckedCreateInput>
+    /**
+     * In case the InboxEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<InboxEventUpdateInput, InboxEventUncheckedUpdateInput>
+  }
+
+  /**
+   * InboxEvent delete
+   */
+  export type InboxEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+    /**
+     * Filter which InboxEvent to delete.
+     */
+    where: InboxEventWhereUniqueInput
+  }
+
+  /**
+   * InboxEvent deleteMany
+   */
+  export type InboxEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which InboxEvents to delete
+     */
+    where?: InboxEventWhereInput
+  }
+
+  /**
+   * InboxEvent without action
+   */
+  export type InboxEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the InboxEvent
+     */
+    select?: InboxEventSelect<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -7691,6 +8759,23 @@ export namespace Prisma {
   };
 
   export type ShippingQuoteScalarFieldEnum = (typeof ShippingQuoteScalarFieldEnum)[keyof typeof ShippingQuoteScalarFieldEnum]
+
+
+  export const InboxEventScalarFieldEnum: {
+    id: 'id',
+    eventId: 'eventId',
+    consumer: 'consumer',
+    eventName: 'eventName',
+    payload: 'payload',
+    status: 'status',
+    attempts: 'attempts',
+    lastError: 'lastError',
+    processedAt: 'processedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type InboxEventScalarFieldEnum = (typeof InboxEventScalarFieldEnum)[keyof typeof InboxEventScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -8385,6 +9470,91 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"ShippingQuote"> | Date | string
   }
 
+  export type InboxEventWhereInput = {
+    AND?: InboxEventWhereInput | InboxEventWhereInput[]
+    OR?: InboxEventWhereInput[]
+    NOT?: InboxEventWhereInput | InboxEventWhereInput[]
+    id?: StringFilter<"InboxEvent"> | string
+    eventId?: StringFilter<"InboxEvent"> | string
+    consumer?: StringFilter<"InboxEvent"> | string
+    eventName?: StringFilter<"InboxEvent"> | string
+    payload?: JsonFilter<"InboxEvent">
+    status?: StringFilter<"InboxEvent"> | string
+    attempts?: IntFilter<"InboxEvent"> | number
+    lastError?: StringNullableFilter<"InboxEvent"> | string | null
+    processedAt?: DateTimeNullableFilter<"InboxEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"InboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"InboxEvent"> | Date | string
+  }
+
+  export type InboxEventOrderByWithRelationInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    payload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrderInput | SortOrder
+    processedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    eventId_consumer?: InboxEventEventIdConsumerCompoundUniqueInput
+    AND?: InboxEventWhereInput | InboxEventWhereInput[]
+    OR?: InboxEventWhereInput[]
+    NOT?: InboxEventWhereInput | InboxEventWhereInput[]
+    eventId?: StringFilter<"InboxEvent"> | string
+    consumer?: StringFilter<"InboxEvent"> | string
+    eventName?: StringFilter<"InboxEvent"> | string
+    payload?: JsonFilter<"InboxEvent">
+    status?: StringFilter<"InboxEvent"> | string
+    attempts?: IntFilter<"InboxEvent"> | number
+    lastError?: StringNullableFilter<"InboxEvent"> | string | null
+    processedAt?: DateTimeNullableFilter<"InboxEvent"> | Date | string | null
+    createdAt?: DateTimeFilter<"InboxEvent"> | Date | string
+    updatedAt?: DateTimeFilter<"InboxEvent"> | Date | string
+  }, "id" | "eventId_consumer">
+
+  export type InboxEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    payload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrderInput | SortOrder
+    processedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: InboxEventCountOrderByAggregateInput
+    _avg?: InboxEventAvgOrderByAggregateInput
+    _max?: InboxEventMaxOrderByAggregateInput
+    _min?: InboxEventMinOrderByAggregateInput
+    _sum?: InboxEventSumOrderByAggregateInput
+  }
+
+  export type InboxEventScalarWhereWithAggregatesInput = {
+    AND?: InboxEventScalarWhereWithAggregatesInput | InboxEventScalarWhereWithAggregatesInput[]
+    OR?: InboxEventScalarWhereWithAggregatesInput[]
+    NOT?: InboxEventScalarWhereWithAggregatesInput | InboxEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"InboxEvent"> | string
+    eventId?: StringWithAggregatesFilter<"InboxEvent"> | string
+    consumer?: StringWithAggregatesFilter<"InboxEvent"> | string
+    eventName?: StringWithAggregatesFilter<"InboxEvent"> | string
+    payload?: JsonWithAggregatesFilter<"InboxEvent">
+    status?: StringWithAggregatesFilter<"InboxEvent"> | string
+    attempts?: IntWithAggregatesFilter<"InboxEvent"> | number
+    lastError?: StringNullableWithAggregatesFilter<"InboxEvent"> | string | null
+    processedAt?: DateTimeNullableWithAggregatesFilter<"InboxEvent"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"InboxEvent"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"InboxEvent"> | Date | string
+  }
+
   export type CourierCreateInput = {
     id?: string
     name: string
@@ -9038,6 +10208,104 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type InboxEventCreateInput = {
+    id?: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    lastError?: string | null
+    processedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InboxEventUncheckedCreateInput = {
+    id?: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    lastError?: string | null
+    processedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InboxEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InboxEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InboxEventCreateManyInput = {
+    id?: string
+    eventId: string
+    consumer: string
+    eventName: string
+    payload: JsonNullValueInput | InputJsonValue
+    status?: string
+    attempts?: number
+    lastError?: string | null
+    processedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InboxEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InboxEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    eventId?: StringFieldUpdateOperationsInput | string
+    consumer?: StringFieldUpdateOperationsInput | string
+    eventName?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    status?: StringFieldUpdateOperationsInput | string
+    attempts?: IntFieldUpdateOperationsInput | number
+    lastError?: NullableStringFieldUpdateOperationsInput | string | null
+    processedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -9624,6 +10892,59 @@ export namespace Prisma {
 
   export type ShippingQuoteSumOrderByAggregateInput = {
     totalCost?: SortOrder
+  }
+
+  export type InboxEventEventIdConsumerCompoundUniqueInput = {
+    eventId: string
+    consumer: string
+  }
+
+  export type InboxEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    payload?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrder
+    processedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventAvgOrderByAggregateInput = {
+    attempts?: SortOrder
+  }
+
+  export type InboxEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrder
+    processedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    eventId?: SortOrder
+    consumer?: SortOrder
+    eventName?: SortOrder
+    status?: SortOrder
+    attempts?: SortOrder
+    lastError?: SortOrder
+    processedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type InboxEventSumOrderByAggregateInput = {
+    attempts?: SortOrder
   }
 
   export type ShippingRateCreateNestedManyWithoutCourierInput = {
@@ -10739,6 +12060,10 @@ export namespace Prisma {
      * @deprecated Use ShippingQuoteDefaultArgs instead
      */
     export type ShippingQuoteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ShippingQuoteDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use InboxEventDefaultArgs instead
+     */
+    export type InboxEventArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = InboxEventDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

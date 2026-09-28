@@ -1,8 +1,6 @@
-import { Channel } from 'amqplib';
 import {
-  connectRabbitMQ,
-  setupExchangeAndQueues,
   createConsumer,
+  createResilientConsumer,
   processWithInbox,
   runWithRequestId,
 } from '@nexacommerce/common';
@@ -19,8 +17,6 @@ const logger = createLogger('analytics-messaging');
  * changing it makes every past event eligible for reprocessing.
  */
 export const ANALYTICS_RABBITMQ_CONSUMER = 'analytics.rabbitmq';
-
-let channel: Channel;
 
 /**
  * Consume an event exactly once.
@@ -51,12 +47,10 @@ export async function handleAnalyticsEvent(event: {
   }
 }
 
-export async function initRabbitMQ() {
-  try {
-    const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createConfirmChannel();
-    await setupExchangeAndQueues(channel);
-
+const analyticsConsumer = createResilientConsumer({
+  url: config.rabbitmqUrl,
+  name: QUEUES.ANALYTICS_EVENTS,
+  setup: async (channel) => {
     await createConsumer(channel, QUEUES.ANALYTICS_EVENTS, async (event: any) => {
       // A consumer has no HTTP request, so the event id becomes the correlation
       // id: every log line from processing this event is findable together, and
@@ -68,10 +62,18 @@ export async function initRabbitMQ() {
         await handleAnalyticsEvent(event);
       });
     });
+  },
+});
 
-    logger.info('[Analytics] RabbitMQ consumer initialized');
-  } catch (err: any) {
-    logger.error('[Analytics] Failed to initialize RabbitMQ:', err.message);
-    throw err;
-  }
+/**
+ * Attach the analytics consumer and keep it attached across broker restarts.
+ * Previously a single connect at startup left the consumer silently detached
+ * after any later broker restart while the service kept reporting healthy.
+ */
+export async function initRabbitMQ() {
+  await analyticsConsumer.start();
+}
+
+export async function stopRabbitMQ() {
+  await analyticsConsumer.stop();
 }

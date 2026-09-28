@@ -1,14 +1,15 @@
-import { Channel } from 'amqplib';
 import {
-  connectRabbitMQ,
-  setupExchangeAndQueues,
   createConsumer,
+  createResilientConsumer,
   processWithInbox,
+  registerBacklogProvider,
   runWithRequestId,
+  toBacklogStats,
 } from '@nexacommerce/common';
 import { QUEUES } from '@nexacommerce/event-contracts';
 import { createLogger } from '@nexacommerce/logger';
 import config from '../config';
+import prisma from '../prisma/client';
 import { notificationInbox } from './inbox';
 import { applyNotificationEvent, prepareNotificationEvent } from './notification-events';
 import { startEmailDispatcher } from './email-dispatcher';
@@ -21,7 +22,16 @@ const logger = createLogger('notification-messaging');
  */
 export const NOTIFICATION_RABBITMQ_CONSUMER = 'notification.rabbitmq';
 
-let channel: Channel;
+/** Summary of the durable email queue (`email_logs`: PENDING, SENT, FAILED). */
+const EMAIL_BACKLOG_SQL = `
+  SELECT
+    COUNT(*) FILTER (WHERE status = 'PENDING' AND locked_at IS NULL)::int AS pending,
+    COUNT(*) FILTER (WHERE status = 'PENDING' AND locked_at IS NOT NULL)::int AS processing,
+    COUNT(*) FILTER (WHERE status = 'FAILED')::int AS failed,
+    COUNT(*) FILTER (WHERE status = 'PENDING' AND retry_count > 0)::int AS retrying,
+    COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(created_at) FILTER (WHERE status = 'PENDING'))), 0)::float AS oldest_pending_age_seconds
+  FROM email_logs
+`;
 
 /**
  * Consume one event exactly once.
@@ -52,13 +62,10 @@ export async function handleNotificationEvent(event: {
   }
 }
 
-export async function initRabbitMQ() {
-  try {
-    const connection = await connectRabbitMQ(config.rabbitmqUrl);
-    channel = await connection.createConfirmChannel();
-
-    await setupExchangeAndQueues(channel);
-
+const notificationConsumer = createResilientConsumer({
+  url: config.rabbitmqUrl,
+  name: QUEUES.NOTIFICATION_EVENTS,
+  setup: async (channel) => {
     await createConsumer(channel, QUEUES.NOTIFICATION_EVENTS, async (event: any) => {
       // No HTTP request here, so the event id is the correlation id.
       await runWithRequestId(String(event?.eventId ?? 'unknown-event'), async () => {
@@ -68,12 +75,22 @@ export async function initRabbitMQ() {
         await handleNotificationEvent(event);
       });
     });
+  },
+});
 
-    startEmailDispatcher();
+registerBacklogProvider('email', 'notification-service', async () =>
+  toBacklogStats(await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(EMAIL_BACKLOG_SQL)));
 
-    logger.info('RabbitMQ Consumers initialized for Notification Service.');
-  } catch (err: any) {
-    logger.error('Failed to initialize RabbitMQ connection in Notification Service:', err);
-    throw err;
-  }
+/**
+ * Start the email dispatcher and the event consumer. The email queue is in
+ * PostgreSQL and does not depend on the broker, so it starts first. The
+ * consumer re-attaches after any broker restart instead of dying silently.
+ */
+export async function initRabbitMQ() {
+  startEmailDispatcher();
+  await notificationConsumer.start();
+}
+
+export async function stopRabbitMQ() {
+  await notificationConsumer.stop();
 }

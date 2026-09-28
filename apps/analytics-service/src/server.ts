@@ -1,6 +1,6 @@
 import { app } from './app';
 import { config } from './config';
-import { initRabbitMQ } from './messaging/rabbitmq';
+import { initRabbitMQ, stopRabbitMQ } from './messaging/rabbitmq';
 import { startKafkaProjection, stopKafkaProjection } from './messaging/kafka-consumer';
 import { createLogger } from '@nexacommerce/logger';
 import { verifyConfiguredDailyReadModel } from './services/projection-comparison';
@@ -31,6 +31,7 @@ async function startServer() {
     const shutdown = async (signal: string) => {
       logger.info(`[Analytics Service] ${signal} received, shutting down`);
       await stopKafkaProjection().catch(() => undefined);
+      await stopRabbitMQ().catch(() => undefined);
       server.close(() => process.exit(0));
     };
     process.on('SIGTERM', () => void shutdown('SIGTERM'));

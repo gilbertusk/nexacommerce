@@ -1,10 +1,34 @@
 import { connect, Channel, ChannelModel, ConfirmChannel, ConsumeMessage, Replies } from 'amqplib';
 import { EXCHANGE_NAME, EXCHANGE_TYPE, QUEUE_BINDINGS } from '@nexacommerce/event-contracts';
+import { createLogger } from '@nexacommerce/logger';
+import { ConsumerOutcome, recordConsumerOutcome } from './reliability-metrics';
+import {
+  expectedQueueSpecs,
+  retryRoutingKey,
+  TOPOLOGY_DEAD_LETTER_EXCHANGE,
+  TOPOLOGY_RETRY_DELAY_MS,
+  TOPOLOGY_RETRY_EXCHANGE,
+} from './topology';
 
-export const RETRY_EXCHANGE = `${EXCHANGE_NAME}.retry`;
-export const DEAD_LETTER_EXCHANGE = `${EXCHANGE_NAME}.dead`;
+const consumerLogger = createLogger('rabbitmq-consumer');
+
+export const RETRY_EXCHANGE = TOPOLOGY_RETRY_EXCHANGE;
+export const DEAD_LETTER_EXCHANGE = TOPOLOGY_DEAD_LETTER_EXCHANGE;
 export const DEFAULT_MAX_RETRIES = 5;
-export const DEFAULT_RETRY_DELAY_MS = 5_000;
+export const DEFAULT_RETRY_DELAY_MS = TOPOLOGY_RETRY_DELAY_MS;
+
+/**
+ * A delivery that can never succeed no matter how often it is retried: it is
+ * not JSON, lacks the event envelope, or a handler has proven the payload
+ * permanently unusable. Such messages go straight to the DLQ instead of
+ * spending the retry budget (and 5 s per attempt) on a certain failure.
+ */
+export class NonRetryableEventError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NonRetryableEventError';
+  }
+}
 
 type ConsumerOptions = {
   maxRetries?: number;
@@ -31,51 +55,22 @@ export async function connectRabbitMQ(url: string, retries = 5, delay = 1000): P
   throw new Error('[RabbitMQ] Failed to connect after retries.');
 }
 
-function retryRoutingKey(queue: string, routingKey: string): string {
-  return `${queue}.${routingKey}`;
-}
-
-function retryQueueName(queue: string, routingKey: string): string {
-  return `${queue}.retry.${routingKey.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-}
-
+/**
+ * Declare the durable exchanges and every queue/binding in
+ * `expectedQueueSpecs()`. Idempotent for an existing matching topology. An
+ * existing classic queue with a production name makes this fail with
+ * PRECONDITION_FAILED: queue types cannot change in place, and nothing here
+ * deletes a queue. See the migration procedure in docs/phase-3-reliability.md.
+ */
 export async function setupExchangeAndQueues(channel: Channel): Promise<void> {
   await channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, { durable: true });
   await channel.assertExchange(RETRY_EXCHANGE, 'direct', { durable: true });
   await channel.assertExchange(DEAD_LETTER_EXCHANGE, 'direct', { durable: true });
 
-  for (const binding of QUEUE_BINDINGS) {
-    await channel.assertQueue(binding.queue, {
-      durable: true,
-      arguments: {
-        'x-queue-type': 'quorum',
-        'x-delivery-limit': 20,
-        'x-dead-letter-exchange': DEAD_LETTER_EXCHANGE,
-        'x-dead-letter-routing-key': binding.queue,
-      },
-    });
-
-    const deadLetterQueue = `${binding.queue}.dead`;
-    await channel.assertQueue(deadLetterQueue, {
-      durable: true,
-      arguments: { 'x-queue-type': 'quorum' },
-    });
-    await channel.bindQueue(deadLetterQueue, DEAD_LETTER_EXCHANGE, binding.queue);
-
-    for (const routingKey of binding.routingKeys) {
-      await channel.bindQueue(binding.queue, EXCHANGE_NAME, routingKey);
-
-      const retryQueue = retryQueueName(binding.queue, routingKey);
-      await channel.assertQueue(retryQueue, {
-        durable: true,
-        arguments: {
-          'x-queue-type': 'quorum',
-          'x-message-ttl': DEFAULT_RETRY_DELAY_MS,
-          'x-dead-letter-exchange': EXCHANGE_NAME,
-          'x-dead-letter-routing-key': routingKey,
-        },
-      });
-      await channel.bindQueue(retryQueue, RETRY_EXCHANGE, retryRoutingKey(binding.queue, routingKey));
+  for (const spec of expectedQueueSpecs()) {
+    await channel.assertQueue(spec.name, { durable: true, arguments: spec.arguments });
+    for (const binding of spec.bindings) {
+      await channel.bindQueue(spec.name, binding.exchange, binding.routingKey);
     }
   }
 }
@@ -181,36 +176,76 @@ export async function createConsumer(
   return channel.consume(queue, async (message) => {
     if (!message) return;
 
+    const retryCount = Number(message.properties.headers?.['x-retry-count'] || 0);
+    // Identifiers only. Payloads may contain customer data and are not logged.
+    const settle = (outcome: ConsumerOutcome, event: any, detail?: Record<string, unknown>) => {
+      recordConsumerOutcome(queue, outcome);
+      const fields = {
+        queue,
+        eventId: typeof event?.eventId === 'string' ? event.eventId : message.properties.messageId,
+        eventName: typeof event?.eventName === 'string' ? event.eventName : message.properties.type,
+        aggregateId: typeof event?.payload?.orderId === 'string' ? event.payload.orderId : undefined,
+        attempt: retryCount + 1,
+        redelivered: message.fields.redelivered === true,
+        outcome,
+        ...detail,
+      };
+      if (outcome === 'ACKED') consumerLogger.info('Message settled', fields);
+      else consumerLogger.warn('Message settled', fields);
+    };
+
     let event: any;
     let error: unknown;
     try {
-      event = JSON.parse(message.content.toString());
+      try {
+        event = JSON.parse(message.content.toString());
+      } catch (parseError) {
+        throw new NonRetryableEventError(
+          `Malformed JSON: ${parseError instanceof Error ? parseError.message : 'unparseable body'}`,
+        );
+      }
       if (!event || typeof event.eventId !== 'string' || typeof event.eventName !== 'string') {
-        throw new Error('Invalid event envelope');
+        throw new NonRetryableEventError('Invalid event envelope');
       }
       await handler(event, message);
       channel.ack(message);
+      settle('ACKED', event);
       return;
     } catch (handlerError) {
       error = handlerError;
     }
 
+    const reason = String(error instanceof Error ? error.message : error).slice(0, 300);
     try {
       const binding = QUEUE_BINDINGS.find((candidate) => candidate.queue === queue);
       const routingKey = message.fields.routingKey;
-      const retryCount = Number(message.properties.headers?.['x-retry-count'] || 0);
-      if (binding?.routingKeys.includes(routingKey) && retryCount < maxRetries) {
+      let outcome: ConsumerOutcome;
+      const retryable = !(error instanceof NonRetryableEventError);
+      if (retryable && binding?.routingKeys.includes(routingKey) && retryCount < maxRetries) {
         await forwardForRetry(channel, queue, routingKey, message, error, retryCount + 1);
+        outcome = 'RETRY_SCHEDULED';
       } else {
         await forwardToDeadLetter(channel, queue, message, error);
+        outcome = 'DEAD_LETTERED';
       }
       // Ack only after the retry/DLQ copy has been broker-confirmed.
       channel.ack(message);
+      settle(outcome, event, { reason });
     } catch (forwardError) {
-      console.error(`[RabbitMQ] Failed to forward message from ${queue}; leaving it for redelivery:`,
-        forwardError instanceof Error ? forwardError.message : 'unknown error');
       // If broker forwarding cannot be confirmed, preserve the original delivery.
-      channel.nack(message, false, true);
+      // A failed publish to a missing exchange closes the channel; nack then
+      // throws, but the broker already returns every unacknowledged delivery
+      // of a closed channel to the queue. Swallowing that throw keeps it from
+      // escaping this callback as an unhandled rejection.
+      try {
+        channel.nack(message, false, true);
+      } catch {
+        // Channel already closed; the delivery is requeued by the broker.
+      }
+      settle('REQUEUED', event, {
+        reason,
+        forwardError: forwardError instanceof Error ? forwardError.message.slice(0, 300) : 'unknown error',
+      });
     }
   });
 }

@@ -9,6 +9,7 @@ import {
   errorResponse,
   httpMetricsMiddleware,
   renderHttpPrometheusMetrics,
+  renderReliabilityPrometheusMetrics,
   requestIdMiddleware,
 } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
@@ -54,9 +55,9 @@ app.get('/analytics/health', (req, res) => {
 
 // Metrics expose operational topology and counters, so they are available to
 // the private scraper identity only, never as an unauthenticated public route.
-app.get('/metrics', createInternalServiceGuard(['prometheus']), (req, res) => {
+app.get('/metrics', createInternalServiceGuard(['prometheus']), async (req, res) => {
   res.type('text/plain; version=0.0.4; charset=utf-8');
-  res.status(200).send(renderHttpPrometheusMetrics() + renderAnalyticsPrometheusMetrics());
+  res.status(200).send(renderHttpPrometheusMetrics() + await renderReliabilityPrometheusMetrics() + renderAnalyticsPrometheusMetrics());
 });
 
 /**

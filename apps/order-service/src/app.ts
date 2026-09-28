@@ -9,6 +9,7 @@ import {
   errorResponse,
   httpMetricsMiddleware,
   renderHttpPrometheusMetrics,
+  renderReliabilityPrometheusMetrics,
   requestIdMiddleware,
 } from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
@@ -60,9 +61,9 @@ app.get('/orders/health', (req, res) => {
   });
 });
 
-app.get('/metrics', createInternalServiceGuard(['prometheus']), (_req, res) => {
+app.get('/metrics', createInternalServiceGuard(['prometheus']), async (_req, res) => {
   res.type('text/plain; version=0.0.4; charset=utf-8');
-  res.status(200).send(renderHttpPrometheusMetrics());
+  res.status(200).send(renderHttpPrometheusMetrics() + await renderReliabilityPrometheusMetrics());
 });
 
 // Routes
@@ -80,6 +81,9 @@ if (process.env.NODE_ENV !== 'test') {
     orderService.checkAndCompleteDeliveredOrders().catch((err) => {
       logger.error('Error in checkAndCompleteDeliveredOrders:', err);
     });
+    orderService.recoverStalledCheckouts().catch((err) => {
+      logger.error('Error in recoverStalledCheckouts:', err);
+    });
   }, 5 * 60 * 1000);
 
   // Run once on startup after delay
@@ -90,6 +94,9 @@ if (process.env.NODE_ENV !== 'test') {
     });
     orderService.checkAndCompleteDeliveredOrders().catch((err) => {
       logger.error('Error in startup delivered orders check:', err);
+    });
+    orderService.recoverStalledCheckouts().catch((err) => {
+      logger.error('Error in startup stalled checkout recovery:', err);
     });
   }, 10000);
 }

@@ -1,5 +1,6 @@
 import { shippingRepository } from '../repositories/shipping.repository';
 import { prisma } from '../prisma/client';
+import { Prisma } from '../generated/client';
 import { AppError, ConflictError, NotFoundError, ValidationError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
 import { enqueueOrderDelivered, enqueueOrderShipped } from '../messaging/outbox';
 import { config } from '../config';
@@ -275,7 +276,7 @@ export class ShippingService {
     trustedQuotedCost?: number;
     destinationAddress: any;
     notes?: string;
-  }) {
+  }, tx?: Prisma.TransactionClient) {
     if (!Number.isSafeInteger(data.weight) || data.weight <= 0) {
       throw new ValidationError('Shipping weight must be a positive integer in grams');
     }
@@ -288,7 +289,14 @@ export class ShippingService {
       throw new ValidationError('Trusted quoted cost must be a positive integer amount in IDR');
     }
 
-    const existing = await shippingRepository.findShippingOrderByOrderAndSeller(data.orderId, data.sellerId);
+    // With a caller transaction (the OrderPaid inbox), the existence check must
+    // see that transaction's own earlier inserts.
+    const existing = tx
+      ? await tx.shippingOrder.findFirst({
+        where: { orderId: data.orderId, sellerId: data.sellerId },
+        include: { history: { orderBy: { createdAt: 'asc' } } },
+      })
+      : await shippingRepository.findShippingOrderByOrderAndSeller(data.orderId, data.sellerId);
     if (existing) {
       return existing; // idempotent
     }
@@ -333,7 +341,7 @@ export class ShippingService {
 
     const originAddress = { city: data.originCity, province: data.originProvince };
 
-    return prisma.$transaction(async (tx) => {
+    const write = async (tx: Prisma.TransactionClient) => {
       const order = await shippingRepository.createShippingOrder(tx, {
         orderId: data.orderId,
         sellerId: data.sellerId,
@@ -361,7 +369,9 @@ export class ShippingService {
         ...order,
         history: [{ toStatus: 'WAITING_PICKUP', location: data.originCity, note: 'Shipping label created', createdAt: new Date() }],
       };
-    });
+    };
+
+    return tx ? write(tx) : prisma.$transaction(write);
   }
 
   async getShippingOrder(

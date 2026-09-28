@@ -23,6 +23,11 @@ const orderEnvSchema = z.object({
   ORDER_OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(500).default(5000),
   ORDER_OUTBOX_BATCH_SIZE: z.coerce.number().int().min(1).max(100).default(50),
   ORDER_OUTBOX_LEASE_MS: z.coerce.number().int().min(10000).default(60000),
+  // An unfinalized checkout older than this is treated as interrupted and
+  // cancelled by the recovery sweep. Must exceed the slowest successful
+  // checkout, including the payment provider round trip.
+  CHECKOUT_FINALIZATION_TIMEOUT_MS: z.coerce.number().int().min(60000).default(15 * 60 * 1000),
+  CHECKOUT_RECOVERY_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(100),
   JWT_SECRET: z.string().default('supersecretjwtkey123'),
 });
 
@@ -45,6 +50,8 @@ export const config = {
   outboxPollIntervalMs: env.ORDER_OUTBOX_POLL_INTERVAL_MS,
   outboxBatchSize: env.ORDER_OUTBOX_BATCH_SIZE,
   outboxLeaseMs: env.ORDER_OUTBOX_LEASE_MS,
+  checkoutFinalizationTimeoutMs: env.CHECKOUT_FINALIZATION_TIMEOUT_MS,
+  checkoutRecoveryBatchSize: env.CHECKOUT_RECOVERY_BATCH_SIZE,
   jwtSecret: env.JWT_SECRET,
 };
 

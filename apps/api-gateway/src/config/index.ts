@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { assertProductionSecret } from '@nexacommerce/common';
+import { parseTrustProxy } from '../trust-proxy';
 
 // Load environmental variables from root folder if present
 dotenv.config({ path: path.join(__dirname, '../../../../.env') });
@@ -35,6 +36,9 @@ export const config = {
   analyticsServiceUrl: process.env.ANALYTICS_SERVICE_URL || 'http://localhost:3012',
   jwtSecret,
   redisUrl,
+  // See src/trust-proxy.ts. Must match the real proxy chain in front of the
+  // gateway, or rate-limit keys are either collapsed or client-chosen.
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
   allowedOrigins: corsOrigins.length > 0
     ? corsOrigins
     : ['http://localhost:3020', 'http://localhost:3021', 'http://localhost:3022'],

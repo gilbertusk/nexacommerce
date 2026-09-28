@@ -130,7 +130,7 @@ export type PreparedEvent =
   | { kind: 'PaymentSuccess'; amount: number }
   | { kind: 'PaymentFailed' }
   | { kind: 'PaymentExpired' }
-  | { kind: 'OrderCancelled' }
+  | { kind: 'OrderCancelled'; announced: boolean }
   | {
       kind: 'ReviewCreated';
       productId: string;
@@ -164,7 +164,9 @@ export async function prepareAnalyticsEvent(
     case 'PaymentExpired':
       return { kind: 'PaymentExpired' };
     case 'OrderCancelled':
-      return { kind: 'OrderCancelled' };
+      // A checkout compensated before finalization never produced
+      // OrderCreated, so counting its cancellation would inflate the rate.
+      return { kind: 'OrderCancelled', announced: payload?.checkoutFinalized !== false };
     case 'ReviewCreated': {
       const [product, summary] = await Promise.all([
         fetchProductInfo(payload.productId),
@@ -273,6 +275,7 @@ export async function applyAnalyticsEvent(
       return;
 
     case 'OrderCancelled':
+      if (!prepared.announced) return;
       await analyticsRepository.upsertDailyReport(today, { totalCancelledOrders: 1 }, client);
       await analyticsRepository.upsertMonthlyReport(year, month, { totalCancelledOrders: 1 }, client);
       return;

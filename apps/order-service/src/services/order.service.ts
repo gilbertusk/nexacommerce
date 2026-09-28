@@ -18,6 +18,37 @@ import {
 } from '../messaging/outbox';
 import { finalizeCheckoutWithOrderCreated } from './checkout-finalization';
 
+type TxClient = Prisma.TransactionClient;
+
+/** Statuses at or beyond payment; a late payment event must never regress them. */
+const PAID_OR_LATER_STATUSES = [
+  'PAID',
+  'PROCESSING',
+  'PACKED',
+  'SHIPPED',
+  'DELIVERED',
+  'COMPLETED',
+  'RETURN_REQUESTED',
+  'RETURN_APPROVED',
+  'RETURN_RECEIVED',
+  'PARTIALLY_REFUNDED',
+  'REFUNDED',
+];
+
+/** Statuses from which a delivery confirmation may move an order to DELIVERED. */
+const DELIVERABLE_STATUSES = ['PAID', 'PROCESSING', 'PACKED', 'SHIPPED'];
+
+/** Statuses a redelivered OrderDelivered must leave untouched. */
+const DELIVERED_OR_LATER_STATUSES = [
+  'DELIVERED',
+  'COMPLETED',
+  'RETURN_REQUESTED',
+  'RETURN_APPROVED',
+  'RETURN_RECEIVED',
+  'PARTIALLY_REFUNDED',
+  'REFUNDED',
+];
+
 export class OrderService {
   private async makeRequest(serviceUrl: string, path: string, method: string, body?: any) {
     const url = `${serviceUrl}${path}`;
@@ -63,6 +94,14 @@ export class OrderService {
     }
   ) {
     const { shippingAddressId, shippingQuoteId, voucherCode, notes } = body;
+
+    // 0. Idempotent replay. A quote prices exactly one order (unique
+    // `shipping_quote_id`), so a retried HTTP request for the same quote is
+    // answered from the order it already produced instead of starting a
+    // second saga. Payment creation is idempotent per order id, so asking
+    // Payment Service again returns the existing invoice rather than a new one.
+    const replay = await this.replayCheckout(userId, shippingQuoteId);
+    if (replay) return replay;
 
     // 1. Get Cart
     const cart = await this.makeRequest(config.cartServiceUrl, `/cart/internal/cart/${userId}`, 'GET');
@@ -367,26 +406,62 @@ export class OrderService {
     };
   }
 
-  private async cancelOrderInDb(orderId: string, reason: string) {
+  /**
+   * Answer a repeated checkout for a quote that already produced an order.
+   * Returns null when the quote has not been used, so a first attempt proceeds.
+   */
+  private async replayCheckout(userId: string, shippingQuoteId: string) {
+    const existing = await orderRepository.findByShippingQuoteId(shippingQuoteId);
+    // Another customer's quote falls through; consuming it is refused later
+    // with the same answer as an unknown quote, so nothing leaks here.
+    if (!existing || existing.customerId !== userId) return null;
+
+    if (existing.status === 'CANCELLED') {
+      throw new ConflictError('Checkout for this shipping quote failed and was cancelled; request a new shipping quote');
+    }
+    if (!existing.checkoutFinalizedAt) {
+      throw new ConflictError('Checkout for this shipping quote is still being processed');
+    }
+
+    const payment = await this.makeRequest(config.paymentServiceUrl, '/payments/internal/payments/create', 'POST', {
+      orderId: existing.id,
+      customerId: userId,
+      amount: Number(existing.grandTotal),
+    });
+    return { order: existing, payment, replayed: true };
+  }
+
+  /**
+   * Cancel an order whose checkout saga never finalized.
+   *
+   * The claim requires `checkoutFinalizedAt IS NULL`, and finalization requires
+   * the order to still be PENDING_PAYMENT, so the two are mutually exclusive on
+   * the order row: an order is either announced with OrderCreated or cancelled
+   * as an abandoned checkout, never both. The OrderCancelled event carries
+   * `checkoutFinalized: false` so Inventory still releases stock while order
+   * projections do not count an order that was never announced.
+   *
+   * Returns false when the order finalized or changed state first.
+   */
+  async abandonUnfinalizedCheckout(orderId: string, reason: string): Promise<boolean> {
     const existing = await orderRepository.findById(orderId);
-    if (!existing) return;
-    if (existing.status === 'CANCELLED') return;
+    if (!existing || existing.status !== 'PENDING_PAYMENT' || existing.checkoutFinalizedAt) return false;
 
     const cancelledAt = new Date();
-    await prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx) => {
       const claimed = await tx.order.updateMany({
-        where: { id: orderId, status: existing.status },
+        where: { id: orderId, status: 'PENDING_PAYMENT', checkoutFinalizedAt: null },
         data: {
           status: 'CANCELLED',
           cancelledAt,
         },
       });
-      if (claimed.count !== 1) throw new ConflictError('Order rollback cancellation was already processed');
+      if (claimed.count !== 1) return false;
 
       await tx.orderStatusHistory.create({
         data: {
           orderId,
-          fromStatus: existing.status,
+          fromStatus: 'PENDING_PAYMENT',
           toStatus: 'CANCELLED',
           note: reason,
           changedBy: 'SYSTEM',
@@ -397,8 +472,44 @@ export class OrderService {
         customerId: existing.customerId,
         reason,
         cancelledAt: cancelledAt.toISOString(),
+        checkoutFinalized: false,
       });
+      return true;
     });
+  }
+
+  private async cancelOrderInDb(orderId: string, reason: string) {
+    await this.abandonUnfinalizedCheckout(orderId, reason);
+  }
+
+  /**
+   * Recover checkout sagas interrupted between order insert and finalization
+   * (process crash, lost request, hung dependency). Such an order may hold
+   * reserved stock and a voucher. Cancelling it emits OrderCancelled through
+   * the outbox, which Inventory consumes to release the reservation; the
+   * voucher is released here and again on retry because release is
+   * idempotent per order.
+   */
+  async recoverStalledCheckouts(now = new Date()): Promise<number> {
+    const staleBefore = new Date(now.getTime() - config.checkoutFinalizationTimeoutMs);
+    const stalled = await orderRepository.findUnfinalizedCheckoutsOlderThan(staleBefore, config.checkoutRecoveryBatchSize);
+    let recovered = 0;
+    for (const order of stalled) {
+      const cancelled = await this.abandonUnfinalizedCheckout(order.id, 'Checkout saga did not finalize in time');
+      if (!cancelled) continue;
+      recovered += 1;
+      console.warn(JSON.stringify({
+        event: 'checkout.recovered',
+        orderId: order.id,
+        outcome: 'CANCELLED_UNFINALIZED',
+      }));
+      if (order.voucherId) {
+        await this.makeRequest(config.voucherServiceUrl, '/vouchers/internal/vouchers/release', 'POST', {
+          orderId: order.id,
+        }).catch((e) => console.error(`Voucher release for recovered checkout ${order.id} failed: ${e.message}`));
+      }
+    }
+    return recovered;
   }
 
   async getOrderById(id: string, actor: { userId: string; role: string }) {
@@ -522,6 +633,7 @@ export class OrderService {
         customerId: order.customerId,
         reason,
         cancelledAt: cancelledAt.toISOString(),
+        checkoutFinalized: Boolean(order.checkoutFinalizedAt),
       });
     });
 
@@ -535,33 +647,35 @@ export class OrderService {
     return this.getOrderById(id, actor);
   }
 
-  async handlePaymentSuccess(orderId: string, paidAt: string, amount: number) {
-    const order = await orderRepository.findById(orderId);
-    if (!order) {
-      throw new NotFoundError('Order not found');
-    }
+  /** Run `fn` in the caller's transaction, or open one when there is none. */
+  private withTx<T>(tx: TxClient | undefined, fn: (client: TxClient) => Promise<T>): Promise<T> {
+    return tx ? fn(tx) : prisma.$transaction(fn);
+  }
 
-    const paidOrLaterStatuses = [
-      'PAID',
-      'PROCESSING',
-      'PACKED',
-      'SHIPPED',
-      'DELIVERED',
-      'COMPLETED',
-      'RETURN_REQUESTED',
-      'RETURN_APPROVED',
-      'PARTIALLY_REFUNDED',
-      'REFUNDED',
-    ];
-    if (paidOrLaterStatuses.includes(order.status)) {
+  private async loadOrder(orderId: string, tx?: TxClient) {
+    const order = tx
+      ? await tx.order.findUnique({ where: { id: orderId }, include: { items: true } })
+      : await orderRepository.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found');
+    return order;
+  }
+
+  /**
+   * Apply PaymentSuccess. With `tx` the transition joins the caller's
+   * transaction (the consumer's inbox transaction); without it, one is opened.
+   */
+  async handlePaymentSuccess(orderId: string, paidAt: string, amount: number, tx?: TxClient) {
+    const order = await this.loadOrder(orderId, tx);
+
+    if (PAID_OR_LATER_STATUSES.includes(order.status)) {
       return order; // already processed
     }
     if (order.status !== 'PENDING_PAYMENT') {
       throw new ConflictError(`Payment success cannot transition order from ${order.status} to PAID`);
     }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const claimed = await tx.order.updateMany({
+    const updated = await this.withTx(tx, async (client) => {
+      const claimed = await client.order.updateMany({
         where: { id: orderId, status: 'PENDING_PAYMENT' },
         data: {
           status: 'PAID',
@@ -570,7 +684,7 @@ export class OrderService {
       });
       if (claimed.count !== 1) throw new ConflictError('Payment success was already processed');
 
-      await tx.orderStatusHistory.create({
+      await client.orderStatusHistory.create({
         data: {
           orderId,
           fromStatus: order.status,
@@ -579,24 +693,27 @@ export class OrderService {
           changedBy: 'SYSTEM',
         },
       });
-      await enqueueOrderPaid(tx, {
+      await enqueueOrderPaid(client, {
         orderId: order.id,
         customerId: order.customerId,
         paidAt,
         amount,
       });
 
-      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
+      return client.order.findUniqueOrThrow({ where: { id: orderId } });
     });
 
     return updated;
   }
 
-  async handlePaymentFailedOrExpired(orderId: string, status: 'FAILED' | 'EXPIRED') {
-    const order = await orderRepository.findById(orderId);
-    if (!order) {
-      throw new NotFoundError('Order not found');
-    }
+  /**
+   * Apply PaymentFailed/PaymentExpired. The voucher release is an HTTP call
+   * and must not run inside a caller-supplied transaction, so it happens here
+   * only when this method owns the transaction; the consumer releases after
+   * its inbox transaction commits.
+   */
+  async handlePaymentFailedOrExpired(orderId: string, status: 'FAILED' | 'EXPIRED', tx?: TxClient) {
+    const order = await this.loadOrder(orderId, tx);
 
     if (order.status === 'CANCELLED') {
       return order; // already processed
@@ -609,8 +726,8 @@ export class OrderService {
     const note = status === 'EXPIRED' ? 'Payment period expired' : 'Payment failed';
     const cancelledAt = new Date();
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const claimed = await tx.order.updateMany({
+    const updated = await this.withTx(tx, async (client) => {
+      const claimed = await client.order.updateMany({
         where: { id: orderId, status: 'PENDING_PAYMENT' },
         data: {
           status: targetStatus,
@@ -619,7 +736,7 @@ export class OrderService {
       });
       if (claimed.count !== 1) throw new ConflictError(`Payment ${status.toLowerCase()} was already processed`);
 
-      await tx.orderStatusHistory.create({
+      await client.orderStatusHistory.create({
         data: {
           orderId,
           fromStatus: order.status,
@@ -628,24 +745,29 @@ export class OrderService {
           changedBy: 'SYSTEM',
         },
       });
-      await enqueueOrderCancelled(tx, {
+      await enqueueOrderCancelled(client, {
         orderId: order.id,
         customerId: order.customerId,
         reason: note,
         cancelledAt: cancelledAt.toISOString(),
+        checkoutFinalized: Boolean(order.checkoutFinalizedAt),
       });
 
-      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
+      return client.order.findUniqueOrThrow({ where: { id: orderId } });
     });
 
     // release voucher
-    if (order.voucherId) {
-      await this.makeRequest(config.voucherServiceUrl, '/vouchers/internal/vouchers/release', 'POST', {
-        orderId: order.id,
-      }).catch((e) => console.error(`Failed to release voucher on payment cancellation: ${e.message}`));
+    if (!tx && order.voucherId) {
+      await this.releaseVoucherForOrder(order.id).catch((e) =>
+        console.error(`Failed to release voucher on payment cancellation: ${e.message}`));
     }
 
     return updated;
+  }
+
+  /** Idempotent per order in Voucher Service; safe to repeat on redelivery. */
+  async releaseVoucherForOrder(orderId: string) {
+    return this.makeRequest(config.voucherServiceUrl, '/vouchers/internal/vouchers/release', 'POST', { orderId });
   }
 
   async updateOrderStatus(id: string, actor: { userId: string; role: string }, toStatus: string, note?: string) {
@@ -700,23 +822,32 @@ export class OrderService {
     return updated;
   }
 
-  async handleOrderDelivered(orderId: string) {
-    const order = await orderRepository.findById(orderId);
-    if (!order) {
-      throw new NotFoundError('Order not found');
-    }
+  /**
+   * Apply OrderDelivered monotonically. A redelivered or late event must not
+   * move a completed, returned, or refunded order back to DELIVERED, and an
+   * unpaid or cancelled order cannot be delivered at all.
+   */
+  async handleOrderDelivered(orderId: string, tx?: TxClient) {
+    const order = await this.loadOrder(orderId, tx);
 
-    if (order.status === 'DELIVERED') {
+    if (DELIVERED_OR_LATER_STATUSES.includes(order.status)) {
       return order;
     }
+    if (!DELIVERABLE_STATUSES.includes(order.status)) {
+      throw new ValidationError(`Order cannot be marked delivered from status: ${order.status}`);
+    }
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const o = await tx.order.update({
-        where: { id: orderId },
+    return this.withTx(tx, async (client) => {
+      const claimed = await client.order.updateMany({
+        where: { id: orderId, status: { in: DELIVERABLE_STATUSES } },
         data: { status: 'DELIVERED' },
       });
+      if (claimed.count !== 1) {
+        // A competing transition won; the next delivery re-evaluates it.
+        throw new ConflictError('Order delivery transition was already processed');
+      }
 
-      await tx.orderStatusHistory.create({
+      await client.orderStatusHistory.create({
         data: {
           orderId,
           fromStatus: order.status,
@@ -726,28 +857,25 @@ export class OrderService {
         },
       });
 
-      return o;
+      return client.order.findUniqueOrThrow({ where: { id: orderId } });
     });
-
-    return updated;
   }
 
-  async handleOrderShipped(orderId: string) {
-    const order = await orderRepository.findById(orderId);
-    if (!order) throw new NotFoundError('Order not found');
-    if (['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(order.status)) return order;
+  async handleOrderShipped(orderId: string, tx?: TxClient) {
+    const order = await this.loadOrder(orderId, tx);
+    if (['SHIPPED', ...DELIVERED_OR_LATER_STATUSES].includes(order.status)) return order;
     if (!['PAID', 'PROCESSING', 'PACKED'].includes(order.status)) {
       throw new ValidationError(`Order cannot be marked shipped from status: ${order.status}`);
     }
 
-    return prisma.$transaction(async (tx) => {
-      const claimed = await tx.order.updateMany({
+    return this.withTx(tx, async (client) => {
+      const claimed = await client.order.updateMany({
         where: { id: orderId, status: { in: ['PAID', 'PROCESSING', 'PACKED'] } },
         data: { status: 'SHIPPED' },
       });
-      if (claimed.count !== 1) return tx.order.findUniqueOrThrow({ where: { id: orderId } });
+      if (claimed.count !== 1) return client.order.findUniqueOrThrow({ where: { id: orderId } });
 
-      await tx.orderStatusHistory.create({
+      await client.orderStatusHistory.create({
         data: {
           orderId,
           fromStatus: order.status,
@@ -756,7 +884,7 @@ export class OrderService {
           changedBy: 'SYSTEM',
         },
       });
-      return tx.order.findUniqueOrThrow({ where: { id: orderId } });
+      return client.order.findUniqueOrThrow({ where: { id: orderId } });
     });
   }
 

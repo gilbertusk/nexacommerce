@@ -99,7 +99,9 @@ export function dailyDeltaFor(envelope: StreamEnvelope): DailyDelta | null {
     case 'OrderCreated':
       return { totalOrders: 1 };
     case 'OrderCancelled':
-      return { totalCancelledOrders: 1 };
+      // Mirrors the RabbitMQ projection: a checkout compensated before
+      // OrderCreated was announced is not an order cancellation.
+      return payload.checkoutFinalized === false ? null : { totalCancelledOrders: 1 };
     case 'OrderCompleted': {
       const items = Array.isArray(payload.items) ? payload.items : [];
       const quantity = items.reduce((sum: number, i: any) => sum + (Number(i?.quantity) || 0), 0);

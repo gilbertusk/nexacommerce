@@ -3,11 +3,17 @@ import {
   connectRabbitMQ,
   createConsumer,
   createPublisher,
+  OUTBOX_BACKLOG_SQL,
+  recordOutboxDispatch,
+  registerBacklogProvider,
+  setDependencyReady,
   setupExchangeAndQueues,
+  toBacklogStats,
 } from '@nexacommerce/common';
 import { EXCHANGE_NAME, QUEUES } from '@nexacommerce/event-contracts';
 import { createLogger } from '@nexacommerce/logger';
 import { config } from '../config';
+import { prisma } from '../prisma/client';
 import { inventoryService } from '../services/inventory.service';
 import {
   claimInventoryOutboxBatch,
@@ -66,6 +72,7 @@ async function ensureMessaging(): Promise<void> {
         channel = undefined;
         connection = undefined;
         publishEvent = undefined;
+        setDependencyReady('rabbitmq', false);
       }
     };
     nextConnection.on('close', resetMessaging);
@@ -74,6 +81,7 @@ async function ensureMessaging(): Promise<void> {
     connection = nextConnection;
     channel = nextChannel;
     publishEvent = createPublisher(nextChannel, EXCHANGE_NAME);
+    setDependencyReady('rabbitmq', true);
     logger.info('[RabbitMQ] Inventory messaging initialized successfully.');
   })().finally(() => {
     connectPromise = undefined;
@@ -81,6 +89,9 @@ async function ensureMessaging(): Promise<void> {
 
   return connectPromise;
 }
+
+registerBacklogProvider('outbox', 'inventory-service', async () =>
+  toBacklogStats(await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(OUTBOX_BACKLOG_SQL)));
 
 export async function dispatchInventoryOutboxOnce(): Promise<number> {
   if (dispatching) return 0;
@@ -98,9 +109,18 @@ export async function dispatchInventoryOutboxOnce(): Promise<number> {
       try {
         await publishEvent!(event.routingKey, event.eventPayload);
         await markInventoryOutboxPublished(event.id, lockToken);
+        recordOutboxDispatch('inventory-service', 'PUBLISHED');
         published += 1;
       } catch (error) {
         await rescheduleInventoryOutbox(event.id, lockToken, event.attempts, error);
+        recordOutboxDispatch('inventory-service', 'RESCHEDULED');
+        logger.warn('[Outbox] Publish failed; event rescheduled', {
+          eventId: event.id,
+          eventName: event.eventName,
+          aggregateId: event.aggregateId,
+          attempt: event.attempts + 1,
+          outcome: 'RESCHEDULED',
+        });
         await Promise.all(events.slice(index + 1).map((pending) => pending.lockToken
           ? releaseInventoryOutboxClaim(pending.id, pending.lockToken)
           : Promise.resolve()));
@@ -138,6 +158,7 @@ export async function stopRabbitMQ(): Promise<void> {
   dispatcherTimer = undefined;
   if (connectPromise) await connectPromise.catch(() => undefined);
   publishEvent = undefined;
+  setDependencyReady('rabbitmq', false);
   const activeChannel = channel;
   const activeConnection = connection;
   channel = undefined;

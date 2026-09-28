@@ -11,10 +11,11 @@ import {
   getRequestId,
   httpMetricsMiddleware,
   renderHttpPrometheusMetrics,
+  renderReliabilityPrometheusMetrics,
   REQUEST_ID_HEADER,
   requestIdMiddleware,
 } from '@nexacommerce/common';
-import { createRateLimitStore, RateLimitStoreUnavailableError } from './redis/rate-limit-store';
+import { createRateLimitStore, rateLimitStoreErrorCount, rateLimitStoreErrorHandler } from './redis/rate-limit-store';
 
 const logger = createLogger('api-gateway');
 const app = express();
@@ -25,6 +26,8 @@ app.use(requestIdMiddleware);
 app.use(httpMetricsMiddleware('api-gateway'));
 
 app.disable('x-powered-by');
+// Must be set before any limiter reads req.ip. See src/trust-proxy.ts.
+app.set('trust proxy', config.trustProxy);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin(origin, callback) {
@@ -37,9 +40,15 @@ app.use(cors({
 
 // Keep the operations surface private and outside Redis-backed public rate
 // limiting, so monitoring remains available during a Redis incident.
-app.get('/metrics', createInternalServiceGuard(['prometheus']), (req, res) => {
+app.get('/metrics', createInternalServiceGuard(['prometheus']), async (req, res) => {
   res.type('text/plain; version=0.0.4; charset=utf-8');
-  res.status(200).send(renderHttpPrometheusMetrics());
+  res.status(200).send(
+    renderHttpPrometheusMetrics()
+    + await renderReliabilityPrometheusMetrics()
+    + '# HELP nexacommerce_rate_limit_store_errors_total Limiter Redis failures; each one was answered with 503.\n'
+    + '# TYPE nexacommerce_rate_limit_store_errors_total counter\n'
+    + `nexacommerce_rate_limit_store_errors_total ${rateLimitStoreErrorCount()}\n`,
+  );
 });
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -335,11 +344,8 @@ app.get('/api/docs', swaggerUi.setup(null, {
 }));
 
 // 404 handler
+app.use(rateLimitStoreErrorHandler);
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-  if (error instanceof RateLimitStoreUnavailableError) {
-    logger.error('Distributed rate-limit store unavailable; rejecting request');
-    return res.status(503).json({ success: false, message: 'Request protection is temporarily unavailable' });
-  }
   logger.error(`Unhandled gateway error: ${error?.message || 'unknown error'}`);
   return res.status(500).json({ success: false, message: 'Internal gateway error' });
 });

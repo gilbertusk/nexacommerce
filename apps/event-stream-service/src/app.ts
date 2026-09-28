@@ -5,6 +5,7 @@ import {
   createInternalServiceGuard,
   httpMetricsMiddleware,
   renderHttpPrometheusMetrics,
+  renderReliabilityPrometheusMetrics,
   requestIdMiddleware,
 } from '@nexacommerce/common';
 
@@ -31,9 +32,9 @@ app.get('/ready', (_req, res) => {
   });
 });
 
-app.get('/metrics', createInternalServiceGuard(['prometheus']), (_req, res) => {
+app.get('/metrics', createInternalServiceGuard(['prometheus']), async (_req, res) => {
   res.type('text/plain; version=0.0.4; charset=utf-8');
-  res.status(200).send(renderHttpPrometheusMetrics());
+  res.status(200).send(renderHttpPrometheusMetrics() + await renderReliabilityPrometheusMetrics());
 });
 
 app.get('/stream/catalog', (_req, res) => {
