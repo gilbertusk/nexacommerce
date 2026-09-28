@@ -76,11 +76,11 @@ Order Service coordinates a SAGA-like transaction:
     releases stock and cancels the order.
 13. **Generate Payment Token:** Payment Service (`POST /payments/internal/payments/create`). Failure
     releases stock and voucher and cancels the order.
-14. **Clear Cart & Publish Event:** Clears the cart, publishes `OrderCreated` to RabbitMQ, and returns
-    the order and payment details.
-
-> `OrderCreated` is still published directly rather than through the transactional outbox. Its
-> finalization boundary is an open Phase 3 item; see `docs/phase-3-reliability.md`.
+14. **Finalize & Clear Cart:** Atomically sets `checkoutFinalizedAt`, records the finalization in
+    order history, and inserts one deterministic `OrderCreated` outbox event. Cart cleanup then runs
+    best-effort; it cannot roll back a finalized checkout. The request returns the order and payment
+    details without waiting for RabbitMQ. The outbox dispatcher publishes later with confirms and
+    retry, so a broker outage cannot lose the fact or fail an otherwise completed checkout.
 
 ## 3. Sequence Diagram
 
@@ -98,6 +98,7 @@ sequenceDiagram
     participant Ship as Shipping Service
     participant Pay as Payment Service
     participant Midtrans as Midtrans API
+    participant DB as Order PostgreSQL
     participant MQ as RabbitMQ Broker
 
     rect rgb(245, 245, 235)
@@ -158,13 +159,16 @@ sequenceDiagram
     Midtrans-->>Pay: Return Snap Token & Redirect URL
     Pay-->>Order: Return payment reference
     
+    Order->>DB: TX: finalize checkout + insert OrderCreated outbox
+    DB-->>Order: Commit
+
     Order->>Cart: DELETE /internal/cart/:userId
-    Cart-->>Order: Confirm cart cleared
-    
-    Order->>MQ: Publish "order.created" Event
+    Cart-->>Order: Confirm cart cleared (best effort)
     
     Order-->>Gateway: Return order & payment details
     Gateway-->>Customer: 201 Created (Order Response)
+
+    DB-->>MQ: Outbox dispatcher publishes "order.created" with confirms/retry
 ```
 
 ---

@@ -4,13 +4,21 @@ import swaggerUi from 'swagger-ui-express';
 import { ZodError } from 'zod';
 import { analyticsRoutes } from './routes/analytics.routes';
 import { swaggerSpec } from './docs/swagger';
-import { errorResponse, requestIdMiddleware } from '@nexacommerce/common';
+import {
+  createInternalServiceGuard,
+  errorResponse,
+  httpMetricsMiddleware,
+  renderHttpPrometheusMetrics,
+  requestIdMiddleware,
+} from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
 import {
   kafkaProjectionLag,
   kafkaProjectionMetrics,
   kafkaProjectionReady,
 } from './messaging/kafka-consumer';
+import { config } from './config';
+import { renderAnalyticsPrometheusMetrics } from './metrics/prometheus';
 
 const logger = createLogger('analytics-service');
 const app = express();
@@ -18,6 +26,7 @@ const app = express();
 // Establish the request correlation id before anything else runs, so every
 // log line and every outbound internal call in this request carries it.
 app.use(requestIdMiddleware);
+app.use(httpMetricsMiddleware('analytics-service'));
 
 app.use(cors({ origin: false }));
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
@@ -43,6 +52,13 @@ app.get('/analytics/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: 'analytics-service', timestamp: new Date().toISOString() });
 });
 
+// Metrics expose operational topology and counters, so they are available to
+// the private scraper identity only, never as an unauthenticated public route.
+app.get('/metrics', createInternalServiceGuard(['prometheus']), (req, res) => {
+  res.type('text/plain; version=0.0.4; charset=utf-8');
+  res.status(200).send(renderHttpPrometheusMetrics() + renderAnalyticsPrometheusMetrics());
+});
+
 /**
  * Readiness, not liveness. It reports whether the Kafka projection is actually
  * consuming and how far behind it is, so a deploy can be held back and an
@@ -57,6 +73,8 @@ app.get('/analytics/readiness', async (req, res) => {
   res.status(ready ? 200 : 503).json({
     status: ready ? 'READY' : 'NOT_READY',
     service: 'analytics-service',
+    dailyReadModel: config.dailyReadModel,
+    rabbitMqConsumerEnabled: config.rabbitMqConsumerEnabled,
     kafkaProjection: { ...metrics, lag },
     timestamp: new Date().toISOString(),
   });

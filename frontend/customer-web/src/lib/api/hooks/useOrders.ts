@@ -24,11 +24,16 @@ export interface OrderAddress {
 }
 
 export interface OrderShippingInfo {
+  sellerId?: string;
+  storeName?: string;
   courier: string;
   service: string;
   cost: number;
   etd?: string;
   trackingNumber?: string;
+  status?: string;
+  originCity?: string;
+  originProvince?: string;
 }
 
 export interface OrderTimelineEvent {
@@ -49,6 +54,7 @@ export interface ApiOrder {
   items: OrderItem[];
   address?: OrderAddress;
   shippingInfo?: OrderShippingInfo;
+  shipments?: OrderShippingInfo[];
   timeline?: OrderTimelineEvent[];
   createdAt?: string;
   date?: string;
@@ -121,11 +127,58 @@ export interface RawOrder {
   } | null;
   courierName?: string | null;
   courierService?: string | null;
+  shipmentBreakdown?: Array<{
+    sellerId: string;
+    storeName?: string;
+    originCity?: string;
+    originProvince?: string;
+    courierName: string;
+    serviceCode: string;
+    serviceName?: string;
+    cost: number | string;
+    estimatedDays?: string;
+  }> | null;
   createdAt?: string;
   statusHistory?: { id: string; toStatus: string; note?: string | null; createdAt: string }[];
 }
 
-export function normalizeOrder(order: RawOrder): ApiOrder {
+interface RawLiveShipment {
+  sellerId?: string | null;
+  courierName: string;
+  serviceCode: string;
+  serviceName?: string;
+  cost: number | string;
+  trackingNumber?: string | null;
+  status: string;
+}
+
+export function normalizeOrder(order: RawOrder, liveShipments: RawLiveShipment[] = []): ApiOrder {
+  const liveBySeller = new Map(liveShipments.map((shipment) => [shipment.sellerId, shipment]));
+  const shipments: OrderShippingInfo[] = (order.shipmentBreakdown ?? []).map((snapshot) => {
+    const live = liveBySeller.get(snapshot.sellerId);
+    return {
+      sellerId: snapshot.sellerId,
+      storeName: snapshot.storeName,
+      courier: live?.courierName ?? snapshot.courierName,
+      service: live?.serviceName ?? snapshot.serviceName ?? snapshot.serviceCode,
+      cost: Number(live?.cost ?? snapshot.cost),
+      etd: snapshot.estimatedDays,
+      trackingNumber: live?.trackingNumber ?? undefined,
+      status: live?.status,
+      originCity: snapshot.originCity,
+      originProvince: snapshot.originProvince,
+    };
+  });
+  if (shipments.length === 0 && (order.courierName || order.courierService)) {
+    shipments.push({
+      courier: order.courierName ?? "",
+      service: order.courierService ?? "",
+      cost: Number(order.shippingCost),
+      trackingNumber: liveShipments[0]?.trackingNumber ?? undefined,
+      status: liveShipments[0]?.status,
+    });
+  }
+
   return {
     id: order.id,
     status: order.status,
@@ -150,11 +203,8 @@ export function normalizeOrder(order: RawOrder): ApiOrder {
       postalCode: order.shippingAddress.postalCode,
       label: order.shippingAddress.label,
     } : undefined,
-    shippingInfo: order.courierName || order.courierService ? {
-      courier: order.courierName ?? "",
-      service: order.courierService ?? "",
-      cost: Number(order.shippingCost),
-    } : undefined,
+    shippingInfo: shipments[0],
+    shipments,
     timeline: order.statusHistory?.map((event, index, events) => ({
       id: event.id,
       title: event.toStatus,
@@ -184,6 +234,11 @@ interface RawCheckoutResponse {
   };
 }
 
+interface RawShippingResponse {
+  success: boolean;
+  data: RawLiveShipment | { shipments: RawLiveShipment[] };
+}
+
 // ------- Hooks -------
 
 export function useOrders() {
@@ -193,7 +248,7 @@ export function useOrders() {
     queryKey: ["orders"],
     queryFn: async (): Promise<OrdersListResponse> => {
       const raw = await apiGet<RawOrdersResponse>("/orders", token ?? undefined);
-      return { success: raw.success, data: { orders: raw.data.orders.map(normalizeOrder) } };
+      return { success: raw.success, data: { orders: raw.data.orders.map((order) => normalizeOrder(order)) } };
     },
     enabled: Boolean(token),
     staleTime: 1000 * 30,
@@ -207,7 +262,14 @@ export function useOrder(id: string) {
     queryKey: ["order", id],
     queryFn: async (): Promise<SingleOrderResponse> => {
       const raw = await apiGet<RawOrderResponse>(`/orders/${id}`, token ?? undefined);
-      return { success: raw.success, data: { order: normalizeOrder(raw.data) } };
+      let liveShipments: RawLiveShipment[] = [];
+      try {
+        const shipping = await apiGet<RawShippingResponse>(`/shipping/${id}`, token ?? undefined);
+        liveShipments = "shipments" in shipping.data ? shipping.data.shipments : [shipping.data];
+      } catch {
+        // A paid order may be visible before the asynchronous label consumer runs.
+      }
+      return { success: raw.success, data: { order: normalizeOrder(raw.data, liveShipments) } };
     },
     enabled: Boolean(id) && Boolean(token),
     staleTime: 1000 * 30,

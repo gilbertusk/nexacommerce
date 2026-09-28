@@ -33,6 +33,50 @@ function quoteBlockedResponse(res: Response, err: QuoteBlockedError) {
 }
 
 export class ShippingController {
+  adminListCouriers = async (_req: Request, res: Response) => {
+    const couriers = await shippingService.adminListCouriers();
+    res.status(200).json(successResponse(couriers, 'Managed couriers retrieved'));
+  };
+
+  adminCreateCourier = async (req: Request, res: Response) => {
+    const adminId = req.headers['x-user-id'] as string;
+    if (!adminId) throw new ValidationError('Authentication required: user ID missing');
+    const courier = await shippingService.adminCreateCourier(adminId, req.body ?? {});
+    res.status(201).json(successResponse(courier, 'Courier created successfully'));
+  };
+
+  adminListRates = async (req: Request, res: Response) => {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+    const result = await shippingService.adminListRates({
+      page,
+      limit,
+      courierId: req.query.courierId as string | undefined,
+      originCity: req.query.originCity as string | undefined,
+      destinationCity: req.query.destinationCity as string | undefined,
+    });
+    res.status(200).json(successResponse(result, 'Managed shipping rates retrieved'));
+  };
+
+  adminCreateRate = async (req: Request, res: Response) => {
+    const adminId = req.headers['x-user-id'] as string;
+    if (!adminId) throw new ValidationError('Authentication required: user ID missing');
+    const rate = await shippingService.adminCreateRate(adminId, req.body ?? {});
+    res.status(201).json(successResponse(rate, 'Verified shipping rate created'));
+  };
+
+  adminUpdateRate = async (req: Request, res: Response) => {
+    const adminId = req.headers['x-user-id'] as string;
+    if (!adminId) throw new ValidationError('Authentication required: user ID missing');
+    const rate = await shippingService.adminUpdateRate(req.params.rateId, adminId, req.body ?? {});
+    res.status(200).json(successResponse(rate, 'Verified shipping rate updated'));
+  };
+
+  adminDeleteRate = async (req: Request, res: Response) => {
+    await shippingService.adminDeleteRate(req.params.rateId);
+    res.status(200).json(successResponse({ id: req.params.rateId }, 'Shipping rate deleted'));
+  };
+
   /**
    * Issue a server-computed shipping quote for the authenticated customer.
    *
@@ -158,17 +202,19 @@ export class ShippingController {
   };
 
   createShippingOrder = async (req: Request, res: Response) => {
-    const { orderId, courierId, serviceCode, weight, originCity, destinationAddress, notes } = req.body;
-    if (!orderId || !courierId || !serviceCode || !weight || !originCity || !destinationAddress) {
+    const { orderId, sellerId, courierId, serviceCode, weight, originCity, originProvince, destinationAddress, notes } = req.body;
+    if (!orderId || !sellerId || !courierId || !serviceCode || !weight || !originCity || !originProvince || !destinationAddress) {
       throw new ValidationError('Missing required fields for shipping order creation');
     }
 
     const result = await shippingService.createShippingOrder({
       orderId,
+      sellerId,
       courierId,
       serviceCode,
       weight,
       originCity,
+      originProvince,
       destinationAddress,
       notes,
     });
@@ -181,13 +227,17 @@ export class ShippingController {
     const userId = req.headers['x-user-id'] as string;
     const userRole = req.headers['x-user-role'] as string;
 
-    const result = await shippingService.getShippingOrder(orderId, { userId, role: userRole });
+    const result = await shippingService.getShippingOrder(
+      orderId,
+      { userId, role: userRole },
+      req.query.sellerId as string | undefined,
+    );
     res.status(200).json(successResponse(result, 'Shipping order retrieved successfully'));
   };
 
   updateShippingStatus = async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const { status, location, note } = req.body;
+    const { status, location, note, sellerId } = req.body;
     if (!status) {
       throw new ValidationError('status is required');
     }
@@ -199,6 +249,7 @@ export class ShippingController {
       status,
       location,
       note,
+      sellerId,
     });
 
     res.status(200).json(successResponse(result, 'Shipping status updated successfully'));
@@ -208,8 +259,9 @@ export class ShippingController {
     const userId = req.headers['x-user-id'] as string;
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 10;
+    const status = req.query.status as string | undefined;
 
-    const result = await shippingService.getSellerShippingOrders(userId, page, limit);
+    const result = await shippingService.getSellerShippingOrders(userId, page, limit, status);
     res.status(200).json(successResponse(result, 'Seller shipping orders retrieved successfully'));
   };
 
@@ -237,13 +289,15 @@ export class ShippingController {
   };
 
   internalCreateShipping = async (req: Request, res: Response) => {
-    const { orderId, courierId, serviceCode, weight, originCity, destinationAddress, notes } = req.body;
+    const { orderId, sellerId, courierId, serviceCode, weight, originCity, originProvince, destinationAddress, notes } = req.body;
     const result = await shippingService.createShippingOrder({
       orderId,
+      sellerId,
       courierId,
       serviceCode,
       weight,
       originCity,
+      originProvince,
       destinationAddress,
       notes,
     });
@@ -258,7 +312,7 @@ export class ShippingController {
 
   updateTrackingNumber = async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const { trackingNumber } = req.body;
+    const { trackingNumber, sellerId } = req.body;
     if (!trackingNumber) {
       throw new ValidationError('trackingNumber is required');
     }
@@ -266,7 +320,12 @@ export class ShippingController {
     const userId = req.headers['x-user-id'] as string || 'SYSTEM';
     const userRole = req.headers['x-user-role'] as string || 'SYSTEM';
 
-    const result = await shippingService.updateTrackingNumber(orderId, { userId, role: userRole }, trackingNumber);
+    const result = await shippingService.updateTrackingNumber(
+      orderId,
+      { userId, role: userRole },
+      trackingNumber,
+      sellerId,
+    );
     res.status(200).json(successResponse(result, 'Tracking number updated successfully'));
   };
 }

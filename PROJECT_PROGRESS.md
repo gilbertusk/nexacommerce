@@ -1,8 +1,8 @@
 # NexaCommerce Project Progress
 
-- Last updated: 2026-09-25
+- Last updated: 2026-09-28
 - Baseline commit: `216a53d` (`first commit`)
-- Active branch: `main`
+- Active branch: `feat/phase-2-5-shipping-quotes-inbox-kafka`
 
 Header correction (2026-09-25): this document previously recorded branch `master` at baseline
 `dc9706f`. The actual checkout is branch `main` at `216a53d`, with a clean working tree; the
@@ -10,45 +10,168 @@ Phase 0-4 work that was previously uncommitted is contained in `216a53d`. No wor
 
 ## Current Status
 
-Updated 2026-09-25.
+Updated 2026-09-28.
 
 | Item | Status |
 |---|---|
 | Phase 0 - Baseline and production-readiness audit | Complete |
 | Phase 1 - Security and payment hardening | Complete (local acceptance) |
-| Phase 2 - Product completion and real frontend integration | In progress - checkout reopened on a server-issued shipping quote; **blocked on business data**, not code |
-| Phase 3 - Redis and RabbitMQ reliability | In progress - atomic inbox implemented and proven on live PostgreSQL; live broker fault acceptance outstanding |
+| Phase 2 - Product completion and real frontend integration | In progress - checkout reopened on a server-issued shipping quote and physical return receipt is enforced before refund; remaining gates are business data, provider acceptance, and E2E |
+| Phase 3 - Redis and RabbitMQ reliability | In progress - producer outboxes (including checkout finalization) and atomic inboxes implemented; live broker/Redis fault acceptance outstanding |
 | Phase 4 - Kafka event streaming | In progress - database-backed Analytics projection implemented and proven on live Kafka + PostgreSQL; production cluster is external acceptance |
 | Phase 5 - Production infrastructure and operations | In progress - migrations, backup/restore drill, request correlation, and CI verified; deployment target undecided |
 | Phase 6 - Production acceptance and limited beta | Not started - requires environments and credentials that have not been supplied |
 
 Phase 0 completion: **100%**.
 Phase 1 completion: **100% for local implementation and static acceptance**.
-Estimated public-production readiness: **55%**, up from 40%.
+Estimated local implementation completeness: **86%**.
+Estimated public-production readiness: **59%**, up from 55%.
 
 The readiness estimate measures production safety, not the number of screens or source files. The
 increase reflects gates that moved from unproven to proven against live infrastructure: migrations
 deploy from empty with no drift, the consumer-side inbox is exactly-once under real concurrency, the
 Kafka projection commits offsets only after its transaction, shipping prices are server-authoritative
-and single-use, and the database backup restores completely. It is not higher because the remaining
-gates need environments, credentials, and business decisions rather than code.
+and single-use, and the database backup restores completely. The increase from 55% to 58% reflected
+fleet-wide HTTP RED instrumentation plus the `OrderCreated` transactional-outbox boundary. The latest
+increase to 59% reflects the implemented physical-return receipt gate, whose migration, atomic audit
+write, authorization, and idempotent retry behavior pass on a clean PostgreSQL 16 database. The local
+implementation estimate is now 86% because admins can manage audited courier/rate data and the paid
+single-shipment label path uses its immutable quote snapshot. Public readiness stays at 59% because no
+real tariffs were supplied, split-shipment label persistence remains unfinished, and RabbitMQ/Redis
+fault acceptance, production monitoring delivery, deployment, provider credentials, browser E2E,
+Midtrans sandbox, and Phase 6 acceptance remain open.
 
 ### What blocks each phase
 
 | Phase | Blocker | Whose call |
 |---|---|---|
-| 2 | No seller has a verified dispatch origin and the rate table has no verified rows, so every quote correctly fails closed | Business - supply origins and tariffs |
+| 2 | Admin origin/rate management is implemented, but no real seller origins or verified tariff rows were supplied; quoting therefore still fails closed for unconfigured routes | Business - enter and approve origins and tariffs |
+| 2 | Paid single-seller labels use the quote snapshot; multi-seller orders are explicitly blocked because `shipping_orders` is still one row per order | Implementation - migrate to one shipment per seller and update fulfillment APIs/UIs |
 | 2 | Production media storage acceptance | External - S3-compatible credentials |
-| 2 | Admin "physical receipt confirmed" step before refunds | Implementation, decision already given |
-| 3 | `OrderCreated` still publishes directly rather than through the outbox | Implementation - needs a saga boundary design |
-| 3 | Live RabbitMQ and Redis fault acceptance (DLQ, broker restart, failover, cross-instance rate limiting) | Implementation - brokers are running locally |
-| 4 | Cutover comparison before reads move to the Kafka projection | Implementation |
+| 3 | Live RabbitMQ and Redis fault acceptance (DLQ, broker restart, failover, cross-instance rate limiting) | Runtime acceptance - Docker Engine and broker ports are currently unavailable |
+| 4 | Cutover comparison tooling is implemented; representative rebuild/comparison evidence is still required before reads move to Kafka | Runtime acceptance |
 | 4 | Production cluster topology, TLS/SASL/ACLs, DR | External - no cluster provided |
-| 5 | Deployment target undecided; no metrics exporter, tracing, or alert rules | Decision, then implementation |
+| 5 | Deployment target undecided; HTTP RED metrics now cover all services and starter alert rules exist, but domain backlog metrics, tracing, collector/Alertmanager, dashboards, and live alert delivery remain | Decision, implementation, and runtime acceptance |
 | 5 | PITR, RTO/RPO, offsite retention | External - needs a real environment |
 | 6 | Everything - full-stack E2E, Midtrans sandbox, SMTP, load/soak/DR, legal approval | External |
 
 Nothing above is marked complete on the strength of a passing build.
+
+### 2026-09-28 continuation - verified shipping-rate administration
+
+- Added ADMIN-only courier creation and shipping-rate list/create/update/delete APIs, OpenAPI
+  coverage, and an Admin Dashboard `Tarif Pengiriman` screen. Inputs are normalized and audited;
+  rates must use an active courier's configured service, positive integer gram/IDR values, and a
+  unique courier/origin/destination/service/weight bracket.
+- Added Shipping audit columns plus the route/bracket uniqueness migration. All four Shipping
+  migrations deployed to a disposable PostgreSQL 16 database. The live integration suite passes
+  20/20 and proves authorization, create/read/update/delete, public quote lookup, audit ownership,
+  and duplicate rejection. Unit tests pass 41/41; Shipping typecheck/build and changed Admin lint
+  and production build pass.
+- Removed the legacy Jakarta origin/province fallback from paid-order label creation. Single-seller
+  labels now use the consumed quote's immutable origin, weight, courier/service, and cost snapshot,
+  so a later rate edit does not re-price a paid order. Missing or malformed snapshots fail closed.
+- Multi-seller paid orders also fail closed at label creation because the legacy `shipping_orders`
+  model still allows only one shipment per order. This prevents silently dropping a seller's parcel,
+  but it is not split-fulfillment completion; the model, APIs, order handoff checks, and UIs still
+  need a one-shipment-per-seller migration.
+- No real seller origin or tariff was invented or retained. Business data entry, browser E2E, and
+  warehouse/provider acceptance remain external gates, so public-production readiness stays 59%.
+
+### 2026-09-26 continuation - Phase 4 cutover gate
+
+- Added an ADMIN-only `GET /analytics/projections/daily/comparison` endpoint with an optional
+  `startDate`/`endDate` window. It compares the RabbitMQ-owned daily report and Kafka-owned daily
+  projection across the union of their dates.
+- The gate checks orders, revenue, items sold, cancelled orders, and completed orders exactly;
+  representation-only decimal differences such as `10` versus `10.00` are canonicalized to cents.
+- A missing date on either source is a mismatch. Two empty sources return `NO_DATA` and
+  `cutoverEligible: false`, preventing an unused projection from being accepted as cutover proof.
+- Five focused comparison tests pass. The new authorization and invalid-date route cases pass;
+  Analytics typecheck and build pass. The full Analytics run reports 27 passing tests and 24 live
+  integration failures because PostgreSQL `localhost:5445` is offline; Kafka `localhost:9092` and
+  Docker Engine are also unavailable. This is recorded as an environment blocker, not a code pass.
+- Daily reads remain on `daily_sales_reports`. They will not be repointed until a representative
+  replay has been compared over an approved window and the endpoint returns `MATCH` with
+  `cutoverEligible: true`.
+- Added a guarded read-model switch. `ANALYTICS_DAILY_READ_MODEL` defaults to `RABBITMQ`; requesting
+  `KAFKA` makes Analytics repeat the comparison at startup and refuse to open its HTTP port on
+  `MISMATCH` or `NO_DATA`. The legacy RabbitMQ analytics consumer can be retired independently only
+  after cutover; configuration validation prevents disabling it while RabbitMQ remains the reader.
+- The guarded-switch unit coverage passes 7/7; Analytics typecheck and build pass. Daily reads have
+  not been switched because the local Docker Engine, PostgreSQL, RabbitMQ, and Kafka are offline.
+- Workspace revalidation after the guarded switch: all 24 workspace typechecks pass; the first run
+  exposed an existing Customer Web API-error test that used an `unknown` catch result without type
+  narrowing, which is now fixed and covered 4/4. The full workspace production build passes. Root
+  lint passes with 0 errors and the same 6 Google-font warnings. Compose production configuration
+  renders with interpolation disabled, and `git diff --check` passes.
+
+### 2026-09-26 continuation - Phase 5 Analytics observability slice
+
+- Added an authenticated Prometheus text exporter at `GET /metrics` on Analytics Service. It exposes
+  Kafka projection connectivity, projected/duplicate/rejected/failure counters, last event/error
+  timestamps, per-partition lag, active daily read model, and RabbitMQ-consumer state.
+- The endpoint requires the `prometheus` internal-service identity and shared token; unauthenticated
+  requests receive 403. It does not expose the operations surface publicly.
+- Added seven Prometheus-compatible starter rules for missing metrics, projection disconnect,
+  transaction failures, sustained lag, schema/message rejection, API Gateway 5xx rate, and p95
+  latency. Rejections/latency are warning-level; failures, disconnection, missing metrics, sustained
+  lag, and elevated 5xx rate are critical.
+- Exporter unit coverage passes 2/2 and focused route coverage passes 2/2. The alert file parses as
+  YAML with seven rules. This is not live monitoring acceptance: no scraper, Alertmanager, dashboard,
+  notification channel, or `promtool` runtime validation is available in the current environment.
+
+### 2026-09-27 continuation - shared HTTP RED metrics
+
+- Added a dependency-free shared HTTP metrics middleware in `@nexacommerce/common`. It records
+  completed requests by service/method/bounded route/status, a cumulative duration histogram, and
+  in-flight requests. UUID, numeric, Mongo-style, and long opaque path segments are normalized to
+  prevent customer identifiers from creating unbounded Prometheus labels.
+- Enabled it on API Gateway and Analytics. Both `GET /metrics` endpoints require the private
+  `prometheus` internal identity. Gateway metrics are mounted before Redis-backed public rate
+  limiting so a Redis outage does not hide the gateway's operational signal.
+- Shared Common tests pass 22/22, including identifier normalization and cumulative buckets. API
+  Gateway and Analytics typechecks pass after rebuilding Common first; the initial parallel check
+  correctly failed against stale generated declarations and was not counted as validation.
+- Final sequential validation passes: Common, API Gateway, and Analytics builds; all 24 workspace
+  typechecks; authenticated/unauthenticated Analytics metrics route cases 2/2; seven-rule YAML
+  parse; and `git diff --check`. No collector scrape or alert firing was runtime-tested.
+
+### 2026-09-27 continuation - fleet-wide HTTP RED metrics
+
+- Extended the shared HTTP request counter, duration histogram, and in-flight gauge to Auth, User,
+  Product, Cart, Order, Payment, Inventory, Voucher, Shipping, Review, Notification, and Event Stream
+  services. Together with API Gateway and Analytics this covers all 14 HTTP processes.
+- Every `/metrics` route uses the authenticated `prometheus` internal-service identity and the shared
+  token. It is not exposed through a public unauthenticated diagnostics route.
+- Generalized the HTTP 5xx-rate and p95-latency starter alerts to evaluate independently per service
+  label, while retaining the Analytics Kafka-specific alerts.
+- Validation: Common package tests 22/22 and Event Stream tests 21/21, including authenticated and
+  rejected metrics requests plus emitted service labels. All 24 workspace typechecks and the full
+  production build pass; lint exits with 0 errors and the same 6 existing Google-font warnings.
+  This is code-level proof only: no collector, scrape discovery, Alertmanager, dashboard, or live
+  notification path was available.
+
+### 2026-09-27 continuation - OrderCreated transactional outbox
+
+- Defined the checkout saga boundary after inventory reservation, optional voucher application, and
+  payment invoice creation have succeeded. Finalization sets `checkout_finalized_at`, writes a
+  status-history marker, and inserts `OrderCreated` into `outbox_events` in one transaction.
+- Removed the direct RabbitMQ publish from the checkout request path. A completed checkout can now
+  return while RabbitMQ is unavailable; the existing leased dispatcher publishes the durable event
+  later with confirms, exponential retry, and stale-claim recovery.
+- `OrderCreated` uses the deterministic event/outbox id `order-created:<orderId>`, preventing an
+  accidental second finalization from creating a second business fact. The migration backfills old
+  rows to `created_at` so previously completed orders are not mistaken for interrupted checkouts.
+- Validation: Order Service unit tests 55/55, typecheck and production build pass, Prisma Client
+  generation succeeds, and the schema validates. Focused RabbitMQ reliability tests pass 6/6 and
+  Redis rate-limit tests pass 4/4. A clean temporary PostgreSQL 16 cluster accepted all six Order
+  migrations and the full suite passes 67/67. The new live integration cases prove finalization,
+  history, and outbox commit together, and all roll back when the deterministic outbox insert
+  conflicts. The temporary cluster was stopped and removed afterward.
+- Docker Desktop still crashes before the Engine starts because its Windows `dockerInference`
+  runtime socket cannot be accessed or removed. No factory reset was attempted. RabbitMQ/Redis
+  restart, DLQ, cross-instance, and failover acceptance therefore remain open rather than inferred.
 
 ## Phase 0 Evidence
 
@@ -131,7 +254,8 @@ Phase 2 is in progress; the first customer catalog slice is implemented locally,
 - Shipping hook safety: removed the customer rate-query hook's default guessed 500g weight; callers must now provide actual product/cart weight, and the query remains disabled for missing/invalid weight. Focused ESLint and Customer Web production build pass. The hook is not currently used by an active page, and actual quote/checkout wiring remains gated on the fulfillment model and verified rates.
 - Refund validation: Payment Service tests pass 26/26, including admin route authorization, return eligibility, cap/idempotency validation, and bank-confirmed vs pending callback behavior. Payment Service and Order Service TypeScript builds pass; Admin Dashboard build and focused ESLint pass. A refunds-table migration was added. No live Midtrans sandbox or database-backed refund/webhook execution was tested; PostgreSQL is unavailable. Order Service has no baseline migration history, and Payment Service history lacks baseline table-creation migrations, so fresh-database migration deployment remains an infrastructure/schema gate. The platform also does not track physical return receipt; an admin must verify returned goods under the accepted business policy before requesting a refund.
 - Full workspace baseline before the review/refund slices: `npm.cmd test` exited 0 with 171 backend tests and 10 Customer Web tests passing; full workspace build passed; full lint passed with 0 errors and 6 Google-font warnings. Latest review, refund, and customer changes have their own targeted test/build/lint results above. Caveat: DB-backed route tests tolerate 500 responses when PostgreSQL at localhost:5445 is unavailable, and Redis/PostgreSQL runtime, Docker, service-to-service runtime, and browser E2E acceptance remain unproven. The configured PostgreSQL endpoint localhost:5445 and Redis localhost:6379 are not listening; other local PostgreSQL instances were not used because they may be unrelated.
-- Remaining Phase 2 work includes authoritative server-side shipping quotes and multi-seller fulfillment design, production media storage/upload validation, full customer/seller/admin integration/E2E coverage, and live service/payment acceptance. Order-level complaint intake/moderation is implemented locally but needs database migration/runtime acceptance. Midtrans refund implementation is local-only and still needs sandbox proof and operational return-receipt policy. No DB, browser E2E, SMTP, broker, payment sandbox, container, or deployment runtime was exercised.
+- At the 2026-09-24 checkpoint, remaining Phase 2 work included authoritative server-side shipping quotes and multi-seller fulfillment design, production media storage/upload validation, full customer/seller/admin integration/E2E coverage, and live service/payment acceptance. Order-level complaint intake/moderation was implemented locally but still needed database migration/runtime acceptance. Midtrans refund implementation was local-only and still needed sandbox proof and the physical-receipt step described in the newer entry below.
+- Physical return receipt gate (2026-09-28): an ADMIN-only `POST /orders/{id}/return-receipt` command now changes `RETURN_APPROVED` to `RETURN_RECEIVED` and atomically records `returnReceivedAt`, `returnReceivedBy`, a bounded note, and `OrderStatusHistory`. The command is idempotent after success and uses a conditional status claim to reject concurrent/stale transitions. Payment Service rejects refund submission until both the receipt marker and an eligible receipt/refund status are present; provider callbacks remain the only path to `PARTIALLY_REFUNDED`/`REFUNDED`. Admin order detail can record and display the receipt, while Admin Payments and Customer Order UI explain the new gate/status. Order unit tests pass 58/58, Payment unit tests pass 23/23, and Order integration tests pass 15/15 on a disposable PostgreSQL 16 cluster after all seven migrations deployed successfully. Order/Payment typechecks and builds pass; Admin typecheck/build pass; Admin lint has 0 errors and 2 existing font warnings. Customer receipt-status UI tests pass 2/2, its typecheck/build pass, and focused lint passes. The temporary database was stopped and removed. Midtrans sandbox and browser E2E are still not proven.
 
 Detailed evidence and next steps: [docs/phase-2-product-completion.md](docs/phase-2-product-completion.md).
 
@@ -372,7 +496,8 @@ decisions on 2026-09-25, and the contract is now implemented against them. Full 
 - Fulfillment: **per-seller origin, split shipment**. N sellers produce N shipments and N fees.
 - Tariffs: the **internal verified rate table**. No external courier API; no configured row means
   the quote fails closed.
-- Refunds: only after an **admin confirms physical receipt** (receipt step still to be built).
+- Refunds: only after an **admin confirms physical receipt**. The receipt step is now implemented;
+  warehouse procedure and live payment-provider acceptance remain external gates.
 
 What was added:
 
@@ -601,7 +726,7 @@ Exit criteria:
 
 ## Immediate Next Step
 
-Next, configure and test a real S3-compatible media endpoint/bucket/CDN (the vendor-neutral upload path is implemented), get the owner's decisions on seller-origin/multi-seller shipping and physical return receipt, then implement trusted shipping quotes and bring up the intended database/runtime for customer/seller/admin E2E plus Midtrans and SMTP sandbox acceptance. Checkout intentionally fails closed until quotes are trusted. Complaint/moderation and refund code exist locally but still require live DB/provider acceptance. Redis/RabbitMQ reliability remains Phase 3 and Kafka remains Phase 4.
+Next, migrate fulfillment persistence and APIs from one shipment per order to one shipment per seller, then enter real verified seller origins and shipping-rate rows through the implemented admin surfaces. After that, configure and test a real S3-compatible media endpoint/bucket/CDN and run customer/seller/admin browser E2E plus Midtrans and SMTP sandbox acceptance. The physical return-receipt gate is implemented and database-tested locally, but the actual warehouse operating procedure and a real Midtrans refund remain production acceptance items. Redis/RabbitMQ reliability remains Phase 3 and Kafka remains Phase 4.
 
 Admin notifications continuation (2026-09-24): pagination reads backend `total` metadata and displays the current range; category filters are sent to Notification Service and applied before pagination instead of filtering only the loaded page. The endpoint validates bounded, non-empty type filters and OpenAPI documents the query parameter. A repository unit test verifies the filter applies to both row selection and filtered total while unread count remains global. Admin also exposes the existing batch mark-all-read endpoint and refreshes its list on success. Notification Service tests pass 20/20 with `--forceExit`, service TypeScript build passes, Admin Dashboard production build passes, and focused ESLint passes. Route tests still tolerate unavailable PostgreSQL, and Jest reports an existing open handle, so persisted runtime query remains unverified.
 

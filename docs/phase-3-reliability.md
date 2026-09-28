@@ -1,7 +1,7 @@
 # Phase 3 — Redis and RabbitMQ Reliability
 
-Last updated: 2026-09-24
-Status: In progress; Payment, Inventory, selected Order lifecycle, Review, and Shipping outboxes plus partial consumer deduplication implemented locally; checkout-saga finalization, full inbox semantics, and live broker acceptance pending
+Last updated: 2026-09-27
+Status: In progress; producer outboxes and atomic consumer inboxes are implemented locally, including checkout-saga finalization; live RabbitMQ/Redis fault acceptance and production HA remain pending
 
 ## Exit criteria
 
@@ -23,7 +23,8 @@ Status: In progress; Payment, Inventory, selected Order lifecycle, Review, and S
 - Redis is used by Cart Service for ephemeral cart state and by API Gateway for distributed rate limits. Gateway counters use atomic Lua operations, separate namespaces per limiter, bounded client reconnect settings, and fail closed with HTTP 503 if Redis is unavailable. `/health` is excluded from the global limiter. Only tests use express-rate-limit's process-local memory store.
 - Focused API Gateway Redis-store tests pass 4/4 for atomic increment/expiry, read/expired-key behavior, decrement/reset, fail-closed errors, and test-mode memory storage. API Gateway TypeScript build passes.
 - Payment status webhooks now write `Payment`, `PaymentLog`, webhook completion, and a stable event envelope to `outbox_events` in one PostgreSQL transaction. The dispatcher claims batches with per-worker lease tokens, publishes through RabbitMQ confirms, marks successful rows published, and releases/reschedules failures with bounded exponential backoff. A closed or unavailable broker is retried by the polling lifecycle instead of dropping the committed domain event.
-- Order cancellation, payment acceptance, payment failure/expiry cancellation, and completion now write their status/history plus `OrderCancelled`, `OrderPaid`, or `OrderCompleted` envelope in one transaction. Conditional status claims prevent concurrent deliveries from producing duplicate transitions. Initial `OrderCreated` remains a confirmed, fail-closed publish because checkout is a multi-service saga and must not announce an order before stock/payment setup succeeds.
+- Order cancellation, payment acceptance, payment failure/expiry cancellation, and completion now write their status/history plus `OrderCancelled`, `OrderPaid`, or `OrderCompleted` envelope in one transaction. Conditional status claims prevent concurrent deliveries from producing duplicate transitions.
+- Checkout now defines an explicit finalization boundary after inventory reservation, optional voucher application, and payment invoice creation succeed. Order Service sets `checkout_finalized_at`, writes a status-history marker, and inserts one deterministic `OrderCreated` outbox envelope in a single transaction. The HTTP request no longer connects to RabbitMQ; a broker outage leaves the committed event pending for the existing dispatcher.
 - Review creation now commits the review, rating summary, and `ReviewCreated` envelope together. Shipping status updates likewise commit the guarded status transition, history, and `OrderShipped`/`OrderDelivered` envelope together. Shipping emits `OrderShipped` only at `PICKED_UP`; repeated in-transit location updates do not re-emit the milestone.
 - Inventory's payment/order consumers now conditionally claim all still-reserved rows for an order and atomically write stock movements plus `StockConfirmed`, `StockReleased`, and any `LowStockDetected` envelopes. A retry after a partial competing delivery only emits events for claims won by that transaction.
 - Payment, Order, Inventory, Review, and Shipping dispatchers share durable owner-lease claims, confirmed publication, retry backoff, stale-lease recovery, broker reconnection, and graceful shutdown behavior. Their HTTP servers can start while RabbitMQ is temporarily unavailable because committed outbox rows remain pending.
@@ -36,7 +37,7 @@ Status: In progress; Payment, Inventory, selected Order lifecycle, Review, and S
 - RabbitMQ was unavailable during implementation, so the topology and delivery behavior have only been verified with unit tests. No broker restart, duplicate delivery, consumer crash, or durable recovery integration test has run.
 - Existing queues created as classic queues cannot be reasserted as quorum queues with different arguments. A production rollout needs an explicit queue migration/versioning plan and must preserve queued messages; this code does not delete or recreate queues automatically.
 - Docker Compose currently defines one RabbitMQ node. A single node can host quorum queues but cannot provide node quorum/high availability. Production HA requires an appropriately sized RabbitMQ cluster and topology policy review.
-- Transactional outbox now covers Payment status events, Inventory confirmation/release/low-stock events, selected Order lifecycle events, Review creation, and Shipping milestones. `OrderCreated` still follows the checkout saga's direct confirmed publish; its finalization boundary needs an explicit saga design before Phase 3 can exit.
+- Transactional outbox now covers Payment status events, Inventory confirmation/release/low-stock events, Order creation and lifecycle events, Review creation, and Shipping milestones. The checkout boundary deliberately queues `OrderCreated` only after its external setup steps succeed, so failed compensated checkouts are never announced as created.
 - Notification and Analytics have event-ID deduplication, but this is not yet a general atomic inbox implementation. Analytics' incremental report mutations are not in the same transaction as its processed marker, and Notification's email log/scheduling is not atomic with notification creation. A crash in those narrow windows can still cause a partial or missing side effect.
 - Runtime Redis/RabbitMQ configuration, broker ACLs/TLS, Redis failover behavior, and deployment acceptance remain unverified. Redis limit behavior is unit-tested with a mocked client only; concurrency, expiry, and outage semantics need live Redis acceptance.
 - Multi-node gateway rate-limit keys currently include the library's client key plus an explicit limiter namespace. Proxy/trust-proxy configuration must be reviewed against the actual load balancer so client IP identity cannot be spoofed or collapsed before public deployment.
@@ -141,8 +142,6 @@ rather than silently skipped; token and URL values are redacted in the log table
 
 ### Still open for Phase 3
 
-- `OrderCreated` still uses the checkout saga's direct confirmed publish rather than the outbox. Its
-  finalization boundary still needs an explicit saga design.
 - Live RabbitMQ fault acceptance: duplicate delivery, poison message, bounded retry, DLQ, consumer
   crash, broker restart, backlog recovery. RabbitMQ is running locally but these scenarios were not
   executed in this session.
@@ -163,11 +162,24 @@ rather than silently skipped; token and URL values are redacted in the log table
 | Redis port 6379 | Unavailable | No distributed limit/cart runtime tests |
 | Payment outbox unit/service tests | Pass, Payment 30/30 | Mocked DB/broker; migration not exercised in this continuation |
 | Consumer dedupe/retry tests | Pass; Notification 29/29, Analytics 14/14, Order 49/49, Inventory 18/18 | Partial inbox/idempotency only; DB-backed route tests tolerate offline PostgreSQL |
-| Order, Review, Shipping outbox/service suites | Pass; Order 56/56, Review 17/17, Shipping 27/27 | Mocked outbox/broker behavior; route tests tolerate offline PostgreSQL |
+| Order, Review, Shipping outbox/service suites | Pass; Order 67/67 on live PostgreSQL 16, Review 17/17, Shipping 27/27 | Review/Shipping broker behavior remains mocked in these suites |
 | Inventory outbox/service suite | Pass, 24/24 | Mocked outbox/broker behavior; route tests tolerate offline PostgreSQL |
 | Affected service builds and workspace typecheck | Pass; 4 builds and all 23 workspace typechecks | Compile/type validation only |
 | Changed Prisma schemas | Pass, 4/4 | Schema validation only; new migrations not deployed to a live database |
-| Outbox/inbox coverage | Partial | Payment, Inventory, selected Order, Review, and Shipping producers covered; `OrderCreated` saga finalization and atomic inbox work remain |
+| Outbox/inbox coverage | Code complete for current producers/consumers | Live migration, crash/recovery, broker, and HA acceptance remain |
 | Broker/runtime fault acceptance | Not run | Docker Engine and broker ports unavailable |
+
+## OrderCreated finalization acceptance (2026-09-27)
+
+- A clean temporary PostgreSQL 16 cluster accepted the complete six-migration Order Service chain,
+  including `20260927120000_add_checkout_finalization`.
+- Live transaction tests prove `checkout_finalized_at`, the order-history marker, and deterministic
+  `OrderCreated` outbox row commit together. A forced outbox primary-key conflict rolls all marker
+  and history writes back.
+- Full Order Service suite: **67/67** against the live database. Unit subset: **55/55**. Typecheck,
+  production build, Prisma Client generation, and schema validation pass.
+- The temporary PostgreSQL cluster was stopped and removed after the run. Docker Desktop still
+  crashes on an inaccessible Windows `dockerInference` runtime socket, so live RabbitMQ/Redis fault
+  acceptance remains blocked without resetting Docker state.
 
 Phase 3 remains open. Do not treat local queue mocks or a successful build as production reliability proof.

@@ -1,9 +1,48 @@
 import { shippingRepository } from '../repositories/shipping.repository';
 import { prisma } from '../prisma/client';
-import { AppError, NotFoundError, ValidationError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
+import { AppError, ConflictError, NotFoundError, ValidationError, ForbiddenError, buildInternalServiceHeaders } from '@nexacommerce/common';
 import { enqueueOrderDelivered, enqueueOrderShipped } from '../messaging/outbox';
 import { config } from '../config';
 import crypto from 'crypto';
+
+type CourierServiceInput = { code: string; name: string; estimatedDays: string };
+type ManagedRateInput = {
+  courierId: string;
+  originCity: string;
+  destinationCity: string;
+  serviceCode: string;
+  weight: number;
+  cost: number;
+  estimatedDays: string;
+};
+
+function boundedText(value: unknown, field: string, maxLength: number): string {
+  if (typeof value !== 'string') throw new ValidationError(`${field} must be a string`);
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (!normalized || normalized.length > maxLength) {
+    throw new ValidationError(`${field} must contain 1-${maxLength} characters`);
+  }
+  return normalized;
+}
+
+function normalizeRateInput(input: ManagedRateInput): ManagedRateInput {
+  const courierId = boundedText(input.courierId, 'courierId', 100);
+  const originCity = boundedText(input.originCity, 'originCity', 100).toLocaleUpperCase('id-ID');
+  const destinationCity = boundedText(input.destinationCity, 'destinationCity', 100).toLocaleUpperCase('id-ID');
+  const serviceCode = boundedText(input.serviceCode, 'serviceCode', 30).toUpperCase();
+  const estimatedDays = boundedText(input.estimatedDays, 'estimatedDays', 50);
+  if (!Number.isSafeInteger(input.weight) || input.weight <= 0) {
+    throw new ValidationError('weight must be a positive integer in grams');
+  }
+  if (!Number.isSafeInteger(input.cost) || input.cost <= 0) {
+    throw new ValidationError('cost must be a positive integer amount in IDR');
+  }
+  return { courierId, originCity, destinationCity, serviceCode, weight: input.weight, cost: input.cost, estimatedDays };
+}
+
+function isUniqueConflict(error: unknown): boolean {
+  return Boolean(error && typeof error === 'object' && 'code' in error && error.code === 'P2002');
+}
 
 export class ShippingService {
   private async getAuthoritativeOrder(orderId: string): Promise<any> {
@@ -35,16 +74,142 @@ export class ShippingService {
     throw new ForbiddenError('You are not allowed to access this shipment');
   }
 
-  private async assertOrderMutationAccess(orderId: string, actor: { userId: string; role: string }): Promise<any> {
+  private async assertOrderMutationAccess(
+    orderId: string,
+    actor: { userId: string; role: string },
+    sellerId?: string | null,
+  ): Promise<any> {
     const order = await this.assertOrderAccess(orderId, actor);
-    if (actor.role === 'SELLER' && order.items?.some((item: any) => item.sellerId !== actor.userId)) {
-      throw new ForbiddenError('Seller cannot mutate a shipment for a multi-seller order');
+    if (actor.role === 'SELLER' && sellerId && sellerId !== actor.userId) {
+      throw new ForbiddenError('Seller cannot mutate another seller shipment');
     }
     return order;
   }
 
+  private async selectShipmentForMutation(
+    orderId: string,
+    actor: { userId: string; role: string },
+    requestedSellerId?: string,
+  ) {
+    const shipments = await shippingRepository.findShippingOrdersByOrderId(orderId);
+    if (shipments.length === 0) throw new NotFoundError('Shipping order not found');
+
+    const sellerId = actor.role === 'SELLER' ? actor.userId : requestedSellerId;
+    if (sellerId) {
+      const shipment = shipments.find((candidate) => candidate.sellerId === sellerId);
+      if (!shipment) throw new NotFoundError('Seller shipment not found');
+      return shipment;
+    }
+    if (shipments.length > 1) {
+      throw new ValidationError('sellerId is required when mutating a split shipment');
+    }
+    return shipments[0];
+  }
+
   async getCouriers() {
     return shippingRepository.findAllCouriers(true);
+  }
+
+  async adminListCouriers() {
+    return shippingRepository.findAllCouriers(false);
+  }
+
+  async adminCreateCourier(adminId: string, input: { code: string; name: string; services: CourierServiceInput[] }) {
+    const code = boundedText(input.code, 'code', 30).toLowerCase();
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(code)) {
+      throw new ValidationError('code may contain only lowercase letters, numbers, underscore, and hyphen');
+    }
+    const name = boundedText(input.name, 'name', 100);
+    if (!Array.isArray(input.services) || input.services.length < 1 || input.services.length > 20) {
+      throw new ValidationError('services must contain 1-20 entries');
+    }
+    const seen = new Set<string>();
+    const services = input.services.map((service, index) => {
+      const serviceCode = boundedText(service?.code, `services[${index}].code`, 30).toUpperCase();
+      if (!/^[A-Z0-9][A-Z0-9_-]*$/.test(serviceCode)) {
+        throw new ValidationError(`services[${index}].code has an invalid format`);
+      }
+      if (seen.has(serviceCode)) throw new ValidationError(`Duplicate courier service code: ${serviceCode}`);
+      seen.add(serviceCode);
+      return {
+        code: serviceCode,
+        name: boundedText(service?.name, `services[${index}].name`, 100),
+        estimatedDays: boundedText(service?.estimatedDays, `services[${index}].estimatedDays`, 50),
+      };
+    });
+
+    if (await shippingRepository.findCourierByCode(code)) {
+      throw new ConflictError(`Courier code ${code} already exists`);
+    }
+    try {
+      return await shippingRepository.createCourier({ code, name, services, createdBy: adminId });
+    } catch (error) {
+      if (isUniqueConflict(error)) throw new ConflictError(`Courier code ${code} already exists`);
+      throw error;
+    }
+  }
+
+  async adminListRates(params: {
+    page: number;
+    limit: number;
+    courierId?: string;
+    originCity?: string;
+    destinationCity?: string;
+  }) {
+    const [rates, total] = await shippingRepository.findAndCountRates({
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+      courierId: params.courierId,
+      originCity: params.originCity?.trim() || undefined,
+      destinationCity: params.destinationCity?.trim() || undefined,
+    });
+    return {
+      rates: rates.map((rate) => ({ ...rate, cost: Number(rate.cost) })),
+      total,
+      page: params.page,
+      limit: params.limit,
+      totalPages: Math.ceil(total / params.limit),
+    };
+  }
+
+  async adminCreateRate(adminId: string, input: ManagedRateInput) {
+    const data = normalizeRateInput(input);
+    await this.assertRateCourierService(data.courierId, data.serviceCode);
+    try {
+      const rate = await shippingRepository.createShippingRate({ ...data, createdBy: adminId });
+      return { ...rate, cost: Number(rate.cost) };
+    } catch (error) {
+      if (isUniqueConflict(error)) throw new ConflictError('This route, service, and weight bracket already exists');
+      throw error;
+    }
+  }
+
+  async adminUpdateRate(rateId: string, adminId: string, input: ManagedRateInput) {
+    if (!await shippingRepository.findShippingRateById(rateId)) throw new NotFoundError('Shipping rate not found');
+    const data = normalizeRateInput(input);
+    await this.assertRateCourierService(data.courierId, data.serviceCode);
+    try {
+      const rate = await shippingRepository.updateShippingRate(rateId, { ...data, updatedBy: adminId });
+      return { ...rate, cost: Number(rate.cost) };
+    } catch (error) {
+      if (isUniqueConflict(error)) throw new ConflictError('This route, service, and weight bracket already exists');
+      throw error;
+    }
+  }
+
+  async adminDeleteRate(rateId: string) {
+    if (!await shippingRepository.findShippingRateById(rateId)) throw new NotFoundError('Shipping rate not found');
+    await shippingRepository.deleteShippingRate(rateId);
+  }
+
+  private async assertRateCourierService(courierId: string, serviceCode: string) {
+    const courier = await shippingRepository.findCourierById(courierId);
+    if (!courier) throw new NotFoundError('Courier not found');
+    if (!courier.isActive) throw new ValidationError('Courier is inactive');
+    const services = Array.isArray(courier.services) ? courier.services as any[] : [];
+    if (!services.some((service) => service?.code === serviceCode)) {
+      throw new ValidationError(`Service ${serviceCode} is not configured for courier ${courier.code}`);
+    }
   }
 
   async getRates(params: {
@@ -101,21 +266,29 @@ export class ShippingService {
 
   async createShippingOrder(data: {
     orderId: string;
+    sellerId: string;
     courierId: string;
     serviceCode: string;
     weight: number;
     originCity: string;
+    originProvince: string;
+    trustedQuotedCost?: number;
     destinationAddress: any;
     notes?: string;
   }) {
     if (!Number.isSafeInteger(data.weight) || data.weight <= 0) {
       throw new ValidationError('Shipping weight must be a positive integer in grams');
     }
-    if (!data.originCity?.trim() || !data.destinationAddress?.city?.trim()) {
-      throw new ValidationError('Verified origin and destination cities are required');
+    if (!data.sellerId?.trim()) throw new ValidationError('sellerId is required for shipment creation');
+    if (!data.originCity?.trim() || !data.originProvince?.trim() || !data.destinationAddress?.city?.trim()) {
+      throw new ValidationError('Verified origin city, origin province, and destination city are required');
+    }
+    if (data.trustedQuotedCost !== undefined
+      && (!Number.isSafeInteger(data.trustedQuotedCost) || data.trustedQuotedCost <= 0)) {
+      throw new ValidationError('Trusted quoted cost must be a positive integer amount in IDR');
     }
 
-    const existing = await shippingRepository.findShippingOrderByOrderId(data.orderId);
+    const existing = await shippingRepository.findShippingOrderByOrderAndSeller(data.orderId, data.sellerId);
     if (existing) {
       return existing; // idempotent
     }
@@ -131,30 +304,39 @@ export class ShippingService {
       throw new ValidationError('Invalid service code for courier');
     }
 
-    // Get rates to calculate cost
-    const rates = await this.getRates({
-      originCity: data.originCity,
-      destinationCity: data.destinationAddress.city,
-      weight: data.weight,
-      courierCode: courier.code,
-    });
+    // A paid order carries the immutable quote amount that checkout consumed.
+    // Internal event processing supplies it so later rate-table edits cannot
+    // mutate the value recorded on the shipping label. Manual/internal creation
+    // without that snapshot still resolves the current authoritative table.
+    let cost = data.trustedQuotedCost;
+    if (cost === undefined) {
+      const rates = await this.getRates({
+        originCity: data.originCity,
+        destinationCity: data.destinationAddress.city,
+        weight: data.weight,
+        courierCode: courier.code,
+      });
 
-    const selectedRate = rates.find((r) => r.serviceCode === data.serviceCode);
-    if (!selectedRate) {
-      throw new ValidationError('No configured shipping rate is available for this route, service, and weight');
+      const selectedRate = rates.find((r) => r.serviceCode === data.serviceCode);
+      if (!selectedRate) {
+        throw new ValidationError('No configured shipping rate is available for this route, service, and weight');
+      }
+      cost = selectedRate.cost;
     }
-    const cost = selectedRate.cost;
+    if (cost === undefined) throw new ValidationError('Unable to resolve shipping cost');
+    const finalCost = cost;
 
     // Generate tracking number: format NXC-SHP-{YYYYMMDD}-{random 6 chars uppercase}
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
     const trackingNumber = `NXC-SHP-${todayStr}-${randomHex}`;
 
-    const originAddress = { city: data.originCity, province: 'DKI Jakarta' }; // simplified
+    const originAddress = { city: data.originCity, province: data.originProvince };
 
     return prisma.$transaction(async (tx) => {
       const order = await shippingRepository.createShippingOrder(tx, {
         orderId: data.orderId,
+        sellerId: data.sellerId,
         courierId: data.courierId,
         courierName: courier.name,
         serviceCode: data.serviceCode,
@@ -163,7 +345,7 @@ export class ShippingService {
         originAddress,
         destinationAddress: data.destinationAddress,
         weight: data.weight,
-        cost,
+        cost: finalCost,
         notes: data.notes,
       });
 
@@ -182,28 +364,49 @@ export class ShippingService {
     });
   }
 
-  async getShippingOrder(orderId: string, actor?: { userId: string; role: string }) {
-    const order = await shippingRepository.findShippingOrderByOrderId(orderId);
-    if (!order) {
+  async getShippingOrder(
+    orderId: string,
+    actor?: { userId: string; role: string },
+    requestedSellerId?: string,
+  ) {
+    const shipments = await shippingRepository.findShippingOrdersByOrderId(orderId);
+    if (shipments.length === 0) {
       throw new NotFoundError('Shipping order not found');
     }
 
     if (actor) await this.assertOrderAccess(orderId, actor);
 
-    return order;
+    if (actor?.role === 'SELLER') {
+      const own = shipments.find((shipment) => shipment.sellerId === actor.userId)
+        ?? (shipments.length === 1 && shipments[0].sellerId === null ? shipments[0] : undefined);
+      if (!own) throw new NotFoundError('Seller shipment not found');
+      return own;
+    }
+
+    if (requestedSellerId) {
+      const selected = shipments.find((shipment) => shipment.sellerId === requestedSellerId);
+      if (!selected) throw new NotFoundError('Seller shipment not found');
+      return selected;
+    }
+
+    if (shipments.length === 1) return shipments[0];
+    const handedStatuses = new Set(['PICKED_UP', 'IN_TRANSIT', 'DELIVERED']);
+    return {
+      orderId,
+      shipments,
+      allPickedUp: shipments.every((shipment) => handedStatuses.has(shipment.status)),
+      allDelivered: shipments.every((shipment) => shipment.status === 'DELIVERED'),
+    };
   }
 
   async updateShippingStatus(
     orderId: string,
     actor: { userId: string; role: string },
-    data: { status: string; location?: string; note?: string }
+    data: { status: string; location?: string; note?: string; sellerId?: string }
   ) {
-    const order = await shippingRepository.findShippingOrderByOrderId(orderId);
-    if (!order) {
-      throw new NotFoundError('Shipping order not found');
-    }
+    const order = await this.selectShipmentForMutation(orderId, actor, data.sellerId);
 
-    const authoritativeOrder = await this.assertOrderMutationAccess(orderId, actor);
+    const authoritativeOrder = await this.assertOrderMutationAccess(orderId, actor, order.sellerId);
 
     const currentStatus = order.status;
     const nextStatus = data.status;
@@ -246,6 +449,16 @@ export class ShippingService {
       });
 
       if (nextStatus === 'PICKED_UP') {
+        await shippingRepository.lockShippingOrderAggregate(tx, orderId);
+        const remaining = await tx.shippingOrder.count({
+          where: { orderId, status: { notIn: ['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'] } },
+        });
+        if (remaining !== 0) return;
+        const shipmentSummary = await tx.shippingOrder.findMany({
+          where: { orderId },
+          select: { sellerId: true, trackingNumber: true, courierName: true, serviceName: true },
+          orderBy: { sellerId: 'asc' },
+        });
         await enqueueOrderShipped(tx, {
           orderId: order.orderId,
           customerId: authoritativeOrder.customerId,
@@ -253,8 +466,19 @@ export class ShippingService {
           courierName: order.courierName,
           serviceName: order.serviceName,
           estimatedDelivery: order.estimatedDelivery || undefined,
+          shipments: shipmentSummary.map((shipment) => ({
+            sellerId: shipment.sellerId ?? 'legacy',
+            trackingNumber: shipment.trackingNumber || '',
+            courierName: shipment.courierName,
+            serviceName: shipment.serviceName,
+          })),
         });
       } else if (nextStatus === 'DELIVERED') {
+        await shippingRepository.lockShippingOrderAggregate(tx, orderId);
+        const remaining = await tx.shippingOrder.count({
+          where: { orderId, status: { not: 'DELIVERED' } },
+        });
+        if (remaining !== 0) return;
         await enqueueOrderDelivered(tx, {
           orderId: order.orderId,
           customerId: authoritativeOrder.customerId,
@@ -263,10 +487,10 @@ export class ShippingService {
       }
     });
 
-    return this.getShippingOrder(orderId);
+    return this.getShippingOrder(orderId, actor, order.sellerId ?? undefined);
   }
 
-  async getSellerShippingOrders(sellerId: string, page = 1, limit = 10) {
+  async getSellerShippingOrders(sellerId: string, page = 1, limit = 10, status?: string) {
     const skip = (page - 1) * limit;
 
     // Fetch order list for this seller via internal call to order service
@@ -291,6 +515,8 @@ export class ShippingService {
       skip,
       take: limit,
       orderIds,
+      sellerId,
+      status,
     });
 
     return {
@@ -448,14 +674,12 @@ export class ShippingService {
   async updateTrackingNumber(
     orderId: string,
     actor: { userId: string; role: string },
-    trackingNumber: string
+    trackingNumber: string,
+    sellerId?: string,
   ) {
-    const order = await shippingRepository.findShippingOrderByOrderId(orderId);
-    if (!order) {
-      throw new NotFoundError('Shipping order not found');
-    }
+    const order = await this.selectShipmentForMutation(orderId, actor, sellerId);
 
-    await this.assertOrderMutationAccess(orderId, actor);
+    await this.assertOrderMutationAccess(orderId, actor, order.sellerId);
 
     // Check for uniqueness
     const existing = await prisma.shippingOrder.findUnique({

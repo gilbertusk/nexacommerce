@@ -145,7 +145,11 @@ exports.Prisma.OrderScalarFieldEnum = {
   paidAt: 'paidAt',
   cancelledAt: 'cancelledAt',
   completedAt: 'completedAt',
+  returnReceivedAt: 'returnReceivedAt',
+  returnReceivedBy: 'returnReceivedBy',
+  returnReceiptNote: 'returnReceiptNote',
   expiresAt: 'expiresAt',
+  checkoutFinalizedAt: 'checkoutFinalizedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

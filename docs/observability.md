@@ -53,6 +53,15 @@ Log levels:
 
 Already exposed:
 
+- `GET /metrics` on all 14 HTTP processes (API Gateway plus 13 backend services) — shared HTTP RED
+  metrics: completed request count by bounded route and status, duration histogram, and in-flight
+  requests. API Gateway mounts it before Redis-backed public rate limiting so monitoring remains
+  reachable during a Redis incident.
+- Analytics Service additionally exports Prometheus projection connectivity,
+  projected/duplicate/rejected/failure counters, last event/error timestamps, per-partition lag,
+  active daily read model, and legacy RabbitMQ-consumer state. The endpoint requires the internal
+  scraper identity (`x-internal-service: prometheus` plus the shared internal token) on every
+  service; none of these endpoints is a public diagnostics route.
 - `GET /analytics/readiness` — Kafka projection connected state, messages projected, duplicates
   skipped, rejected, failures, last event time, and **per-partition consumer lag**.
 - `GET /ready` on Event Stream Service — RabbitMQ and Kafka dependency readiness, separate from
@@ -83,6 +92,13 @@ They are different questions and must stay different endpoints.
 
 ## Alerting
 
+Prometheus-compatible starter rules now live in
+`infra/observability/analytics-alerts.yml`. They cover an absent exporter, a disconnected
+projection, new projection failures, sustained partition lag above 100 records, rejected messages,
+per-service 5xx rate, and per-service p95 latency. Message rejection and latency are warning
+severity; failures, disconnection, missing metrics, sustained lag, and elevated 5xx rate are
+critical. Thresholds are initial operational defaults and must be tuned against real traffic.
+
 Should page:
 
 - Error rate above baseline for a sustained window.
@@ -102,8 +118,9 @@ Should be visible but not page:
 
 ## Not yet done
 
-- No metrics endpoint or exporter is wired. The counters above exist inside the Analytics projection
-  and are exposed on its readiness endpoint; nothing scrapes them.
+- All HTTP services expose HTTP RED metrics; Analytics additionally exports Kafka state.
+  Outbox/inbox/email queue metrics and database pool metrics remain open.
+- No Prometheus-compatible collector or Alertmanager is deployed, and the starter rule file has not
+  been loaded into a running monitoring system. A YAML parse is not alert-delivery proof.
 - No distributed tracing. Correlation ids make a trace reconstructable from logs; they are not spans.
 - No log aggregation, retention, or access control, which are deployment-environment decisions.
-- No alert rules, because no alerting system has been selected.

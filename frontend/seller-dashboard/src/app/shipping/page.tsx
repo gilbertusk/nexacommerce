@@ -7,6 +7,7 @@ import { apiGet, apiPatch } from '@/lib/api/client';
 interface ShippingOrder {
   id: string;
   orderId?: string;
+  sellerId?: string;
   order?: {
     id: string;
     customer?: { name: string };
@@ -15,6 +16,8 @@ interface ShippingOrder {
   customerName?: string;
   status: string;
   courier?: string;
+  courierName?: string;
+  serviceName?: string;
   trackingNumber?: string;
   createdAt: string;
   updatedAt?: string;
@@ -35,13 +38,26 @@ const SHIPPING_STATUSES = [
   { key: 'PICKED_UP', label: 'Dijemput' },
   { key: 'IN_TRANSIT', label: 'Dalam Perjalanan' },
   { key: 'DELIVERED', label: 'Terkirim' },
+  { key: 'FAILED', label: 'Gagal Dikirim' },
+  { key: 'RETURNED', label: 'Dikembalikan' },
 ];
+
+const NEXT_SHIPPING_STATUSES: Record<string, string[]> = {
+  WAITING_PICKUP: ['PICKED_UP', 'FAILED'],
+  PICKED_UP: ['IN_TRANSIT', 'FAILED'],
+  IN_TRANSIT: ['DELIVERED', 'FAILED'],
+  FAILED: ['RETURNED'],
+  DELIVERED: [],
+  RETURNED: [],
+};
 
 const STATUS_COLORS: Record<string, string> = {
   WAITING_PICKUP: 'bg-stone-50 text-stone-600',
   PICKED_UP: 'bg-blue-50 text-blue-700',
   IN_TRANSIT: 'bg-orange-50 text-orange-700',
   DELIVERED: 'bg-green-50 text-green-700',
+  FAILED: 'bg-red-50 text-red-700',
+  RETURNED: 'bg-violet-50 text-violet-700',
 };
 
 function formatDate(dateStr: string): string {
@@ -336,7 +352,8 @@ export default function ShippingPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-ink-secondary">
-                        {shipping.courier ?? '—'}
+                        {shipping.courierName ?? shipping.courier ?? '—'}
+                        {shipping.serviceName ? ` — ${shipping.serviceName}` : ''}
                       </td>
                       <td className="px-4 py-3 min-w-[200px]">
                         {isTrackingExpanded ? (
@@ -407,13 +424,18 @@ export default function ShippingPage() {
                       <td className="px-4 py-3 min-w-[160px]">
                         <select
                           value={shipping.status}
-                          onChange={(e) =>
-                            handleUpdateStatus(orderId, e.target.value)
-                          }
+                          onChange={(e) => {
+                            if (e.target.value !== shipping.status) {
+                              handleUpdateStatus(orderId, e.target.value);
+                            }
+                          }}
                           disabled={isUpdatingStatus}
                           className="w-full px-2 py-1.5 bg-surface hairline rounded-sm text-xs text-ink-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 cursor-pointer"
                         >
-                          {SHIPPING_STATUSES.filter((s) => s.key !== '').map(
+                          {SHIPPING_STATUSES.filter((s) => (
+                            s.key === shipping.status
+                            || (NEXT_SHIPPING_STATUSES[shipping.status] ?? []).includes(s.key)
+                          )).map(
                             (s) => (
                               <option key={s.key} value={s.key}>
                                 {s.label}

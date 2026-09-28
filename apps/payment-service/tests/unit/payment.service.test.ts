@@ -136,11 +136,11 @@ describe('PaymentService', () => {
       mockPrisma.paymentLog.create.mockResolvedValue({ id: 'log-1' });
       (global.fetch as jest.Mock) = jest.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ data: { id: 'order-1', customerId: 'user-1', status: 'RETURN_APPROVED' } }),
+        json: async () => ({ data: { id: 'order-1', customerId: 'user-1', status: 'RETURN_RECEIVED', returnReceivedAt: '2026-09-28T03:00:00Z' } }),
       });
     });
 
-    it('reserves and submits an approved-return refund using Midtrans refund_key', async () => {
+    it('reserves and submits a received-return refund using Midtrans refund_key', async () => {
       const result = await service.requestRefund('order-1', 115000, 'Return approved', idempotencyKey);
 
       expect(result).toMatchObject({ id: idempotencyKey, status: 'PENDING' });
@@ -155,14 +155,25 @@ describe('PaymentService', () => {
       });
     });
 
-    it('refuses to submit a refund when return approval is absent', async () => {
+    it('refuses to submit a refund before the return is physically received', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: async () => ({ data: { id: 'order-1', customerId: 'user-1', status: 'RETURN_REQUESTED' } }),
       });
 
       await expect(service.requestRefund('order-1', 115000, 'Return approved', idempotencyKey))
-        .rejects.toThrow('approved return');
+        .rejects.toThrow('physical return is received');
+      expect(mockPrisma.refund.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses an approved return that has no physical receipt confirmation', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { id: 'order-1', customerId: 'user-1', status: 'RETURN_APPROVED', returnReceivedAt: null } }),
+      });
+
+      await expect(service.requestRefund('order-1', 115000, 'Return approved', idempotencyKey))
+        .rejects.toThrow('physical return is received');
       expect(mockPrisma.refund.create).not.toHaveBeenCalled();
     });
 

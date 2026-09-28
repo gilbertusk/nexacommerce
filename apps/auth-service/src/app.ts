@@ -3,7 +3,13 @@ import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { authRoutes } from './routes/auth.routes';
 import { swaggerSpec } from './docs/swagger';
-import { errorResponse, requestIdMiddleware } from '@nexacommerce/common';
+import {
+  createInternalServiceGuard,
+  errorResponse,
+  httpMetricsMiddleware,
+  renderHttpPrometheusMetrics,
+  requestIdMiddleware,
+} from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
 import { ZodError } from 'zod';
 
@@ -26,6 +32,7 @@ const app = express();
 // Establish the request correlation id before anything else runs, so every
 // log line and every outbound internal call in this request carries it.
 app.use(requestIdMiddleware);
+app.use(httpMetricsMiddleware('auth-service'));
 
 app.use(cors({ origin: false }));
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
@@ -51,6 +58,11 @@ app.get('/auth/health', (req, res) => {
     service: 'auth-service',
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/metrics', createInternalServiceGuard(['prometheus']), (_req, res) => {
+  res.type('text/plain; version=0.0.4; charset=utf-8');
+  res.status(200).send(renderHttpPrometheusMetrics());
 });
 
 // Swagger UI

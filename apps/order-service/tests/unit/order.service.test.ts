@@ -70,10 +70,10 @@ describe('OrderService', () => {
      * request bodies so a test can assert what checkout sent where.
      */
     function stubServices(overrides: { quote?: unknown; quoteStatus?: number } = {}) {
-      const calls: Array<{ url: string; body: any }> = [];
+      const calls: Array<{ url: string; method: string; body: any }> = [];
       (global.fetch as jest.Mock).mockImplementation(async (url: string, init: any) => {
         const body = init?.body ? JSON.parse(init.body) : undefined;
-        calls.push({ url, body });
+        calls.push({ url, method: init?.method ?? 'GET', body });
 
         const ok = (data: unknown) => ({ ok: true, status: 200, json: async () => ({ data }) });
 
@@ -145,6 +145,76 @@ describe('OrderService', () => {
       });
       const created = mockPrisma.order.create.mock.calls[0]?.[0]?.data;
       expect(created.id).toBe(consume!.body.orderId);
+    });
+
+    it('atomically marks checkout finalized and queues OrderCreated after payment setup', async () => {
+      stubServices();
+      mockOrderRepo.countCreatedToday.mockResolvedValue(0);
+      mockPrisma.order.create = jest.fn().mockResolvedValue({
+        ...mockOrder,
+        status: 'PENDING_PAYMENT',
+        customerId: 'user-1',
+        voucherId: null,
+        shippingAddressId: 'addr-1',
+        items: [{ productId: 'prod-1', quantity: 2, productPrice: 50000 }],
+      });
+
+      const result = await service.checkout('user-1', body);
+
+      expect(result.order.id).toBe('order-1');
+      expect(mockPrisma.order.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'order-1',
+          status: 'PENDING_PAYMENT',
+          checkoutFinalizedAt: null,
+        },
+        data: { checkoutFinalizedAt: expect.any(Date) },
+      });
+      expect(mockPrisma.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId: 'order-1',
+          note: 'Checkout saga finalized; OrderCreated queued',
+        }),
+      });
+      expect(mockPrisma.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          id: 'order-created:order-1',
+          eventName: 'OrderCreated',
+          routingKey: 'order.created',
+          eventPayload: expect.objectContaining({
+            eventId: 'order-created:order-1',
+            payload: expect.objectContaining({
+              orderId: 'order-1',
+              customerId: 'user-1',
+              shippingCost: 18000,
+              grandTotal: 118000,
+            }),
+          }),
+        }),
+      });
+    });
+
+    it('rolls back OrderCreated enqueue when finalization loses its state claim', async () => {
+      const calls = stubServices();
+      mockOrderRepo.countCreatedToday.mockResolvedValue(0);
+      mockPrisma.order.create = jest.fn().mockResolvedValue({
+        ...mockOrder,
+        status: 'PENDING_PAYMENT',
+        customerId: 'user-1',
+        voucherId: null,
+        shippingAddressId: 'addr-1',
+        items: [],
+      });
+      mockPrisma.order.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(service.checkout('user-1', body)).rejects.toThrow('finalization was already processed');
+      expect(mockPrisma.outboxEvent.create).not.toHaveBeenCalledWith({
+        data: expect.objectContaining({ eventName: 'OrderCreated' }),
+      });
+      expect(calls).not.toContainEqual(expect.objectContaining({
+        method: 'DELETE',
+        url: expect.stringContaining('/cart/internal/cart/'),
+      }));
     });
 
     it('creates no order when the quote is refused', async () => {
@@ -379,18 +449,43 @@ describe('OrderService', () => {
     });
   });
 
-  describe('multi-seller mutation authorization', () => {
-    it('rejects a seller status update that would affect another seller', async () => {
+  describe('multi-seller fulfillment', () => {
+    it('allows an owning seller to start processing without exposing another seller items', async () => {
       mockOrderRepo.findById.mockResolvedValue({
         ...mockOrder,
+        status: 'PAID',
         items: [{ sellerId: 'seller-1' }, { sellerId: 'seller-2' }],
       } as any);
+      mockPrisma.order.update.mockResolvedValue({ ...mockOrder, status: 'PROCESSING' } as any);
+
+      const updated = await service.updateOrderStatus(
+        'order-1',
+        { userId: 'seller-1', role: 'SELLER' },
+        'PROCESSING',
+      );
+
+      expect(updated.status).toBe('PROCESSING');
+    });
+
+    it('requires every seller shipment to be handed to a courier', async () => {
+      mockOrderRepo.findById.mockResolvedValue({
+        ...mockOrder,
+        status: 'PROCESSING',
+        items: [{ sellerId: 'seller-1' }, { sellerId: 'seller-2' }],
+      } as any);
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: async () => ({ data: { shipments: [
+          { sellerId: 'seller-1', trackingNumber: 'TRACK-1', status: 'PICKED_UP' },
+          { sellerId: 'seller-2', trackingNumber: 'TRACK-2', status: 'WAITING_PICKUP' },
+        ] } }),
+      });
 
       await expect(service.updateOrderStatus(
         'order-1',
         { userId: 'seller-1', role: 'SELLER' },
-        'PROCESSING',
-      )).rejects.toThrow('multi-seller');
+        'SHIPPED',
+      )).rejects.toThrow('Every seller shipment');
     });
   });
 
@@ -487,6 +582,28 @@ describe('OrderService', () => {
     });
   });
 
+  describe('shipping aggregate events', () => {
+    it('moves the global order to shipped after Shipping Service confirms all parcels', async () => {
+      mockOrderRepo.findById.mockResolvedValue({
+        ...mockOrder,
+        status: 'PROCESSING',
+        items: [{ sellerId: 'seller-1' }, { sellerId: 'seller-2' }],
+      } as any);
+      mockPrisma.order.findUniqueOrThrow.mockResolvedValue({ ...mockOrder, status: 'SHIPPED' });
+
+      const result = await service.handleOrderShipped('order-1');
+
+      expect(result.status).toBe('SHIPPED');
+      expect(mockPrisma.order.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 'order-1', status: { in: ['PAID', 'PROCESSING', 'PACKED'] } },
+        data: { status: 'SHIPPED' },
+      }));
+      expect(mockPrisma.orderStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ toStatus: 'SHIPPED', changedBy: 'SYSTEM' }),
+      }));
+    });
+  });
+
   describe('return requests', () => {
     it('approves a return without claiming the payment was refunded', async () => {
       mockOrderRepo.findById
@@ -508,9 +625,65 @@ describe('OrderService', () => {
       );
     });
 
-    it('marks an approved return refunded only after an internal provider confirmation', async () => {
+    it('records who physically received the return and creates an audit entry', async () => {
       mockOrderRepo.findById
-        .mockResolvedValueOnce({ ...mockOrder, status: 'RETURN_APPROVED' } as any)
+        .mockResolvedValueOnce({ ...mockOrder, status: 'RETURN_APPROVED', returnReceivedAt: null } as any)
+        .mockResolvedValueOnce({
+          ...mockOrder,
+          status: 'RETURN_RECEIVED',
+          returnReceivedAt: new Date('2026-09-28T03:00:00Z'),
+          returnReceivedBy: 'admin-1',
+        } as any);
+
+      const result = await service.confirmReturnReceipt('order-1', 'admin-1', 'Seal intact');
+
+      expect(result?.status).toBe('RETURN_RECEIVED');
+      expect(mockPrisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'order-1', status: 'RETURN_APPROVED', returnReceivedAt: null },
+        data: expect.objectContaining({
+          status: 'RETURN_RECEIVED',
+          returnReceivedBy: 'admin-1',
+          returnReceiptNote: 'Seal intact',
+          returnReceivedAt: expect.any(Date),
+        }),
+      });
+      expect(mockPrisma.orderStatusHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId: 'order-1',
+          fromStatus: 'RETURN_APPROVED',
+          toStatus: 'RETURN_RECEIVED',
+          changedBy: 'admin-1',
+          note: 'Seal intact',
+        }),
+      });
+    });
+
+    it('does not confirm a physical receipt before the return is approved', async () => {
+      mockOrderRepo.findById.mockResolvedValue({ ...mockOrder, status: 'RETURN_REQUESTED', returnReceivedAt: null } as any);
+
+      await expect(service.confirmReturnReceipt('order-1', 'admin-1')).rejects.toThrow(
+        'requires RETURN_APPROVED',
+      );
+      expect(mockPrisma.order.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rolls back the audit entry when a concurrent receipt/status change wins', async () => {
+      mockOrderRepo.findById.mockResolvedValue({
+        ...mockOrder,
+        status: 'RETURN_APPROVED',
+        returnReceivedAt: null,
+      } as any);
+      mockPrisma.order.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(service.confirmReturnReceipt('order-1', 'admin-1', 'Checked')).rejects.toThrow(
+        'already confirmed or the order changed',
+      );
+      expect(mockPrisma.orderStatusHistory.create).not.toHaveBeenCalled();
+    });
+
+    it('marks a received return refunded only after an internal provider confirmation', async () => {
+      mockOrderRepo.findById
+        .mockResolvedValueOnce({ ...mockOrder, status: 'RETURN_RECEIVED', returnReceivedAt: new Date() } as any)
         .mockResolvedValueOnce({ ...mockOrder, status: 'REFUNDED' } as any);
 
       const result = await service.markRefundCompleted('order-1');
@@ -527,7 +700,7 @@ describe('OrderService', () => {
 
     it('records provider-confirmed partial refunds without claiming a full refund', async () => {
       mockOrderRepo.findById
-        .mockResolvedValueOnce({ ...mockOrder, status: 'RETURN_APPROVED' } as any)
+        .mockResolvedValueOnce({ ...mockOrder, status: 'RETURN_RECEIVED', returnReceivedAt: new Date() } as any)
         .mockResolvedValueOnce({ ...mockOrder, status: 'PARTIALLY_REFUNDED' } as any);
 
       const result = await service.markRefundPartial('order-1');
@@ -539,10 +712,10 @@ describe('OrderService', () => {
       });
     });
 
-    it('does not mark an order refunded unless its return was approved', async () => {
-      mockOrderRepo.findById.mockResolvedValue({ ...mockOrder, status: 'RETURN_REQUESTED' } as any);
+    it('does not mark an order refunded until its physical return is received', async () => {
+      mockOrderRepo.findById.mockResolvedValue({ ...mockOrder, status: 'RETURN_APPROVED', returnReceivedAt: null } as any);
 
-      await expect(service.markRefundCompleted('order-1')).rejects.toThrow('requires an approved return');
+      await expect(service.markRefundCompleted('order-1')).rejects.toThrow('requires a physically received return');
       expect(mockPrisma.order.update).not.toHaveBeenCalled();
     });
 

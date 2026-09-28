@@ -10,7 +10,7 @@ import { EXCHANGE_NAME, QUEUES } from '@nexacommerce/event-contracts';
 import { createLogger } from '@nexacommerce/logger';
 import { config } from '../config';
 import { shippingService } from '../services/shipping.service';
-import { calculateOrderWeight } from './order-weight';
+import { parsePaidOrderShipments } from './paid-order-shipment';
 import {
   claimShippingOutboxBatch,
   markShippingOutboxPublished,
@@ -43,32 +43,35 @@ async function setupConsumers(consumerChannel: Channel): Promise<void> {
     const resBody = await response.json() as any;
     const order = resBody.data;
 
-    // The current contract does not carry a trusted fulfillment origin yet.
-    // Keep this compatibility fallback explicit until the quote model provides it.
-    const originCity = 'Jakarta';
-    const totalWeight = calculateOrderWeight(order.items);
+    const shipments = parsePaidOrderShipments(order);
     const couriers = await shippingService.getCouriers();
-    const matchedCourier = couriers.find((candidate) => (
-      candidate.name.toLowerCase() === order.courierName.toLowerCase()
-    ));
-    if (!matchedCourier) {
-      throw new Error(`No matching courier found for name ${order.courierName}`);
-    }
 
     const destinationAddress = typeof order.shippingAddress === 'string'
       ? JSON.parse(order.shippingAddress)
       : order.shippingAddress;
 
-    await shippingService.createShippingOrder({
-      orderId: order.id,
-      courierId: matchedCourier.id,
-      serviceCode: order.courierService || 'REG',
-      weight: totalWeight,
-      originCity,
-      destinationAddress,
-      notes: order.notes || undefined,
-    });
-    logger.info(`[RabbitMQ] Shipping order created for order ${orderId}`);
+    for (const shipment of shipments) {
+      const matchedCourier = couriers.find((candidate) => (
+        candidate.code.toLowerCase() === shipment.courierCode
+      ));
+      if (!matchedCourier) {
+        throw new Error(`No active courier found for code ${shipment.courierCode}`);
+      }
+
+      await shippingService.createShippingOrder({
+        orderId: order.id,
+        sellerId: shipment.sellerId,
+        courierId: matchedCourier.id,
+        serviceCode: shipment.serviceCode,
+        weight: shipment.weightGrams,
+        originCity: shipment.originCity,
+        originProvince: shipment.originProvince,
+        trustedQuotedCost: shipment.cost,
+        destinationAddress,
+        notes: order.notes || undefined,
+      });
+    }
+    logger.info(`[RabbitMQ] ${shipments.length} seller shipment(s) created for order ${orderId}`);
   });
 }
 

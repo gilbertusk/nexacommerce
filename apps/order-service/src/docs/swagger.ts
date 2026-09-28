@@ -125,5 +125,13 @@ export const swaggerSpec = {
         responses: { 200: { description: 'Order completed — triggers OrderCompleted event' }, 400: { description: 'Order must be in DELIVERED status' }, 403: { description: 'CUSTOMER only and must own the order' } },
       },
     },
+    '/orders/{id}/return-receipt': {
+      post: {
+        tags: ['Orders'], summary: 'Confirm physical return receipt (ADMIN)', security: [{ bearerAuth: [] }],
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: { required: false, content: { 'application/json': { schema: { type: 'object', properties: { note: { type: 'string', maxLength: 1000 } } } } } },
+        responses: { 200: { description: 'Return receipt confirmed and audit data recorded' }, 400: { description: 'Return is not approved or note is invalid' }, 403: { description: 'ADMIN only' }, 409: { description: 'Concurrent confirmation or status change' } },
+      },
+    },
   },
 };

@@ -120,6 +120,7 @@ export default function OrderDetailPage() {
   const [error, setError] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
 
   useEffect(() => {
     if (!token || !orderId) return;
@@ -162,6 +163,7 @@ export default function OrderDetailPage() {
     if (!token || !order) return;
     setIsUpdating(true);
     setActionError('');
+    setActionNotice('');
     try {
       if (newStatus === 'SHIPPED') {
         if (!shipment?.trackingNumber) {
@@ -179,9 +181,13 @@ export default function OrderDetailPage() {
             token,
           );
           setShipment(shippingRes.data);
+          setActionNotice(
+            'Shipment Anda sudah diserahkan ke kurir. Status pesanan berubah otomatis setelah seluruh seller menyerahkan shipment masing-masing.',
+          );
         } else if (!['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)) {
           throw new Error(`Shipment belum dapat dikirim dari status ${shipment.status}.`);
         }
+        return;
       }
 
       await apiPatch(
@@ -248,7 +254,7 @@ export default function OrderDetailPage() {
   const discount = order.discount ?? 0;
   const canHandOffShipment = Boolean(
     shipment?.trackingNumber
-    && ['WAITING_PICKUP', 'PICKED_UP', 'IN_TRANSIT'].includes(shipment.status),
+    && shipment.status === 'WAITING_PICKUP',
   );
 
   const addr = order.shippingAddress;
@@ -292,6 +298,11 @@ export default function OrderDetailPage() {
         <div className="flex items-center gap-2 bg-red-50 hairline border-red-200 rounded-sm px-4 py-3 text-sm text-red-700">
           <span className="material-symbols-outlined text-sm">error</span>
           {actionError}
+        </div>
+      )}
+      {actionNotice && (
+        <div role="status" className="bg-emerald-50 hairline border-emerald-200 rounded-sm px-4 py-3 text-sm text-emerald-800">
+          {actionNotice}
         </div>
       )}
 
@@ -380,11 +391,13 @@ export default function OrderDetailPage() {
                   local_shipping
                 </span>
               )}
-              Serahkan ke Kurir
+              Serahkan Shipment Saya ke Kurir
             </button>
             {!canHandOffShipment && (
               <p role="status" className="self-center text-xs text-amber-900">
-                Shipment aktif dan nomor tracking diperlukan sebelum status pesanan dapat diubah.
+                {shipment && ['PICKED_UP', 'IN_TRANSIT', 'DELIVERED'].includes(shipment.status)
+                  ? 'Shipment Anda sudah diserahkan. Status pesanan menunggu shipment seller lain.'
+                  : 'Shipment aktif dan nomor tracking diperlukan sebelum paket dapat diserahkan.'}
               </p>
             )}
             </>

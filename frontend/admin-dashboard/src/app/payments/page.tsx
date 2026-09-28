@@ -186,7 +186,7 @@ export default function PaymentsPage() {
           <form className="mx-4 mt-4 grid gap-3 rounded-sm border border-hairline bg-surface p-4 md:grid-cols-[1fr_2fr_auto]" onSubmit={(event) => { event.preventDefault(); setRefundMessage(""); refundMutation.mutate(); }}>
             <div className="md:col-span-3">
               <p className="text-sm font-semibold text-ink-primary">Refund untuk pesanan {refundTarget.orderId ?? refundTarget.order?.id}</p>
-              <p className="mt-1 text-xs text-ink-secondary">Hanya untuk return yang sudah disetujui. Dana belum dianggap kembali sampai Midtrans/bank mengirim konfirmasi.</p>
+              <p className="mt-1 text-xs text-ink-secondary">Hanya untuk retur yang barang fisiknya sudah dikonfirmasi diterima oleh admin. Dana belum dianggap kembali sampai Midtrans/bank mengirim konfirmasi.</p>
             </div>
             <label className="flex flex-col gap-1 text-xs text-ink-secondary">Jumlah (maks. {formatRupiah(refundTarget.remainingRefundableAmount ?? refundTarget.amount)})
               <input required type="number" min={1} max={refundTarget.remainingRefundableAmount ?? refundTarget.amount} step={1} value={refundAmount} onChange={(event) => setRefundAmount(event.target.value)} className="rounded-xs border border-hairline bg-white px-3 py-2 text-ink-primary" />

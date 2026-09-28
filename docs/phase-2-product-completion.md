@@ -77,9 +77,9 @@ Replace customer-facing mock commerce behavior with validated backend contracts,
 - Customer product reviews now normalize the actual Review Service response fields (`customerName`, `content`) instead of expecting the frontend-only aliases (`userName`, `comment`). Signed-in customers can report another user's review using the existing report endpoint; the form submits one of the supported reasons and an optional description capped at 500 characters. Signed-out visitors receive a login link that returns to the review section. Review Service validates report reasons and description length server-side.
 - Review-slice validation: Customer Web tests pass 13/13 (response normalization, report form submission, and own-review guard); Review Service tests pass 10/10 (including self-report, invalid-reason, and overlong-description validation). Review Service and Customer Web builds pass, and focused ESLint passes. The route suite's database-backed read cases accept the expected failure because PostgreSQL is unavailable; no live report persistence was verified.
 - Removed fabricated product-page shipping assurances (central warehouse location, same-day dispatch, courier/ETA, packaging, and breakage guarantee) and the unused hard-coded shipping-rate fixture. The shipping tab now explicitly discloses that rate/timeline is unconfirmed and checkout is unavailable until a trusted server quote is implemented.
-- Refund flow now has an ADMIN-only endpoint on Payment Service. It requires a UUID `Idempotency-Key`, a paid payment, matching customer/order, `RETURN_APPROVED` or `PARTIALLY_REFUNDED` order status from internal Order Service, a positive integer IDR amount, and bounded reason. Refund reservation uses a serializable transaction, caps confirmed+pending refund totals at payment amount, persists a stable refund key before calling Midtrans Core API, and permits retry only with the same key when outcome is uncertain. Provider acceptance leaves refund PENDING.
+- Refund flow now has an ADMIN-only endpoint on Payment Service. It requires a UUID `Idempotency-Key`, a paid payment, matching customer/order, `RETURN_RECEIVED` or `PARTIALLY_REFUNDED` status plus a persisted physical-receipt timestamp from internal Order Service, a positive integer IDR amount, and bounded reason. Refund reservation uses a serializable transaction, caps confirmed+pending refund totals at payment amount, persists a stable refund key before calling Midtrans Core API, and permits retry only with the same key when outcome is uncertain. Provider acceptance leaves refund PENDING.
 - Refund webhook handling processes Midtrans `refund`/`partial_refund` notices against the saved refund key and original payment signature/amount. It only marks a refund PROCESSED when the notification's matching refund entry includes `bank_confirmed_at`; confirmed totals drive `PARTIALLY_REFUNDED`/`REFUNDED` payment and order state. An unprocessed webhook can retry its internal status update. Admin Payments UI accepts partial/full amount, displays remaining amount and pending rows; customer order badges distinguish partial refund from return-approved/pending and fully refunded.
-- Refund verification at the refund-slice checkpoint: Payment Service tests pass 26/26, including access control, eligibility, no over-refund, and provider-confirmed vs pending callback cases. Current broader workspace and Order Service verification is recorded below. Route tests tolerate the expected PostgreSQL-unavailable responses, and Jest has a known startup-timer handle; `--forceExit` provides a deterministic exit but does not prove database behavior. Payment Service and Order Service builds pass; Admin Dashboard build and focused ESLint pass. The refunds-table migration was added, but no DB was available to deploy/test it, and no Midtrans sandbox callback or refund was performed. Order Service has no baseline migration history; Payment Service also lacks baseline table-creation migrations, so fresh-database migration deploy remains unproven. The current system does not record physical return receipt; admin must verify goods/policy outside the system before refunding.
+- Refund verification at the refund-slice checkpoint: Payment Service tests pass 26/26, including access control, eligibility, no over-refund, and provider-confirmed vs pending callback cases. Current broader workspace and Order Service verification is recorded below. Route tests tolerate the expected PostgreSQL-unavailable responses, and Jest has a known startup-timer handle; `--forceExit` provides a deterministic exit but does not prove database behavior. Payment Service and Order Service builds pass; Admin Dashboard build and focused ESLint pass. The refunds-table migration was added, but no DB was available to deploy/test it, and no Midtrans sandbox callback or refund was performed. Order Service has no baseline migration history; Payment Service also lacks baseline table-creation migrations, so fresh-database migration deploy remains unproven. At this historical checkpoint the system did not yet record physical return receipt; the 2026-09-28 section below supersedes that gap.
 - Checkout security gate: the Order Service endpoint now rejects checkout before any service or database side effect until a trusted shipping quote contract exists. Browser-supplied `shippingCost` is not an acceptable authority; a unit test verifies no network/database calls occur. This closes direct-API order creation with a forged/zero shipping fee but intentionally leaves checkout unavailable pending the shipping model/provider decision.
 - Shipping safety follow-up: removed automatic synthetic courier/rate seeding from Shipping Service startup. The root seed script now skips the invented city/rate matrix by default; `ALLOW_DEMO_SHIPPING_RATES=true` is an explicit development-only opt-in and is rejected in production. Label creation rejects non-positive/non-integer grams, missing route data, and inactive couriers, and no longer substitutes a fabricated Rp15,000 price when no configured rate exists. Public rate queries reject non-integer weight strings rather than truncating them. Shipping Service TypeScript build passes and its focused test suite passes 17/17. These code changes do not certify any legacy rates already present in a database; PostgreSQL was unavailable, so existing rate rows and DB-backed behavior remain unaudited. A real quote still needs an agreed seller/warehouse origin and fulfillment model plus verified courier tariff/provider data; checkout stays fail-closed.
 - Seller product creation contract fix (historical URL-only implementation): the form sends the API-required slug/category, captures integer weight in grams, validates positive price and nonnegative integer stock, and uses the product-image endpoint rather than an ignored `images` field. Image URL validation requires HTTPS and rejects credentials, malformed URLs, and URLs over 2,048 characters. The initial Seller UI was URL-only; the later S3-compatible upload implementation and current verification are recorded below.
@@ -206,7 +206,14 @@ Full workspace baseline before the review/refund slices: `npm.cmd test` exited 0
 
 - Reran root `npm run build` on the current checkout. All backend services, shared packages, Admin Dashboard, Customer Web, and Seller Dashboard completed their TypeScript/Next.js production builds successfully.
 - Root `npm run lint` completes with 0 errors and 6 warnings, all Google-font configuration warnings in the three frontend layout files; `git diff --check` passes. These are compile/lint checks only and do not prove service startup, live APIs, database migrations/persistence, SMTP, payment, media storage, or browser E2E.
-- Phase 2 remains in progress. Trusted shipping quote and fulfillment/multi-seller decisions, physical return-receipt policy, real media provider configuration and upload/read/delete acceptance, live database/migration acceptance, SMTP/Midtrans sandbox checks, and browser E2E remain open. Do not enable checkout or claim public-production readiness until applicable gates are accepted.
+- Phase 2 remains in progress. Verified seller origins/rate rows, real media provider configuration and upload/read/delete acceptance, SMTP/Midtrans sandbox checks, browser E2E, and production warehouse acceptance of the implemented return-receipt workflow remain open. Do not claim public-production readiness until applicable gates are accepted.
+
+### Physical Return Receipt Gate (2026-09-28)
+
+- Order Service now exposes ADMIN-only `POST /orders/{id}/return-receipt`. It accepts only `RETURN_APPROVED`, uses a conditional database claim to prevent stale/concurrent updates, transitions to `RETURN_RECEIVED`, and atomically stores the receiving admin, timestamp, bounded note, and status-history audit entry. Successful retries are idempotent and do not overwrite the original evidence.
+- Payment Service now requires both `returnReceivedAt` and `RETURN_RECEIVED`/`PARTIALLY_REFUNDED` before it reserves or submits a refund. Order Service also rejects partial/full provider completion callbacks if receipt evidence is absent. Midtrans/bank confirmation remains the only event that moves the order to a refunded state.
+- Admin order detail can record and display the receipt evidence; Admin Payment UI explains that the receipt gate precedes provider submission. Customer order badges and detail copy distinguish approved/waiting-for-goods from received/waiting-for-refund. The Order migration adds nullable receipt columns so existing orders can migrate safely.
+- All seven Order migrations deployed on a disposable PostgreSQL 16 cluster. Order integration tests pass 15/15, including persisted receipt fields, exactly one audit row, ADMIN authorization, note bounds, and idempotent retry. Order unit tests pass 58/58, including the losing side of a concurrent conditional claim; Payment unit tests pass 23/23. Both backend typechecks/builds and Admin typecheck/build pass; Admin lint reports 0 errors and 2 pre-existing font warnings. Customer receipt-status UI tests pass 2/2, Customer typecheck/build pass, and focused lint passes. The temporary database was stopped and removed. Browser E2E, real warehouse handling, and Midtrans sandbox refund acceptance remain open.
 
 ### Shipping Rate Bracket Pricing Correction (2026-09-24)
 
@@ -219,7 +226,8 @@ Full workspace baseline before the review/refund slices: `npm.cmd test` exited 0
 - Order items now persist the product weight (grams) captured from Product Service at checkout, rather than leaving Shipping Service to query mutable catalog data later. The order path rejects missing, non-integer, zero, or negative product weights. Added the column to the fresh-database baseline and an additive migration for existing databases; generated Prisma Client matches the schema and Prisma validation passes.
 - The `OrderPaid` consumer now calculates total parcel weight only from valid order-item snapshots, validates quantities and safe integer aggregation, and rejects missing/invalid weight instead of substituting 1 kg. Added focused calculation tests for sums, missing/invalid values, empty orders, and overflow.
 - Order Service build passes and its suite reports 37/37 tests; after preventing background cron timers from starting under `NODE_ENV=test`, Jest exits cleanly. Shipping Service build passes and its suite passes 21/21. Route tests still tolerate PostgreSQL `localhost:5445` connection failures, so neither migration application nor persisted snapshot reads are verified. `git diff --check` passes.
-- The consumer still uses Jakarta as an origin city because no fulfillment-origin model or quote contract has been selected. This remains an explicit shipping gate; no real rate or shipment acceptance is claimed.
+- Historical note: this checkpoint still used Jakarta as a compatibility origin. The 2026-09-28
+  continuation below removes that fallback and supersedes this behavior.
 
 ### Trusted Shipping Quote and Checkout Reopening (2026-09-25)
 
@@ -234,7 +242,7 @@ Decisions received (recorded as given; nothing was invented):
 2. **Tariffs**: the internal **verified rate table** (`shipping_rates`). No external courier API is
    called. A route/service/weight with no configured row fails closed.
 3. **Refunds**: allowed only after an **admin confirms physical receipt** of returned goods.
-   Approval alone is not sufficient. (Implementation of the receipt step is still open.)
+   Approval alone is not sufficient. The receipt command, audit fields, refund gate, and Admin UI are implemented and verified on a disposable PostgreSQL database; warehouse and Midtrans sandbox acceptance remain open.
 
 #### Seller dispatch origin
 
@@ -320,13 +328,34 @@ idempotent.
 
 #### Still open for Phase 2
 
-- No seller currently has a verified dispatch origin, and the rate table has no verified rows. Until
-  the marketplace supplies both, every quote correctly fails closed. **This is the remaining gate
-  for a working checkout**, and it needs business data, not code.
-- Seller and admin UI for entering and verifying a dispatch origin.
-- The admin "physical receipt confirmed" step before refunds.
+- Seller proposal/admin verification and courier/rate admin UI now exist, but no real origins or
+  tariff rows were supplied. Quotes correctly fail closed for unconfigured sellers/routes.
+- Split-shipment label persistence is still missing. The quote and order snapshot support one
+  shipment per seller, but `shipping_orders` remains one row per order. Paid multi-seller orders
+  are therefore explicitly blocked from label creation instead of being partially fulfilled.
+- Browser E2E and real warehouse acceptance for the implemented admin physical-receipt step.
 - Production media storage acceptance (needs S3 credentials).
 - Browser E2E across customer, seller, and admin.
+
+### Verified Courier and Rate Administration (2026-09-28)
+
+- Added ADMIN-only courier creation and shipping-rate list/create/update/delete endpoints. Courier
+  codes and route/service data are normalized, a rate must reference an active configured courier
+  service, weight/cost must be positive integers, and a database uniqueness constraint prevents two
+  rows for the same courier/origin/destination/service/weight bracket.
+- Added `createdBy`/`updatedBy` audit fields, a checked-in additive migration, OpenAPI coverage, and
+  an Admin Dashboard `Tarif Pengiriman` page for managing couriers and verified bracket prices.
+- Deployed all four Shipping migrations to a disposable PostgreSQL 16 database. The live CRUD test
+  proves admin authorization, normalization, public quote visibility, duplicate rejection (409),
+  update audit, and deletion. Shipping integration tests pass 20/20.
+- Removed the legacy Jakarta/province fallback from `OrderPaid` label creation. A single-seller paid
+  order now uses the exact origin, weight, courier/service, and cost stored in the consumed quote;
+  later rate-table edits cannot silently re-price it. Missing snapshots and multi-seller snapshots
+  fail closed. The latter remains an implementation blocker until `shipping_orders` supports one
+  row per seller.
+- Shipping typecheck/build pass; unit tests pass 41/41. Changed Admin files pass ESLint, and the
+  Admin production build passes. No actual business tariff/origin data was invented or retained;
+  the disposable database is removed after validation.
 
 ### Prisma Schema Validation Audit (2026-09-24)
 

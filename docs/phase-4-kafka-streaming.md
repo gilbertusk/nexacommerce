@@ -1,7 +1,7 @@
 # Phase 4 — Kafka Event Streaming
 
-Last updated: 2026-09-25
-Status: In progress; local live bridge, topic catalog, schema envelope, replay, ordering, restart, and single-broker outage checks passed; a real database-backed projection and production cluster acceptance remain pending
+Last updated: 2026-09-26
+Status: In progress; local live bridge, database-backed projection, replay, ordering, restart, and single-broker outage checks passed; live cutover comparison and production cluster acceptance remain pending
 
 ## System boundary
 
@@ -136,6 +136,28 @@ Cutover sequence, when the projection is trusted:
 Running both write paths into one table at any point in that sequence is the
 failure this design exists to prevent.
 
+The comparison gate is exposed to administrators at
+`GET /analytics/projections/daily/comparison?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`.
+It compares the union of dates in both tables and requires exact agreement for
+orders, revenue, items sold, cancelled orders, and completed orders. A date
+missing from either source is a mismatch. Two empty tables return `NO_DATA`
+and `cutoverEligible: false`, so an unused projection cannot accidentally be
+accepted as production-ready. The default window is 30 days and the maximum
+window is 366 days.
+
+Daily reads are selected with `ANALYTICS_DAILY_READ_MODEL`, which defaults to
+`RABBITMQ`. Setting it to `KAFKA` does not blindly enable the new table: before
+opening its HTTP port, Analytics compares the configured recent window
+(`ANALYTICS_KAFKA_CUTOVER_WINDOW_DAYS`, default 30) and exits if the result is
+`MISMATCH` or `NO_DATA`. This is deliberately fail-closed. After a successful
+cutover and observation period, `ANALYTICS_RABBITMQ_CONSUMER_ENABLED=false`
+retires the legacy writer. Configuration validation refuses to disable that
+consumer while the read model is still `RABBITMQ`.
+
+Only daily dashboard totals and daily revenue/order time series move with this
+switch. Monthly, seller, product, category, and payment reports still use their
+existing projections and are not falsely presented as Kafka-backed.
+
 ### Guarantees and how each is enforced
 
 | Guarantee | Mechanism |
@@ -178,7 +200,8 @@ behaviour. Those need a real cluster, not a single-node KRaft container.
 
 ## Remaining exit gates
 
-- Execute the cutover comparison above and repoint Analytics reads, then retire the RabbitMQ analytics consumer.
+- Rebuild the projection from the intended topic history, run the comparison endpoint over the approved shared window, and retain the evidence. The read model must not be switched unless it returns `MATCH` and `cutoverEligible: true`.
+- Repoint the daily Analytics reads to the Kafka projection, observe them, then retire the RabbitMQ analytics consumer. The code still serves `daily_sales_report` by default because no representative cutover comparison has passed yet.
 - Production cluster requirements are now written down in [kafka-production-requirements.md](kafka-production-requirements.md): 3 brokers, RF 3, `min.insync.replicas` 2, `unclean.leader.election.enable=false`, TLS plus SASL with per-service ACLs, storage sizing, monitoring and alert thresholds, export, and DR. **Marked external acceptance: no production cluster has been provided, so none of it is verified.**
 - Decide retention/privacy deletion requirements with business/legal owners before public production.
 - Replace the single-node plaintext Compose validation topology with the intended secured multi-node environment for production acceptance.

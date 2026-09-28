@@ -29,20 +29,28 @@ model Order {
   /// per-seller split-shipment breakdown it contained. The breakdown is the
   /// source of truth for a multi-seller order; `courierName`/`courierService`
   /// hold the first shipment only, for existing single-courier reads.
-  shippingQuoteId   String?              @unique @map("shipping_quote_id")
-  shipmentBreakdown Json?                @map("shipment_breakdown")
-  status            String               @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID, PROCESSING, PACKED, SHIPPED, DELIVERED, COMPLETED, CANCELLED, RETURN_REQUESTED, RETURN_APPROVED, PARTIALLY_REFUNDED, REFUNDED
-  notes             String?
-  paidAt            DateTime?            @map("paid_at")
-  cancelledAt       DateTime?            @map("cancelled_at")
-  completedAt       DateTime?            @map("completed_at")
-  expiresAt         DateTime             @map("expires_at")
-  createdAt         DateTime             @default(now()) @map("created_at")
-  updatedAt         DateTime             @updatedAt @map("updated_at")
-  items             OrderItem[]
-  statusHistory     OrderStatusHistory[]
-  complaints        OrderComplaint[]
+  shippingQuoteId     String?              @unique @map("shipping_quote_id")
+  shipmentBreakdown   Json?                @map("shipment_breakdown")
+  status              String               @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAID, PROCESSING, PACKED, SHIPPED, DELIVERED, COMPLETED, CANCELLED, RETURN_REQUESTED, RETURN_APPROVED, RETURN_RECEIVED, PARTIALLY_REFUNDED, REFUNDED
+  notes               String?
+  paidAt              DateTime?            @map("paid_at")
+  cancelledAt         DateTime?            @map("cancelled_at")
+  completedAt         DateTime?            @map("completed_at")
+  returnReceivedAt    DateTime?            @map("return_received_at")
+  returnReceivedBy    String?              @map("return_received_by")
+  returnReceiptNote   String?              @map("return_receipt_note") @db.VarChar(1000)
+  expiresAt           DateTime             @map("expires_at")
+  /// Set only when inventory reservation, optional voucher application, and
+  /// payment invoice creation have all succeeded. OrderCreated is inserted
+  /// into the outbox in the same transaction as this marker.
+  checkoutFinalizedAt DateTime?            @map("checkout_finalized_at")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  items               OrderItem[]
+  statusHistory       OrderStatusHistory[]
+  complaints          OrderComplaint[]
 
+  @@index([status, checkoutFinalizedAt])
   @@map("orders")
 }
 

@@ -4,7 +4,13 @@ import swaggerUi from 'swagger-ui-express';
 import { ZodError } from 'zod';
 import { cartRoutes } from './routes/cart.routes';
 import { swaggerSpec } from './docs/swagger';
-import { errorResponse, requestIdMiddleware } from '@nexacommerce/common';
+import {
+  createInternalServiceGuard,
+  errorResponse,
+  httpMetricsMiddleware,
+  renderHttpPrometheusMetrics,
+  requestIdMiddleware,
+} from '@nexacommerce/common';
 import { createLogger } from '@nexacommerce/logger';
 
 const logger = createLogger('cart-service');
@@ -13,6 +19,7 @@ const app = express();
 // Establish the request correlation id before anything else runs, so every
 // log line and every outbound internal call in this request carries it.
 app.use(requestIdMiddleware);
+app.use(httpMetricsMiddleware('cart-service'));
 
 app.use(cors({ origin: false }));
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
@@ -51,6 +58,11 @@ app.get('/cart/health', (req, res) => {
     service: 'cart-service',
     timestamp: new Date().toISOString(),
   });
+});
+
+app.get('/metrics', createInternalServiceGuard(['prometheus']), (_req, res) => {
+  res.type('text/plain; version=0.0.4; charset=utf-8');
+  res.status(200).send(renderHttpPrometheusMetrics());
 });
 
 // Mount Routes

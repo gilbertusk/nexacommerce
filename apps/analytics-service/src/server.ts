@@ -3,12 +3,24 @@ import { config } from './config';
 import { initRabbitMQ } from './messaging/rabbitmq';
 import { startKafkaProjection, stopKafkaProjection } from './messaging/kafka-consumer';
 import { createLogger } from '@nexacommerce/logger';
+import { verifyConfiguredDailyReadModel } from './services/projection-comparison';
 
 const logger = createLogger('analytics-service');
 
 async function startServer() {
   try {
-    await initRabbitMQ();
+    const cutover = await verifyConfiguredDailyReadModel();
+    if (cutover) {
+      logger.info(
+        `[Analytics Service] Kafka daily read model approved across ${cutover.daysCompared} compared day(s)`,
+      );
+    }
+
+    if (config.rabbitMqConsumerEnabled) {
+      await initRabbitMQ();
+    } else {
+      logger.info('[Analytics Service] RabbitMQ analytics consumer is disabled');
+    }
     await startKafkaProjection();
     const server = app.listen(config.port, () => {
       logger.info(`[Analytics Service] Running on port ${config.port}`);

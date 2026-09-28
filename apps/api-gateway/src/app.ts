@@ -6,7 +6,14 @@ import helmet from 'helmet';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
 import { config } from './config/index';
 import { createLogger } from '@nexacommerce/logger';
-import { getRequestId, REQUEST_ID_HEADER, requestIdMiddleware } from '@nexacommerce/common';
+import {
+  createInternalServiceGuard,
+  getRequestId,
+  httpMetricsMiddleware,
+  renderHttpPrometheusMetrics,
+  REQUEST_ID_HEADER,
+  requestIdMiddleware,
+} from '@nexacommerce/common';
 import { createRateLimitStore, RateLimitStoreUnavailableError } from './redis/rate-limit-store';
 
 const logger = createLogger('api-gateway');
@@ -15,6 +22,7 @@ const app = express();
 // Establish the request correlation id before anything else runs, so every
 // log line and every outbound internal call in this request carries it.
 app.use(requestIdMiddleware);
+app.use(httpMetricsMiddleware('api-gateway'));
 
 app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -26,6 +34,13 @@ app.use(cors({
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
 }));
+
+// Keep the operations surface private and outside Redis-backed public rate
+// limiting, so monitoring remains available during a Redis incident.
+app.get('/metrics', createInternalServiceGuard(['prometheus']), (req, res) => {
+  res.type('text/plain; version=0.0.4; charset=utf-8');
+  res.status(200).send(renderHttpPrometheusMetrics());
+});
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 app.use((req, res, next) => {

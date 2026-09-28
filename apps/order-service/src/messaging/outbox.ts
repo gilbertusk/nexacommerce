@@ -1,20 +1,38 @@
 import crypto from 'crypto';
-import type { OrderCancelled, OrderCompleted, OrderPaid } from '@nexacommerce/event-contracts';
+import type { OrderCancelled, OrderCompleted, OrderCreated, OrderPaid } from '@nexacommerce/event-contracts';
 import { Prisma } from '../generated/client';
 import { prisma } from '../prisma/client';
 
 const MAX_BACKOFF_MS = 5 * 60 * 1000;
 
-type OrderEvent = OrderCancelled | OrderPaid | OrderCompleted;
+type OrderEvent = OrderCreated | OrderCancelled | OrderPaid | OrderCompleted;
 type OutboxTransaction = Prisma.TransactionClient;
 
-function createEvent<T extends OrderEvent>(eventName: T['eventName'], payload: T['payload']): T {
+function createEvent<T extends OrderEvent>(
+  eventName: T['eventName'],
+  payload: T['payload'],
+  eventId: string = crypto.randomUUID(),
+): T {
   return {
-    eventId: crypto.randomUUID(),
+    eventId,
     eventName,
     timestamp: new Date().toISOString(),
     payload,
   } as T;
+}
+
+export async function enqueueOrderCreated(
+  tx: OutboxTransaction,
+  payload: OrderCreated['payload'],
+): Promise<void> {
+  // One checkout may have only one OrderCreated fact. The deterministic id
+  // makes an accidental second finalization fail atomically instead of
+  // creating a duplicate event with a new UUID.
+  await enqueueOrderEvent(
+    tx,
+    'order.created',
+    createEvent<OrderCreated>('OrderCreated', payload, `order-created:${payload.orderId}`),
+  );
 }
 
 async function enqueueOrderEvent(

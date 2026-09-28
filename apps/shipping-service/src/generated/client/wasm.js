@@ -128,6 +128,8 @@ exports.Prisma.CourierScalarFieldEnum = {
   code: 'code',
   services: 'services',
   isActive: 'isActive',
+  createdBy: 'createdBy',
+  updatedBy: 'updatedBy',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -141,12 +143,16 @@ exports.Prisma.ShippingRateScalarFieldEnum = {
   weight: 'weight',
   cost: 'cost',
   estimatedDays: 'estimatedDays',
-  createdAt: 'createdAt'
+  createdBy: 'createdBy',
+  updatedBy: 'updatedBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.ShippingOrderScalarFieldEnum = {
   id: 'id',
   orderId: 'orderId',
+  sellerId: 'sellerId',
   courierId: 'courierId',
   courierName: 'courierName',
   serviceCode: 'serviceCode',

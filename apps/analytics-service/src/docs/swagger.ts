@@ -119,5 +119,21 @@ export const swaggerSpec = {
         responses: { 200: { description: 'Cancellation stats time series' }, 403: { description: 'ADMIN only' } },
       },
     },
+    '/analytics/projections/daily/comparison': {
+      get: {
+        tags: ['Analytics'],
+        summary: 'Compare RabbitMQ and Kafka daily projections before cutover (ADMIN)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: 'query', name: 'startDate', schema: { type: 'string', format: 'date' }, description: 'Defaults to 29 days before endDate' },
+          { in: 'query', name: 'endDate', schema: { type: 'string', format: 'date' }, description: 'Defaults to today; maximum window is 366 days' },
+        ],
+        responses: {
+          200: { description: 'Exact comparison and cutover eligibility result' },
+          400: { description: 'Invalid date or comparison window' },
+          403: { description: 'ADMIN only' },
+        },
+      },
+    },
   },
 };

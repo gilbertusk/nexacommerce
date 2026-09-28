@@ -36,6 +36,7 @@ router.get('/categories/top-selling', restrictTo('ADMIN'), asyncHandler(analytic
 router.get('/sellers/performance', restrictTo('ADMIN'), asyncHandler(analyticsController.sellerPerformance));
 router.get('/payments/success-rate', restrictTo('ADMIN'), asyncHandler(analyticsController.paymentSuccessRate));
 router.get('/orders/cancellation-rate', restrictTo('ADMIN'), asyncHandler(analyticsController.cancellationRate));
+router.get('/projections/daily/comparison', restrictTo('ADMIN'), asyncHandler(analyticsController.dailyProjectionComparison));
 
 // Seller endpoint
 router.get('/seller/dashboard', restrictTo('SELLER'), asyncHandler(analyticsController.sellerDashboard));

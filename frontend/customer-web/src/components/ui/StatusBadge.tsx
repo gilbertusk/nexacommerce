@@ -36,7 +36,11 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
       break;
     case "RETURN_APPROVED":
       style = "bg-violet-50 text-violet-800 border-violet-200/60";
-      label = "Retur Disetujui, Refund Menunggu";
+      label = "Retur Disetujui, Barang Ditunggu";
+      break;
+    case "RETURN_RECEIVED":
+      style = "bg-teal-50 text-teal-800 border-teal-200/60";
+      label = "Barang Retur Diterima, Refund Menunggu";
       break;
     case "PARTIALLY_REFUNDED":
       style = "bg-blue-50 text-blue-800 border-blue-200/60";

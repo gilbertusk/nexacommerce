@@ -20,7 +20,7 @@ const mockRate = {
 };
 
 const mockTracking = {
-  id: 'track-1', orderId: 'order-1', trackingNumber: 'JNE123456',
+  id: 'track-1', orderId: 'order-1', sellerId: 'seller-1', trackingNumber: 'JNE123456',
   courierId: 'courier-1', courierName: 'JNE', serviceName: 'Regular', status: 'SHIPPED' as any,
   estimatedDelivery: '2 days', shippedAt: new Date(), deliveredAt: null,
   createdAt: new Date(), updatedAt: new Date(),
@@ -42,6 +42,75 @@ describe('ShippingService', () => {
       const result = await service.getCouriers();
       expect(result).toHaveLength(1);
       expect(result[0].code).toBe('jne');
+    });
+  });
+
+  describe('admin-managed courier and rates', () => {
+    it('normalizes and records the admin when creating a courier', async () => {
+      mockShippingRepo.findCourierByCode.mockResolvedValue(null);
+      mockShippingRepo.createCourier.mockResolvedValue({ ...mockCourier, createdBy: 'admin-1' } as any);
+
+      await service.adminCreateCourier('admin-1', {
+        code: ' JNE ',
+        name: ' JNE Express ',
+        services: [{ code: ' reg ', name: ' Regular ', estimatedDays: ' 2-3 hari ' }],
+      });
+
+      expect(mockShippingRepo.createCourier).toHaveBeenCalledWith({
+        code: 'jne',
+        name: 'JNE Express',
+        services: [{ code: 'REG', name: 'Regular', estimatedDays: '2-3 hari' }],
+        createdBy: 'admin-1',
+      });
+    });
+
+    it('rejects duplicate courier service codes before writing', async () => {
+      await expect(service.adminCreateCourier('admin-1', {
+        code: 'jne',
+        name: 'JNE',
+        services: [
+          { code: 'REG', name: 'Regular', estimatedDays: '2-3' },
+          { code: 'reg', name: 'Regular duplicate', estimatedDays: '3-4' },
+        ],
+      })).rejects.toThrow('Duplicate courier service code');
+      expect(mockShippingRepo.createCourier).not.toHaveBeenCalled();
+    });
+
+    it('creates only a rate matching an active courier service and audits the admin', async () => {
+      mockShippingRepo.findCourierById.mockResolvedValue(mockCourier as any);
+      mockShippingRepo.createShippingRate.mockResolvedValue({ ...mockRate, cost: 18000 } as any);
+
+      const result = await service.adminCreateRate('admin-1', {
+        courierId: 'courier-1',
+        originCity: ' Bandung ',
+        destinationCity: ' Surabaya ',
+        serviceCode: 'reg',
+        weight: 1000,
+        cost: 18000,
+        estimatedDays: '2-3 hari',
+      });
+
+      expect(result.cost).toBe(18000);
+      expect(mockShippingRepo.createShippingRate).toHaveBeenCalledWith({
+        courierId: 'courier-1',
+        originCity: 'BANDUNG',
+        destinationCity: 'SURABAYA',
+        serviceCode: 'REG',
+        weight: 1000,
+        cost: 18000,
+        estimatedDays: '2-3 hari',
+        createdBy: 'admin-1',
+      });
+    });
+
+    it('rejects a service code not configured on the courier', async () => {
+      mockShippingRepo.findCourierById.mockResolvedValue(mockCourier as any);
+
+      await expect(service.adminCreateRate('admin-1', {
+        courierId: 'courier-1', originCity: 'Bandung', destinationCity: 'Surabaya',
+        serviceCode: 'YES', weight: 1000, cost: 25000, estimatedDays: '1 hari',
+      })).rejects.toThrow('is not configured for courier');
+      expect(mockShippingRepo.createShippingRate).not.toHaveBeenCalled();
     });
   });
 
@@ -88,24 +157,44 @@ describe('ShippingService', () => {
   });
 
   describe('createShippingOrder', () => {
+    it('records the immutable paid quote cost and exact origin without re-pricing', async () => {
+      mockShippingRepo.findShippingOrderByOrderAndSeller.mockResolvedValue(null);
+      mockShippingRepo.findCourierById.mockResolvedValue(mockCourier as any);
+      mockShippingRepo.createShippingOrder.mockResolvedValue({ ...mockTracking, cost: 18000 } as any);
+      mockShippingRepo.createStatusHistory.mockResolvedValue({} as any);
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => callback({}));
+
+      await service.createShippingOrder({
+        orderId: 'order-1', sellerId: 'seller-1', courierId: 'courier-1', serviceCode: 'REG', weight: 1000,
+        originCity: 'Bandung', originProvince: 'Jawa Barat', trustedQuotedCost: 18000,
+        destinationAddress: { city: 'Surabaya' },
+      });
+
+      expect(mockShippingRepo.findRates).not.toHaveBeenCalled();
+      expect(mockShippingRepo.createShippingOrder).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+        cost: 18000,
+        originAddress: { city: 'Bandung', province: 'Jawa Barat' },
+      }));
+    });
+
     it('does not invent a shipping fee when no configured rate matches', async () => {
-      mockShippingRepo.findShippingOrderByOrderId.mockResolvedValue(null);
+      mockShippingRepo.findShippingOrderByOrderAndSeller.mockResolvedValue(null);
       mockShippingRepo.findCourierById.mockResolvedValue(mockCourier as any);
       mockShippingRepo.findCourierByCode.mockResolvedValue(mockCourier as any);
       mockShippingRepo.findRates.mockResolvedValue([]);
 
       await expect(service.createShippingOrder({
-        orderId: 'order-1', courierId: 'courier-1', serviceCode: 'REG', weight: 1000,
-        originCity: 'Jakarta', destinationAddress: { city: 'Bandung' },
+        orderId: 'order-1', sellerId: 'seller-1', courierId: 'courier-1', serviceCode: 'REG', weight: 1000,
+        originCity: 'Jakarta', originProvince: 'DKI Jakarta', destinationAddress: { city: 'Bandung' },
       })).rejects.toThrow('No configured shipping rate');
     });
 
     it('rejects invalid weight and missing route before querying providers', async () => {
       await expect(service.createShippingOrder({
-        orderId: 'order-1', courierId: 'courier-1', serviceCode: 'REG', weight: 0,
-        originCity: 'Jakarta', destinationAddress: { city: 'Bandung' },
+        orderId: 'order-1', sellerId: 'seller-1', courierId: 'courier-1', serviceCode: 'REG', weight: 0,
+        originCity: 'Jakarta', originProvince: 'DKI Jakarta', destinationAddress: { city: 'Bandung' },
       })).rejects.toThrow('positive integer');
-      expect(mockShippingRepo.findShippingOrderByOrderId).not.toHaveBeenCalled();
+      expect(mockShippingRepo.findShippingOrderByOrderAndSeller).not.toHaveBeenCalled();
     });
   });
 
@@ -126,7 +215,7 @@ describe('ShippingService', () => {
 
   describe('object-level authorization', () => {
     it('rejects a customer who does not own the order', async () => {
-      mockShippingRepo.findShippingOrderByOrderId.mockResolvedValue(mockTracking as any);
+      mockShippingRepo.findShippingOrdersByOrderId.mockResolvedValue([mockTracking] as any);
       jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
         json: async () => ({ data: { id: 'order-1', customerId: 'owner-1', items: [] } }),
@@ -136,8 +225,11 @@ describe('ShippingService', () => {
         .rejects.toThrow('not allowed');
     });
 
-    it('rejects a seller mutation when another seller also owns order items', async () => {
-      mockShippingRepo.findShippingOrderByOrderId.mockResolvedValue(mockTracking as any);
+    it('selects only the authenticated seller shipment in a multi-seller order', async () => {
+      mockShippingRepo.findShippingOrdersByOrderId.mockResolvedValue([
+        mockTracking,
+        { ...mockTracking, id: 'track-2', sellerId: 'seller-2', trackingNumber: 'OTHER' },
+      ] as any);
       jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -149,11 +241,11 @@ describe('ShippingService', () => {
         }),
       } as Response);
 
-      await expect(service.updateTrackingNumber(
+      const result = await service.getShippingOrder(
         'order-1',
         { userId: 'seller-1', role: 'SELLER' },
-        'NEW-TRACKING',
-      )).rejects.toThrow('multi-seller');
+      );
+      expect(result).toEqual(expect.objectContaining({ id: 'track-1', sellerId: 'seller-1' }));
     });
   });
 
@@ -167,17 +259,25 @@ describe('ShippingService', () => {
       estimatedDelivery: '2 days',
       shippedAt: null,
     };
-    const tx = { outboxEvent: { create: jest.fn() } };
+    const tx = {
+      outboxEvent: { create: jest.fn() },
+      shippingOrder: { count: jest.fn(), findMany: jest.fn() },
+    };
 
     beforeEach(() => {
       tx.outboxEvent.create.mockResolvedValue({});
       mockPrisma.$transaction.mockImplementation(async (callback: (client: typeof tx) => unknown) => callback(tx));
-      mockShippingRepo.findShippingOrderByOrderId.mockResolvedValue(shippingOrder as any);
+      mockShippingRepo.findShippingOrdersByOrderId.mockResolvedValue([shippingOrder] as any);
       mockShippingRepo.claimShippingOrderStatus.mockResolvedValue({ count: 1 });
       mockShippingRepo.createStatusHistory.mockResolvedValue({} as any);
+      mockShippingRepo.lockShippingOrderAggregate.mockResolvedValue(undefined);
+      tx.shippingOrder.count.mockResolvedValue(0);
+      tx.shippingOrder.findMany.mockResolvedValue([{
+        sellerId: 'seller-1', trackingNumber: 'JNE123456', courierName: 'JNE', serviceName: 'Regular',
+      }]);
       jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
-        json: async () => ({ data: { id: 'order-1', customerId: 'customer-1', items: [] } }),
+        json: async () => ({ data: { id: 'order-1', customerId: 'customer-1', items: [{ sellerId: 'seller-1' }] } }),
       } as Response);
     });
 
@@ -201,6 +301,33 @@ describe('ShippingService', () => {
           eventName: 'OrderShipped',
           routingKey: 'order.shipped',
         }),
+      });
+    });
+
+    it('does not emit the global shipped event while another seller parcel is waiting', async () => {
+      tx.shippingOrder.count.mockResolvedValueOnce(1);
+
+      await service.updateShippingStatus(
+        'order-1',
+        { userId: 'seller-1', role: 'SELLER' },
+        { status: 'PICKED_UP' },
+      );
+
+      expect(tx.outboxEvent.create).not.toHaveBeenCalled();
+    });
+
+    it('emits delivered only after every seller parcel is delivered', async () => {
+      const inTransit = { ...shippingOrder, status: 'IN_TRANSIT' };
+      mockShippingRepo.findShippingOrdersByOrderId.mockResolvedValue([inTransit] as any);
+
+      await service.updateShippingStatus(
+        'order-1',
+        { userId: 'seller-1', role: 'SELLER' },
+        { status: 'DELIVERED' },
+      );
+
+      expect(tx.outboxEvent.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ eventName: 'OrderDelivered', routingKey: 'order.delivered' }),
       });
     });
 

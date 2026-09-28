@@ -1,9 +1,9 @@
 "use client";
 
-import { use } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { use, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAdminStore } from "@/lib/store/useAdminStore";
-import { apiGet } from "@/lib/api/client";
+import { apiGet, apiPost } from "@/lib/api/client";
 import Link from "next/link";
 
 interface OrderItem {
@@ -20,6 +20,9 @@ interface OrderDetail {
   status: string;
   createdAt: string;
   updatedAt?: string;
+  returnReceivedAt?: string | null;
+  returnReceivedBy?: string | null;
+  returnReceiptNote?: string | null;
   totalAmount?: number;
   total?: number;
   customer?: { name?: string; email?: string; phone?: string };
@@ -56,6 +59,11 @@ const STATUS_LABELS: Record<string, string> = {
   DELIVERED: "Terkirim",
   COMPLETED: "Selesai",
   CANCELLED: "Dibatalkan",
+  RETURN_REQUESTED: "Retur Diajukan",
+  RETURN_APPROVED: "Retur Disetujui",
+  RETURN_RECEIVED: "Barang Retur Diterima",
+  PARTIALLY_REFUNDED: "Refund Sebagian",
+  REFUNDED: "Refund Selesai",
 };
 
 function formatRupiah(v: number) {
@@ -73,11 +81,33 @@ function formatDate(d: string) {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const token = useAdminStore((s) => s.token);
+  const queryClient = useQueryClient();
+  const [receiptNote, setReceiptNote] = useState("");
+  const [receiptMessage, setReceiptMessage] = useState("");
 
   const { data, isLoading, isError, refetch } = useQuery<OrderResponse>({
     queryKey: ["order", id],
     queryFn: () => apiGet<OrderResponse>(`/orders/${id}`, token ?? undefined),
     enabled: !!token && !!id,
+  });
+
+  const receiptMutation = useMutation({
+    mutationFn: () => apiPost<OrderResponse>(
+      `/orders/${encodeURIComponent(id)}/return-receipt`,
+      { note: receiptNote.trim() || undefined },
+      token ?? undefined,
+    ),
+    onSuccess: async () => {
+      setReceiptMessage("Penerimaan barang retur berhasil dikonfirmasi. Refund sekarang dapat diajukan dari halaman Pembayaran.");
+      setReceiptNote("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+      ]);
+    },
+    onError: (error) => setReceiptMessage(
+      error instanceof Error ? error.message : "Konfirmasi penerimaan retur gagal.",
+    ),
   });
 
   const order = data?.data;
@@ -142,7 +172,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* Status Timeline */}
-      {order.status !== "CANCELLED" && (
+      {STATUS_TIMELINE.includes(order.status) && (
         <div className="bg-white hairline rounded-sm p-5">
           <h2 className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary mb-4">Status Pesanan</h2>
           <div className="flex items-center gap-0">
@@ -168,6 +198,68 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               );
             })}
           </div>
+        </div>
+      )}
+
+      {(order.status === "RETURN_APPROVED" || order.returnReceivedAt) && (
+        <div className="bg-white hairline rounded-sm p-5">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-sm font-bold text-ink-primary">Penerimaan Barang Retur</h2>
+            <p className="text-xs text-ink-secondary">
+              Refund hanya dapat diajukan setelah admin memastikan barang fisik sudah diterima.
+            </p>
+          </div>
+
+          {receiptMessage && (
+            <p role="status" className="mt-4 rounded-xs border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+              {receiptMessage}
+            </p>
+          )}
+
+          {order.returnReceivedAt ? (
+            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <dt className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary">Diterima pada</dt>
+                <dd className="mt-1 text-sm text-ink-primary">{formatDate(order.returnReceivedAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary">Dikonfirmasi oleh</dt>
+                <dd className="mt-1 text-sm font-mono text-ink-primary">{order.returnReceivedBy ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] uppercase font-bold tracking-widest text-ink-secondary">Catatan</dt>
+                <dd className="mt-1 text-sm text-ink-primary">{order.returnReceiptNote ?? "—"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <form
+              className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setReceiptMessage("");
+                receiptMutation.mutate();
+              }}
+            >
+              <label className="flex flex-1 flex-col gap-1 text-xs text-ink-secondary">
+                Catatan pemeriksaan (opsional)
+                <textarea
+                  value={receiptNote}
+                  onChange={(event) => setReceiptNote(event.target.value)}
+                  maxLength={1000}
+                  rows={3}
+                  placeholder="Contoh: segel utuh, item lengkap, kondisi sesuai"
+                  className="rounded-xs border border-hairline bg-white px-3 py-2 text-ink-primary"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={receiptMutation.isPending}
+                className="rounded-xs bg-primary px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
+              >
+                {receiptMutation.isPending ? "Menyimpan…" : "Konfirmasi Barang Diterima"}
+              </button>
+            </form>
+          )}
         </div>
       )}
 

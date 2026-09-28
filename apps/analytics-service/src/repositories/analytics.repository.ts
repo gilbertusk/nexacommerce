@@ -1,5 +1,6 @@
 import { prisma } from '../prisma/client';
 import { Prisma } from '../generated/client';
+import { config } from '../config';
 
 /**
  * Either the ambient client or a transaction client. Write methods accept one
@@ -55,27 +56,54 @@ export const analyticsRepository = {
     });
   },
 
-  async findDailyReports(startDate: Date, endDate: Date) {
+  async findRabbitMqDailyReports(startDate: Date, endDate: Date) {
     return prisma.dailySalesReport.findMany({
       where: { date: { gte: startDate, lte: endDate } },
       orderBy: { date: 'asc' },
     });
   },
 
-  async findRecentDailyReports(days: number) {
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    start.setHours(0, 0, 0, 0);
-    return prisma.dailySalesReport.findMany({
-      where: { date: { gte: start } },
+  async findDailyProjections(startDate: Date, endDate: Date) {
+    return prisma.dailySalesProjection.findMany({
+      where: { date: { gte: startDate, lte: endDate } },
       orderBy: { date: 'asc' },
     });
   },
 
+  async findDailyReports(startDate: Date, endDate: Date) {
+    if (config.dailyReadModel === 'RABBITMQ') {
+      return this.findRabbitMqDailyReports(startDate, endDate);
+    }
+
+    const rows = await this.findDailyProjections(startDate, endDate);
+    return rows.map((row) => ({
+      ...row,
+      averageOrderValue: row.totalOrders > 0
+        ? new Prisma.Decimal(row.totalRevenue).div(row.totalOrders)
+        : new Prisma.Decimal(0),
+    }));
+  },
+
+  async findRecentDailyReports(days: number) {
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    start.setHours(0, 0, 0, 0);
+    return this.findDailyReports(start, new Date());
+  },
+
   async sumAllDailyRevenue() {
-    return prisma.dailySalesReport.aggregate({
-      _sum: { totalRevenue: true, totalOrders: true, totalItemsSold: true, totalCompletedOrders: true, totalCancelledOrders: true },
-    });
+    const aggregation = {
+      _sum: {
+        totalRevenue: true,
+        totalOrders: true,
+        totalItemsSold: true,
+        totalCompletedOrders: true,
+        totalCancelledOrders: true,
+      },
+    } as const;
+    return config.dailyReadModel === 'KAFKA'
+      ? prisma.dailySalesProjection.aggregate(aggregation)
+      : prisma.dailySalesReport.aggregate(aggregation);
   },
 
   // ── Monthly ────────────────────────────────────────────────────────────

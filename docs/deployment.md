@@ -37,8 +37,8 @@ Run the production profile to build multi-stage Docker images and start all 13 s
 docker compose --profile production up -d --build
 ```
 This boots:
-- Database (`postgres`), cache (`redis`), message broker (`rabbitmq`).
-- All 13 microservices connected via the virtual bridge network `nexacommerce-network`.
+- Database (`postgres`), cache (`redis`), RabbitMQ, and the local Kafka validation broker.
+- All backend services, including the Event Stream bridge, connected through `nexacommerce-network`.
 
 ### Step 2.4: Check Container Health
 Wait 30-45 seconds for all containers to finish initialization:
@@ -46,6 +46,31 @@ Wait 30-45 seconds for all containers to finish initialization:
 docker compose --profile production ps
 ```
 Verify that all services display the `healthy` status.
+
+### Step 2.5: Analytics Kafka read cutover
+
+The safe default is:
+
+```env
+ANALYTICS_DAILY_READ_MODEL=RABBITMQ
+ANALYTICS_KAFKA_CUTOVER_WINDOW_DAYS=30
+ANALYTICS_RABBITMQ_CONSUMER_ENABLED=true
+```
+
+After rebuilding the Kafka daily projection, call the ADMIN-only comparison
+endpoint over the approved window:
+
+```text
+GET /api/v1/analytics/projections/daily/comparison?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+```
+
+Do not change the read model unless the response says `status: MATCH` and
+`cutoverEligible: true`. Then set `ANALYTICS_DAILY_READ_MODEL=KAFKA` and redeploy
+Analytics. Startup repeats the comparison and exits rather than serving Kafka
+reads if the two sources no longer agree. Keep the RabbitMQ consumer enabled
+during observation. Retire it later with
+`ANALYTICS_RABBITMQ_CONSUMER_ENABLED=false`; never disable it while the read
+model is `RABBITMQ`.
 
 ---
 

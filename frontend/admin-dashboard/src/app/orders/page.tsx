@@ -30,6 +30,9 @@ const STATUSES = [
   { value: "PAID", label: "Dibayar" },
   { value: "SHIPPED", label: "Dikirim" },
   { value: "COMPLETED", label: "Selesai" },
+  { value: "RETURN_REQUESTED", label: "Retur Diajukan" },
+  { value: "RETURN_APPROVED", label: "Retur Disetujui" },
+  { value: "RETURN_RECEIVED", label: "Barang Retur Diterima" },
   { value: "CANCELLED", label: "Dibatalkan" },
 ];
 
@@ -38,6 +41,11 @@ const STATUS_STYLES: Record<string, string> = {
   PAID: "bg-blue-50 text-blue-700",
   SHIPPED: "bg-indigo-50 text-indigo-700",
   COMPLETED: "bg-green-50 text-green-700",
+  RETURN_REQUESTED: "bg-orange-50 text-orange-700",
+  RETURN_APPROVED: "bg-amber-50 text-amber-700",
+  RETURN_RECEIVED: "bg-teal-50 text-teal-700",
+  PARTIALLY_REFUNDED: "bg-blue-50 text-blue-700",
+  REFUNDED: "bg-surface text-ink-secondary",
   CANCELLED: "bg-red-50 text-red-700",
 };
 
@@ -46,6 +54,11 @@ const STATUS_LABELS: Record<string, string> = {
   PAID: "Dibayar",
   SHIPPED: "Dikirim",
   COMPLETED: "Selesai",
+  RETURN_REQUESTED: "Retur Diajukan",
+  RETURN_APPROVED: "Retur Disetujui",
+  RETURN_RECEIVED: "Barang Retur Diterima",
+  PARTIALLY_REFUNDED: "Refund Sebagian",
+  REFUNDED: "Refund Selesai",
   CANCELLED: "Dibatalkan",
 };
 
