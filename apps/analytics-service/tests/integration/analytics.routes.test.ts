@@ -37,7 +37,7 @@ describe('Analytics Routes (integration)', () => {
       const res = await request(app)
         .get('/metrics')
         .set('x-internal-service', 'prometheus')
-        .set('x-internal-token', 'development-only-internal-token');
+        .set('x-internal-token', process.env.INTERNAL_SERVICE_TOKEN || 'development-only-internal-token');
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('text/plain');

@@ -33,7 +33,7 @@ describe('event stream service health', () => {
     const response = await request(app)
       .get('/metrics')
       .set('x-internal-service', 'prometheus')
-      .set('x-internal-token', 'development-only-internal-token')
+      .set('x-internal-token', process.env.INTERNAL_SERVICE_TOKEN || 'development-only-internal-token')
       .expect(200)
       .expect('Content-Type', /text\/plain/);
 
