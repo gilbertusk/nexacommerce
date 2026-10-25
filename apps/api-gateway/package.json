@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test:live": "jest --config jest.live.config.ts --runInBand"
+    "test:live": "jest --config jest.live.config.ts --runInBand",
+    "test:ha": "jest --config jest.ha.config.ts --runInBand"
   },
   "dependencies": {
     "@nexacommerce/common": "*",

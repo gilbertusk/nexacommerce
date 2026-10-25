@@ -2,7 +2,7 @@ import Redis from 'ioredis';
 import type { NextFunction, Request, Response } from 'express';
 import { ClientRateLimitInfo, Store } from 'express-rate-limit';
 import { createLogger } from '@nexacommerce/logger';
-import { setDependencyReady } from '@nexacommerce/common';
+import { redisConnectionSettings, setDependencyReady } from '@nexacommerce/common';
 import { config } from '../config';
 
 const logger = createLogger('api-gateway-rate-limit');
@@ -113,14 +113,18 @@ export class RedisRateLimitStore implements Store {
  * the limiter fail closed quickly; reconnection continues in the background.
  */
 export function createRateLimitRedisClient(url: string, options: { connectionName?: string } = {}): Redis {
-  const client = new Redis(url, {
+  // Direct URL or Sentinel (REDIS_SENTINELS), with TLS for rediss:// URLs.
+  const settings = redisConnectionSettings(url);
+  const clientOptions = {
+    ...settings.options,
     lazyConnect: true,
     enableOfflineQueue: false,
     maxRetriesPerRequest: 1,
     connectTimeout: 1000,
-    retryStrategy: (attempt) => Math.min(attempt * 500, 5000),
+    retryStrategy: (attempt: number) => Math.min(attempt * 500, 5000),
     ...(options.connectionName ? { connectionName: options.connectionName } : {}),
-  });
+  };
+  const client = settings.url ? new Redis(settings.url, clientOptions) : new Redis(clientOptions);
   // Without an error listener ioredis reports every failed reconnect as an
   // unhandled 'error' event. Connection state is surfaced through readiness.
   client.on('error', () => undefined);

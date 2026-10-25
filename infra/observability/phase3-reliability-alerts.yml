@@ -1,0 +1,105 @@
+# Phase 3 reliability alerts. Metric sources:
+# - nexacommerce_* : GET /metrics on each service (internal prometheus identity)
+# - rabbitmq_detailed_queue_* : RabbitMQ's rabbitmq_prometheus plugin, scraped at
+#   /metrics/detailed?vhost=<vhost>&family=queue_coarse_metrics
+# Unit-tested with `promtool test rules phase3-reliability-alerts.test.yml`.
+groups:
+  - name: nexacommerce-phase3-reliability
+    rules:
+      - alert: MessagingDependencyDown
+        expr: min by (job, instance, dependency) (nexacommerce_dependency_ready) == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} has no usable {{ $labels.dependency }} connection"
+          description: The replica has been disconnected for two minutes. Committed events stay in the outbox, but nothing is published or consumed from this replica.
+
+      - alert: OutboxBacklogStale
+        expr: max by (service) (nexacommerce_backlog_oldest_pending_age_seconds{kind="outbox"}) > 300
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} outbox has an event older than 5 minutes"
+          description: Domain events are committed but not reaching RabbitMQ. Check broker connectivity and the dispatcher logs (eventId, outcome=RESCHEDULED).
+
+      - alert: OutboxRescheduling
+        expr: sum by (service) (increase(nexacommerce_outbox_dispatch_total{outcome="RESCHEDULED"}[10m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} outbox publishes keep failing"
+          description: More than 20 publish attempts were rescheduled in 10 minutes.
+
+      - alert: BacklogMetricsUnavailable
+        expr: min by (kind, service) (nexacommerce_backlog_scrape_success) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} cannot read its {{ $labels.kind }} backlog"
+          description: The backlog query failed on every scrape for ten minutes, so outbox/email alerts are blind.
+
+      - alert: InboxFailures
+        expr: sum by (consumer) (increase(nexacommerce_inbox_events_total{outcome="FAILED"}[15m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.consumer }} is failing to apply events"
+          description: Repeated inbox failures precede dead-lettering. Inspect inbox_events rows with status FAILED and last_error.
+
+      - alert: MessagesDeadLettered
+        expr: sum by (queue) (increase(nexacommerce_consumer_messages_total{outcome="DEAD_LETTERED"}[15m])) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "A message was dead-lettered from {{ $labels.queue }}"
+          description: A business event exhausted its retries or was malformed. It needs a decision; it will not be retried automatically.
+
+      - alert: DeadLetterQueueNotEmpty
+        expr: max by (vhost, queue) (rabbitmq_detailed_queue_messages{queue=~".+\\.dead"}) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DLQ {{ $labels.queue }} holds unprocessed messages"
+          description: Dead-lettered messages have been waiting for fifteen minutes.
+
+      - alert: MessagesRequeuedAfterForwardFailure
+        expr: sum by (queue) (increase(nexacommerce_consumer_messages_total{outcome="REQUEUED"}[10m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.queue }} cannot forward failures to retry/DLQ"
+          description: Retry or DLQ publishes are not being confirmed; the broker keeps redelivering the originals.
+
+      - alert: EmailQueueFailures
+        expr: max by (service) (nexacommerce_backlog_rows{kind="email",state="failed"}) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Transactional emails reached the terminal FAILED state
+          description: A promised email was never delivered after all retries. Inspect email_logs.
+
+      - alert: EmailQueueStale
+        expr: max by (service) (nexacommerce_backlog_oldest_pending_age_seconds{kind="email"}) > 900
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Emails have been waiting more than 15 minutes
+          description: The email dispatcher is not keeping up or the SMTP provider is unavailable.
+
+      - alert: RateLimitStoreErrors
+        expr: sum by (instance) (increase(nexacommerce_rate_limit_store_errors_total[5m])) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: API Gateway is rejecting requests because Redis is unavailable
+          description: The distributed rate limiter fails closed with 503 while Redis is unreachable or out of memory.

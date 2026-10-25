@@ -2,6 +2,7 @@ import { connect, Channel, ChannelModel, ConfirmChannel, ConsumeMessage, Replies
 import { EXCHANGE_NAME, EXCHANGE_TYPE, QUEUE_BINDINGS } from '@nexacommerce/event-contracts';
 import { createLogger } from '@nexacommerce/logger';
 import { ConsumerOutcome, recordConsumerOutcome } from './reliability-metrics';
+import { rabbitEndpoints, rabbitSocketOptions } from './broker-connection';
 import {
   expectedQueueSpecs,
   retryRoutingKey,
@@ -36,23 +37,48 @@ type ConsumerOptions = {
   prefetch?: number;
 };
 
+/**
+ * Connect to the first reachable broker node. `url` may list several nodes
+ * separated by commas (see `rabbitEndpoints`); each attempt tries every node
+ * in order before backing off. `amqps://` endpoints use the TLS settings from
+ * `rabbitSocketOptions`.
+ */
 export async function connectRabbitMQ(url: string, retries = 5, delay = 1000): Promise<ChannelModel> {
+  const endpoints = rabbitEndpoints(url);
+  let lastError: unknown;
   for (let attempt = 1; attempt <= retries; attempt += 1) {
-    try {
-      // Do not print broker URLs: production URLs may embed credentials.
-      console.log(`[RabbitMQ] Connecting (attempt ${attempt}/${retries})...`);
-      const connection = await connect(url);
-      connection.on('error', (err: Error) => console.error('[RabbitMQ] Connection error:', err.message));
-      connection.on('close', () => console.warn('[RabbitMQ] Connection closed.'));
-      return connection;
-    } catch (err: any) {
-      console.error(`[RabbitMQ] Connection failed: ${err?.message || 'unknown error'}`);
-      if (attempt === retries) throw err;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      delay = Math.min(delay * 2, 30_000);
+    for (let index = 0; index < endpoints.length; index += 1) {
+      const endpoint = endpoints[index];
+      try {
+        // Do not print broker URLs: production URLs may embed credentials.
+        console.log(`[RabbitMQ] Connecting to node ${index + 1}/${endpoints.length} (attempt ${attempt}/${retries})...`);
+        const connection = await connect(endpoint, rabbitSocketOptions(endpoint));
+        connection.on('error', (err: Error) => console.error('[RabbitMQ] Connection error:', err.message));
+        connection.on('close', () => console.warn('[RabbitMQ] Connection closed.'));
+        return connection;
+      } catch (err: any) {
+        lastError = err;
+        console.error(`[RabbitMQ] Connection to node ${index + 1} failed: ${err?.message || 'unknown error'}`);
+      }
     }
+    if (attempt === retries) break;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    delay = Math.min(delay * 2, 30_000);
   }
-  throw new Error('[RabbitMQ] Failed to connect after retries.');
+  throw lastError instanceof Error ? lastError : new Error('[RabbitMQ] Failed to connect after retries.');
+}
+
+/**
+ * `RABBITMQ_TOPOLOGY_MODE`: `declare` (default) asserts the whole topology on
+ * connect, which needs `configure` permission on every queue; `verify` only
+ * checks it passively, for per-service users restricted to their own queues.
+ */
+export function topologyMode(env: Record<string, string | undefined> = process.env): 'declare' | 'verify' {
+  const mode = (env.RABBITMQ_TOPOLOGY_MODE ?? 'declare').trim().toLowerCase();
+  if (mode !== 'declare' && mode !== 'verify') {
+    throw new Error('RABBITMQ_TOPOLOGY_MODE must be "declare" or "verify"');
+  }
+  return mode;
 }
 
 /**
@@ -62,7 +88,23 @@ export async function connectRabbitMQ(url: string, retries = 5, delay = 1000): P
  * PRECONDITION_FAILED: queue types cannot change in place, and nothing here
  * deletes a queue. See the migration procedure in docs/phase-3-reliability.md.
  */
-export async function setupExchangeAndQueues(channel: Channel): Promise<void> {
+export async function setupExchangeAndQueues(
+  channel: Channel,
+  mode: 'declare' | 'verify' = topologyMode(),
+): Promise<void> {
+  if (mode === 'verify') {
+    // Least-privilege deployments: the topology is provisioned by an operator
+    // (`npm run rabbitmq:topology -- declare`) and service users hold no
+    // `configure` permission. Passive checks fail fast if anything is missing.
+    for (const exchange of [EXCHANGE_NAME, RETRY_EXCHANGE, DEAD_LETTER_EXCHANGE]) {
+      await channel.checkExchange(exchange);
+    }
+    for (const spec of expectedQueueSpecs()) {
+      await channel.checkQueue(spec.name);
+    }
+    return;
+  }
+
   await channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, { durable: true });
   await channel.assertExchange(RETRY_EXCHANGE, 'direct', { durable: true });
   await channel.assertExchange(DEAD_LETTER_EXCHANGE, 'direct', { durable: true });

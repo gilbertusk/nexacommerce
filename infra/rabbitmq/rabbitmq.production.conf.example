@@ -12,12 +12,15 @@ cluster_formation.classic_config.nodes.2 = rabbit@<node-2-hostname>
 cluster_formation.classic_config.nodes.3 = rabbit@<node-3-hostname>
 # Pause the minority side of a partition rather than let both sides diverge.
 cluster_partition_handling = pause_minority
+# Detect a lost peer in ~10-15 s instead of the 60 s default.
+net_ticktime = 15
 
 ## Quorum queues: new queues default to quorum even if a client omits the
 ## argument (services already request it explicitly).
 default_queue_type = quorum
-# Keep a replica on every node for the queues the services declare.
-quorum_queue.initial_cluster_size = 3
+# Quorum queues get a member on every cluster node by default (initial group
+# size = cluster size). To cap it on larger clusters use a policy with
+# `x-quorum-initial-group-size`, never fewer than 3.
 
 ## TLS only for AMQP; disable the plaintext listener.
 listeners.tcp = none
@@ -33,7 +36,7 @@ management.ssl.port       = 15671
 management.ssl.cacertfile = /etc/rabbitmq/tls/ca.pem
 management.ssl.certfile   = /etc/rabbitmq/tls/server.pem
 management.ssl.keyfile    = /etc/rabbitmq/tls/server-key.pem
-management.tcp.port       = none
+# With only management.ssl.* configured, no plaintext HTTP listener starts.
 
 ## Default-deny: remove the bootstrap guest user; create one user per service
 ## with permissions limited to its own queues (see docs/phase-3-reliability.md).

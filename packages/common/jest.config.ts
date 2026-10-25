@@ -6,7 +6,7 @@ const config: Config = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   // Live broker suites need RabbitMQ/Redis and run via `npm run test:live`.
-  testPathIgnorePatterns: ['/node_modules/', '/tests/live/'],
+  testPathIgnorePatterns: ['/node_modules/', '/tests/live/', '/tests/ha/'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: '../../tsconfig.base.json' }],
   },

@@ -162,3 +162,43 @@ export function dockerContainer(envName: 'PHASE3_RABBITMQ_CONTAINER' | 'PHASE3_R
     start: () => run('start'),
   };
 }
+
+/**
+ * HA staging (infra/ha). Values come from the environment or, when absent,
+ * from infra/ha/.generated/ha.env written by infra/ha/setup.sh.
+ */
+export function haEnv(name: string): string {
+  if (process.env[name]) return process.env[name] as string;
+  const fs = require('fs') as typeof import('fs');
+  const path = require('path') as typeof import('path');
+  const file = process.env.HA_ENV_FILE ?? path.resolve(__dirname, '../../../infra/ha/.generated/ha.env');
+  if (fs.existsSync(file)) {
+    for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+      const index = line.indexOf('=');
+      if (index > 0 && line.slice(0, index) === name) return line.slice(index + 1);
+    }
+  }
+  throw new Error(`${name} is required for HA acceptance tests; run infra/ha/setup.sh first`);
+}
+
+/**
+ * Control one service of the HA staging compose project. Only containers of
+ * the `nexacommerce-ha` project are ever touched.
+ */
+export function haService(service: string) {
+  if (!/^(rmq-[123]|redis-primary|redis-replica-[12]|sentinel-[123])$/.test(service)) {
+    throw new Error(`${service} is not an HA staging service`);
+  }
+  const container = `nexacommerce-ha-${service}-1`;
+  const docker = (...args: string[]) => execFileSync('docker', args, { stdio: 'pipe', timeout: 180_000 }).toString();
+  const network = 'nexacommerce-ha-net';
+  return {
+    container,
+    stop: () => docker('stop', '-t', '5', container),
+    start: () => docker('start', container),
+    restart: () => docker('restart', '-t', '10', container),
+    ip: () => docker('inspect', '-f', '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}', container).trim(),
+    disconnect: () => docker('network', 'disconnect', network, container),
+    connect: (ip: string) => docker('network', 'connect', '--ip', ip, network, container),
+  };
+}

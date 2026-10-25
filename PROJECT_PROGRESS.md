@@ -21,15 +21,15 @@ Updated 2026-09-28.
 | Phase 0 - Baseline and production-readiness audit | Complete |
 | Phase 1 - Security and payment hardening | Complete (local acceptance) |
 | Phase 2 - Product completion and real frontend integration | In progress - checkout reopened on a server-issued shipping quote and physical return receipt is enforced before refund; remaining gates are business data, provider acceptance, and E2E |
-| Phase 3 - Redis and RabbitMQ reliability | **Local implementation and single-node runtime acceptance complete** (2026-09-28) - live RabbitMQ, Redis, and PostgreSQL fault suites pass; production HA acceptance (multi-node broker, Redis failover, TLS/ACL) is external and not done |
+| Phase 3 - Redis and RabbitMQ reliability | **Complete** (2026-09-28) - single-node fault suites plus HA acceptance on a production-shaped staging topology (3-node TLS RabbitMQ cluster, Redis Sentinel with TLS/ACL, least-privilege service users); deploying it into the real target environment belongs to Phase 5/6 |
 | Phase 4 - Kafka event streaming | In progress - database-backed Analytics projection implemented and proven on live Kafka + PostgreSQL; production cluster is external acceptance |
 | Phase 5 - Production infrastructure and operations | In progress - migrations, backup/restore drill, request correlation, and CI verified; deployment target undecided |
 | Phase 6 - Production acceptance and limited beta | Not started - requires environments and credentials that have not been supplied |
 
 Phase 0 completion: **100%**.
 Phase 1 completion: **100% for local implementation and static acceptance**.
-Estimated local implementation completeness: **88%** (86% before the 2026-09-28 Phase 3 completion pass).
-Estimated public-production readiness: **61%**, up from 59% (see the Phase 3 completion entry).
+Estimated local implementation completeness: **90%** (86% before the 2026-09-28 Phase 3 passes).
+Estimated public-production readiness: **64%**, up from 59% (see the two Phase 3 entries dated 2026-09-28).
 
 The readiness estimate measures production safety, not the number of screens or source files. The
 increase reflects gates that moved from unproven to proven against live infrastructure: migrations
@@ -52,7 +52,7 @@ Midtrans sandbox, and Phase 6 acceptance remain open.
 | 2 | Admin origin/rate management is implemented, but no real seller origins or verified tariff rows were supplied; quoting therefore still fails closed for unconfigured routes | Business - enter and approve origins and tariffs |
 | 2 | Paid single-seller labels use the quote snapshot; multi-seller orders are explicitly blocked because `shipping_orders` is still one row per order | Implementation - migrate to one shipment per seller and update fulfillment APIs/UIs |
 | 2 | Production media storage acceptance | External - S3-compatible credentials |
-| 3 | ~~Live RabbitMQ and Redis fault acceptance~~ done 2026-09-28 on single nodes. Remaining: multi-node RabbitMQ and Redis failover/partition acceptance, TLS/ACL/credentials, and running the classic-to-quorum procedure on a real legacy broker if one exists | External - needs a production-like cluster |
+| 3 | None for engineering. Live fault and HA acceptance passed 2026-09-28 (`infra/ha`). Carried into Phase 5/6: real-environment deployment with the real CA/secret manager, and running `rabbitmq:topology audit` (plus the classic-to-quorum procedure if needed) on the target broker | Phase 5/6 environment |
 | 4 | Cutover comparison tooling is implemented; representative rebuild/comparison evidence is still required before reads move to Kafka | Runtime acceptance |
 | 4 | Production cluster topology, TLS/SASL/ACLs, DR | External - no cluster provided |
 | 5 | Deployment target undecided; HTTP RED metrics now cover all services and starter alert rules exist, but domain backlog metrics, tracing, collector/Alertmanager, dashboards, and live alert delivery remain | Decision, implementation, and runtime acceptance |
@@ -60,6 +60,27 @@ Midtrans sandbox, and Phase 6 acceptance remain open.
 | 6 | Everything - full-stack E2E, Midtrans sandbox, SMTP, load/soak/DR, legal approval | External |
 
 Nothing above is marked complete on the strength of a passing build.
+
+### 2026-09-28 continuation - Phase 3 HA staging acceptance (Phase 3 complete)
+
+- Built `infra/ha/`: 3-node RabbitMQ cluster (TLS-only, `pause_minority`, quorum default, no
+  `guest`) and Redis primary + 2 replicas + 3 Sentinels (TLS-only, ACL default-deny,
+  `noeviction`). Secrets, CA, and configs are generated at runtime into a git-ignored folder.
+- Clients: multi-node `RABBITMQ_URL` with verified TLS, `RABBITMQ_TOPOLOGY_MODE=verify` for users
+  without `configure` plus `rabbitmq:topology declare` for operators, Redis Sentinel + TLS
+  settings shared by Gateway and Cart.
+- Bound `order.shipped` to Order Service. The earlier concern was wrong: Shipping emits it only
+  when every seller shipment is picked up.
+- HA suites: RabbitMQ 6/6 twice (leader killed mid-stream with 0 of 1 500 lost; partition with
+  minority pause and heal; rolling restart; TLS-only; least privilege), Redis 4/4 twice (Sentinel
+  failover in 5.6-9.3 s with only 503/200 during the switch, `noeviction` fail-closed, TLS, ACL),
+  Order Service 1/1 (least-privilege user in verify mode survives losing its node; 20/20 paid once).
+- Found and fixed: Redis service users with `+@write` could run `FLUSHALL`; ACLs and the
+  production template now add `-@dangerous`.
+- Added 11 Phase 3 alert rules; `promtool check rules` and `promtool test rules` pass.
+- Phase 3 is complete. Estimated local implementation completeness 88% -> **90%**; public-production
+  readiness 61% -> **64%**. Remaining gates are Phase 2 business data, Phase 5 environment and
+  alert delivery, and Phase 6 acceptance.
 
 ### 2026-09-28 continuation - Phase 3 completion pass (Redis/RabbitMQ reliability)
 
@@ -790,6 +811,9 @@ Update 2026-09-28: Phase 3 local implementation and single-node runtime acceptan
 The next Phase 3 step is production HA acceptance on a real 3-node RabbitMQ cluster and a Redis
 deployment with failover (node loss during publish/consume, partitions, TLS/ACL credentials), plus
 running `npm run rabbitmq:topology -- audit` against the target broker.
+
+Update 2026-09-28 (later): Phase 3 is complete, including HA acceptance on the `infra/ha` staging
+topology. Carrying its configuration into the real target environment is part of Phase 5.
 
 Admin notifications continuation (2026-09-24): pagination reads backend `total` metadata and displays the current range; category filters are sent to Notification Service and applied before pagination instead of filtering only the loaded page. The endpoint validates bounded, non-empty type filters and OpenAPI documents the query parameter. A repository unit test verifies the filter applies to both row selection and filtered total while unread count remains global. Admin also exposes the existing batch mark-all-read endpoint and refreshes its list on success. Notification Service tests pass 20/20 with `--forceExit`, service TypeScript build passes, Admin Dashboard production build passes, and focused ESLint passes. Route tests still tolerate unavailable PostgreSQL, and Jest reports an existing open handle, so persisted runtime query remains unverified.
 

@@ -34,8 +34,10 @@ tls-auth-clients optional
 aclfile /etc/redis/users.acl
 # users.acl example (one user per service, key-prefix scoped):
 #   user default off
-#   user api-gateway on >{secret} ~rate-limit:* +@read +@write +eval +evalsha +pttl +pexpire +ping +client|setname
-#   user cart-service on >{secret} ~cart:* +@read +@write +ping
+#   user api-gateway on >{secret} ~rate-limit:* -@all +@read +@write +@connection -@dangerous +eval +evalsha +role +info
+#   user cart-service on >{secret} ~cart:* -@all +@read +@write +@connection -@dangerous +role +info
+# `-@dangerous` matters: key patterns do not restrict key-less commands, and
+# @write alone includes FLUSHALL/FLUSHDB (proven by the HA suite).
 protected-mode yes
 bind <private-interface-address>
 rename-command FLUSHALL ""

@@ -14,7 +14,8 @@
     "test:integration": "jest tests/integration",
     "test:coverage": "jest --coverage",
     "typecheck": "tsc --noEmit",
-    "test:live": "jest --config jest.live.config.ts --runInBand"
+    "test:live": "jest --config jest.live.config.ts --runInBand",
+    "test:ha": "jest --config jest.ha.config.ts --runInBand"
   },
   "dependencies": {
     "@nexacommerce/common": "*",

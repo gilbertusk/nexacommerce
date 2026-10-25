@@ -33,8 +33,8 @@ Services bind distinct queues to this exchange using specific routing keys:
 | `OrderPaid` | `order.paid` | Order Service | Shipping, Notification | Payment webhook triggers settlement | `{ orderId, userId, amount }` | Instantiates `ShippingOrder` (status: `WAITING_PICKUP`). |
 | `PaymentSuccess` | `payment.success` | Payment Service | Order, Inventory, Notification, Analytics | Webhook triggers successful status | `{ orderId, transactionId, amount }` | Marks order as `PAID`; confirms stock reservation; records payment metrics. |
 | `PaymentFailed` | `payment.failed` | Payment Service | Order, Inventory, Notification | Webhook triggers deny/cancel/failure | `{ orderId, reason }` | Marks order as `CANCELLED`; releases stock reservations; sends alerts. |
-| `OrderShipped` | `order.shipped` | Shipping Service | Order, Notification | Courier picks up items | `{ orderId, trackingNumber, courierCode }` | Updates order to `SHIPPED`; updates tracking logs. |
-| `OrderDelivered` | `order.delivered` | Shipping Service | Order, Notification | Courier delivers items | `{ orderId, deliveredAt }` | Updates order to `DELIVERED`; sends arrival alerts. |
+| `OrderShipped` | `order.shipped` | Shipping Service | Order, Notification | Every seller shipment of the order picked up | `{ orderId, trackingNumber, courierCode }` | Updates order to `SHIPPED`; updates tracking logs. |
+| `OrderDelivered` | `order.delivered` | Shipping Service | Order, Notification | Every seller shipment of the order delivered | `{ orderId, deliveredAt }` | Updates order to `DELIVERED`; sends arrival alerts. |
 | `OrderCompleted` | `order.completed` | Order Service | Analytics, Notification | Customer accepts items, or auto-complete cron trigger (7 days) | `{ orderId, completedAt, total }` | Builds sales metrics; enables review eligibility for products. |
 | `ReviewCreated` | `review.created` | Review Service | Product, Analytics, Notification | Customer writes a review | `{ reviewId, productId, rating }` | Recalculates average rating and syncs to Product database. |
 | `LowStockDetected`| `stock.low_detected` | Inventory Service | Notification | Stock falls below threshold | `{ productId, currentStock }` | Sends alert notification to the Seller. |
@@ -85,7 +85,8 @@ To prevent transient failures from becoming tight redelivery loops:
 2. **Per-consumer DLQ:** Exhausted or malformed messages are broker-confirmed into `<consumer-queue>.dead` through `nexacommerce.events.dead`. The original delivery is acknowledged only after the retry/DLQ copy is confirmed.
 3. **Last-resort redelivery:** If RabbitMQ cannot confirm the retry/DLQ copy, the consumer nacks the original with `requeue=true` so the only copy is not lost. If the failed publish already closed the channel, the broker requeues the unacknowledged original itself; the nack is guarded so it cannot surface as an unhandled rejection.
 4. **Idempotency:** Durable consumers must claim `eventId` before side effects and treat an already-completed claim as a duplicate.
-5. **Reconnection:** consumers are attached through `createResilientConsumer` or a service dispatcher loop that re-declares topology and re-registers consumers after any connection loss. Unacknowledged deliveries of the lost channel return to the queue.
+5. **High availability:** `RABBITMQ_URL` may list every cluster node; clients connect to the first reachable node and re-attach elsewhere when a node dies. Services can run with `RABBITMQ_TOPOLOGY_MODE=verify` and least-privilege users (topology provisioned by an operator). Proven on a 3-node TLS cluster (`infra/ha`).
+6. **Reconnection:** consumers are attached through `createResilientConsumer` or a service dispatcher loop that re-declares topology and re-registers consumers after any connection loss. Unacknowledged deliveries of the lost channel return to the queue.
 
 All of the above is exercised against a live broker in `packages/common/tests/live/rabbitmq.live.test.ts`
 and `apps/order-service/tests/live/order.rabbitmq.live.test.ts`; see `docs/phase-3-reliability.md`.

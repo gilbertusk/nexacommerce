@@ -20,3 +20,4 @@ out/
 apps/*/.env
 frontend/*/.env
 packages/*/.env
+infra/ha/.generated/

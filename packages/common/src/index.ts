@@ -12,3 +12,4 @@ export * from './http-metrics';
 export * from './reliability-metrics';
 export * from './resilient-consumer';
 export * from './topology';
+export * from './broker-connection';

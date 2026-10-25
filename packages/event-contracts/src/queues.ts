@@ -51,7 +51,9 @@ export const QUEUE_BINDINGS = [
   },
   {
     queue: QUEUES.ORDER_SHIPPING_EVENTS,
-    routingKeys: ['order.delivered']
+    // Shipping emits OrderShipped only once every seller shipment of the order
+    // has been picked up, and OrderDelivered only once all are delivered.
+    routingKeys: ['order.shipped', 'order.delivered']
   },
   {
     queue: QUEUES.PRODUCT_REVIEW_EVENTS,

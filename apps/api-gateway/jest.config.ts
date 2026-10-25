@@ -6,7 +6,7 @@ const config: Config = {
   testEnvironment: 'node',
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   // Live Redis acceptance runs separately via `npm run test:live`.
-  testPathIgnorePatterns: ['/node_modules/', '/tests/live/'],
+  testPathIgnorePatterns: ['/node_modules/', '/tests/live/', '/tests/ha/'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       isolatedModules: true,

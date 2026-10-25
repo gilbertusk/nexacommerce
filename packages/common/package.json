@@ -8,7 +8,8 @@
     "build": "tsc",
     "test": "jest --config jest.config.ts --runInBand",
     "typecheck": "tsc --noEmit",
-    "test:live": "jest --config jest.live.config.ts --runInBand"
+    "test:live": "jest --config jest.live.config.ts --runInBand",
+    "test:ha": "jest --config jest.ha.config.ts --runInBand"
   },
   "dependencies": {
     "@nexacommerce/event-contracts": "*",

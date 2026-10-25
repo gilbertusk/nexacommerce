@@ -61,6 +61,13 @@ Verify that all services display the `healthy` status.
   `CLASSIC_NEEDS_MIGRATION` means a pre-quorum queue exists under a production name; services will
   refuse to start against it (they never delete queues). Follow "Classic-to-quorum migration" in
   `docs/phase-3-reliability.md`.
+- For HA, list every RabbitMQ node in `RABBITMQ_URL` (`amqps://` with `RABBITMQ_TLS_CA_FILE`),
+  give each service its own user without `configure`, set `RABBITMQ_TOPOLOGY_MODE=verify`, and
+  provision the topology with `npm run rabbitmq:topology -- declare` using an operator account.
+  For Redis failover set `REDIS_SENTINELS`, `REDIS_SENTINEL_NAME`, `REDIS_SENTINEL_PASSWORD`, and
+  use `rediss://` with `REDIS_TLS_CA_FILE`. `infra/ha/` is a working reference of this shape.
+- Load `infra/observability/phase3-reliability-alerts.yml` into Prometheus and route it through
+  Alertmanager.
 - The Compose stack runs one RabbitMQ node and one Redis instance with published ports. It is a
   development/validation topology, not HA. Production requirements and templates:
   `docs/phase-3-reliability.md` and `infra/rabbitmq/`, `infra/redis/`.

@@ -1,0 +1,80 @@
+# NexaCommerce HA staging topology (Phase 3 acceptance).
+#
+# 3-node RabbitMQ cluster (TLS-only, pause_minority, quorum default) and Redis
+# 1 primary + 2 replicas + 3 Sentinels (TLS-only, ACL default-deny,
+# noeviction). Every secret, certificate, and rendered config lives in
+# ./.generated (git-ignored) and is created by ./setup.sh; nothing secret is in
+# this file. Static addresses let clients on the Docker host reach each node
+# directly and let certificates carry IP SANs.
+#
+# Start: infra/ha/setup.sh   Stop and delete: infra/ha/teardown.sh
+name: nexacommerce-ha
+
+x-rabbitmq: &rabbitmq
+  image: rabbitmq:3.13-management
+  env_file: .generated/rabbitmq.env
+  volumes:
+    - ./.generated/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    - ./.generated/tls:/etc/rabbitmq/tls:ro
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+    interval: 5s
+    timeout: 10s
+    retries: 30
+
+x-redis-tls: &redis-tls
+  image: redis:7-alpine
+  volumes:
+    - ./.generated/tls:/tls:ro
+    - ./.generated/redis:/conf:ro
+
+services:
+  rmq-1:
+    <<: *rabbitmq
+    hostname: rmq-1
+    networks: { ha: { ipv4_address: 172.29.10.11 } }
+    extra_hosts: ["rmq-2:172.29.10.12", "rmq-3:172.29.10.13"]
+  rmq-2:
+    <<: *rabbitmq
+    hostname: rmq-2
+    networks: { ha: { ipv4_address: 172.29.10.12 } }
+    extra_hosts: ["rmq-1:172.29.10.11", "rmq-3:172.29.10.13"]
+  rmq-3:
+    <<: *rabbitmq
+    hostname: rmq-3
+    networks: { ha: { ipv4_address: 172.29.10.13 } }
+    extra_hosts: ["rmq-1:172.29.10.11", "rmq-2:172.29.10.12"]
+
+  redis-primary:
+    <<: *redis-tls
+    command: ["redis-server", "/conf/primary.conf"]
+    networks: { ha: { ipv4_address: 172.29.10.21 } }
+  redis-replica-1:
+    <<: *redis-tls
+    command: ["redis-server", "/conf/replica.conf"]
+    networks: { ha: { ipv4_address: 172.29.10.22 } }
+  redis-replica-2:
+    <<: *redis-tls
+    command: ["redis-server", "/conf/replica.conf"]
+    networks: { ha: { ipv4_address: 172.29.10.23 } }
+
+  # Sentinel rewrites its config, so each starts from a private copy.
+  sentinel-1:
+    <<: *redis-tls
+    command: ["sh", "-c", "cp /conf/sentinel.conf /data/sentinel.conf && exec redis-sentinel /data/sentinel.conf"]
+    networks: { ha: { ipv4_address: 172.29.10.31 } }
+  sentinel-2:
+    <<: *redis-tls
+    command: ["sh", "-c", "cp /conf/sentinel.conf /data/sentinel.conf && exec redis-sentinel /data/sentinel.conf"]
+    networks: { ha: { ipv4_address: 172.29.10.32 } }
+  sentinel-3:
+    <<: *redis-tls
+    command: ["sh", "-c", "cp /conf/sentinel.conf /data/sentinel.conf && exec redis-sentinel /data/sentinel.conf"]
+    networks: { ha: { ipv4_address: 172.29.10.33 } }
+
+networks:
+  ha:
+    name: nexacommerce-ha-net
+    ipam:
+      config:
+        - subnet: 172.29.10.0/24

@@ -161,3 +161,18 @@ skipping** when their configuration is missing:
 `npm run test:live` at the root runs all three. Each RabbitMQ suite creates and deletes its own
 vhost; the Redis suite deletes its own key namespace; container control is restricted to names
 starting with `phase3-test-`. Setup commands are in `docs/phase-3-reliability.md`.
+
+## HA staging acceptance (Phase 3)
+
+`infra/ha/setup.sh` starts a 3-node TLS RabbitMQ cluster and Redis primary + 2 replicas +
+3 Sentinels (TLS, ACL), provisions least-privilege users, and writes `infra/ha/.generated/ha.env`
+(the suites read it automatically). Then:
+
+| Command | Covers |
+|---|---|
+| `npm run test:ha -w packages/common` | quorum membership, TLS-only, per-service permissions, leader loss mid-stream, partition with `pause_minority`, rolling restart |
+| `npm run test:ha -w apps/api-gateway` | TLS-only, ACL default-deny and key scoping, `noeviction` fail-closed, Sentinel failover |
+| `npm run test:ha -w apps/order-service` | real Order Service as a least-privilege user surviving the loss of its broker node (needs `DATABASE_URL`) |
+
+`infra/ha/teardown.sh` removes the staging project and its generated secrets. Alert rules are
+tested with `promtool test rules infra/observability/phase3-reliability-alerts.test.yml`.

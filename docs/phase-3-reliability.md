@@ -1,10 +1,11 @@
 # Phase 3 — Redis and RabbitMQ Reliability
 
 Last updated: 2026-09-28
-Status: **Local implementation and single-node runtime acceptance complete.** Live RabbitMQ,
-Redis, and PostgreSQL fault suites pass against disposable containers (see "Phase 3 completion
-pass" below). **Production HA acceptance is not done**: every broker test ran against a single
-RabbitMQ node and a single Redis instance, which prove delivery semantics, not high availability.
+Status: **Complete, including HA acceptance on a production-shaped staging topology**
+(2026-09-28). Single-node fault suites and the HA suites (3-node TLS RabbitMQ cluster; Redis
+primary + 2 replicas + 3 Sentinels with TLS and ACLs) pass; see "HA staging acceptance" below.
+What remains is deploying this configuration into the real target environment, which is a
+Phase 5/6 activity (environment, secret manager, alert delivery), not open Phase 3 engineering.
 
 ## Exit criteria
 
@@ -265,10 +266,13 @@ milliseconds-wide window plus a payment against an unseen invoice.
 | Notification `notification-service.events` | Notification rows, email jobs | Atomic inbox (hardened) + durable email queue | 43 tests live |
 | Event Stream `event-stream-service.business-facts` | Kafka records | **At-least-once by design.** No database; the RabbitMQ message is acknowledged only after Kafka acknowledges the keyed record, so a crash in between republishes the same `eventId`. Exactly-once is **not** claimed. Downstream Kafka consumers deduplicate: the Analytics projection uses its own inbox consumer name. A persisted bridge inbox would not help — the side effect is in Kafka, which cannot join a PostgreSQL transaction. | existing Phase 4 suites |
 
-Observation: `order-service.shipping-events` is bound only to `order.delivered`; the Order
-handler for `OrderShipped` is unreachable from the broker and orders reach SHIPPED through the
-seller API. Binding `order.shipped` would mark a multi-seller order shipped at the first seller's
-pickup, so this is left unchanged pending a split-shipment decision.
+Observation (resolved later the same day): `order-service.shipping-events` was bound only to
+`order.delivered`, so the inbox-guarded `OrderShipped` handler was unreachable. The concern that
+binding `order.shipped` would mark a multi-seller order shipped at the first pickup was wrong:
+Shipping emits `OrderShipped` only after locking the order's shipments and confirming **every**
+seller shipment is picked up (and `OrderDelivered` only when all are delivered). The binding is
+now `['order.shipped', 'order.delivered']`; adding a binding and its retry queue is
+non-destructive for existing brokers.
 
 ### Live RabbitMQ acceptance
 
@@ -444,3 +448,84 @@ The suites fail (never skip) when configuration is missing, stop/start only the 
 - Running the classic-to-quorum procedure against the real production broker, if one exists with
   classic queues.
 - Dashboards and alert routing for the metrics above (Phase 5).
+
+## HA staging acceptance (2026-09-28, second pass)
+
+The remaining 15% of Phase 3 was HA, transport security, and least-privilege access. These were
+built as a reproducible staging topology and proven with automated suites.
+
+### Staging topology (`infra/ha/`)
+
+`infra/ha/setup.sh` generates a private CA, a server certificate with every node's name and IP,
+random passwords, the Redis ACL file, and all broker configs into `infra/ha/.generated/`
+(git-ignored; nothing secret is committed), starts `docker-compose.ha.yml` (project
+`nexacommerce-ha`), provisions users, and writes the test environment to
+`.generated/ha.env`. `infra/ha/teardown.sh` removes only that project and its generated files.
+
+| Component | Configuration |
+|---|---|
+| RabbitMQ | 3 nodes (`rmq-1..3`), `pause_minority`, `net_ticktime 10`, quorum default, TLS-only AMQP (5671) and management (15671), no plaintext listener, `guest` deleted |
+| RabbitMQ users | `ops-admin` (operator), `order-service` and `notification-service`: configure `^$`, write only `nexacommerce.events(.retry|.dead)`, read only their own queues |
+| Redis | primary + 2 replicas + 3 Sentinels (quorum 2, down-after 3 s), TLS-only (`port 0`), TLS replication, `noeviction`, AOF |
+| Redis ACL | `default off`; `api-gateway` limited to `rate-limit:*`, `cart-service` to `cart:*`, both `-@dangerous`; dedicated `replicator` and `sentinel` users |
+
+### New client capabilities
+
+| Setting | Effect |
+|---|---|
+| `RABBITMQ_URL=amqps://..node1..,amqps://..node2..,...` | `connectRabbitMQ` tries every node; consumers and dispatchers re-attach to a surviving node |
+| `RABBITMQ_TLS_CA_FILE` (+ optional `RABBITMQ_TLS_CERT_FILE`/`_KEY_FILE`) | verified TLS; verification is never disabled |
+| `RABBITMQ_TOPOLOGY_MODE=verify` | services only check the topology passively, so their users need no `configure`; an operator provisions it with `npm run rabbitmq:topology -- declare` |
+| `REDIS_SENTINELS`, `REDIS_SENTINEL_NAME`, `REDIS_SENTINEL_PASSWORD` | Gateway limiter and Cart follow Sentinel failover; ACL user/password/db still from `REDIS_URL` |
+| `rediss://` + `REDIS_TLS_CA_FILE` | verified TLS to Redis and to the Sentinels |
+
+### Results
+
+`npm run test:ha -w packages/common` — **6/6** (run twice, green both times):
+
+| Case | Evidence |
+|---|---|
+| 3 running nodes; every quorum queue has members on all three | management API |
+| TLS only | plaintext 5672 refused; a client not trusting the staging CA fails verification |
+| Least privilege | `order-service` passes `verify`, gets `ACCESS_REFUSED` for `declare` and for consuming Notification's queue, can publish events |
+| Queue leader killed mid-stream | 1 500 confirmed publishes; leader `rmq-1` stopped after 300; new leader `rmq-3`; **0 missing**; 1 republish (unconfirmed at the kill) |
+| Network partition | `rmq-3` disconnected; majority keeps confirming 400 publishes and marks `rmq-3` down; after healing all 3 members are back and all 400 are consumed |
+| Rolling restart | 500-message backlog survives restarting every node in turn |
+
+`npm run test:ha -w apps/api-gateway` — **4/4** (run twice, no open handles):
+
+| Case | Evidence |
+|---|---|
+| TLS only | plaintext and untrusted-CA clients refused |
+| ACL | anonymous `NOAUTH`; gateway `NOPERM` on `cart:*`, `FLUSHALL`, `FLUSHDB`, `KEYS`, `CONFIG`; cart `NOPERM` on `rate-limit:*` |
+| `noeviction` fail-closed | with memory exhausted the limiter answers 503 instead of evicting counters; recovers after |
+| Sentinel failover | primary stopped; promoted replica serving in **5.6–9.3 s**; responses during the switch were only 503 then 200 (never an unchecked pass); limits enforced on the new primary; old primary rejoins as a replica |
+
+`npm run test:ha -w apps/order-service` — **1/1**: the real Order Service (consumer, inbox,
+outbox, dispatcher) as the least-privilege `order-service` user in `verify` mode over TLS; the
+node it was attached to was killed after 10 of 20 payments; **20/20 orders paid exactly once
+and 20 `OrderPaid` published**.
+
+### Defect found by the HA suite
+
+The first Redis ACL draft (and the production template) granted service users `+@read +@write`.
+Key patterns do not restrict key-less commands, and `@write` includes `FLUSHALL`/`FLUSHDB`: the
+gateway user could wipe all carts. Both now add `-@dangerous`, and the suite asserts `NOPERM`.
+
+### Alerts
+
+`infra/observability/phase3-reliability-alerts.yml` — 11 rules (dependency down, stale or
+repeatedly rescheduled outbox, blind backlog metrics, inbox failures, dead-lettered messages,
+non-empty DLQ via `rabbitmq_detailed_queue_messages`, requeue storms, failed/stale email, limiter
+store errors). `promtool check rules` passes and `promtool test rules
+phase3-reliability-alerts.test.yml` proves the key alerts fire on synthetic series. The DLQ
+metric name was verified against the staging cluster's `rabbitmq_prometheus` endpoint.
+
+### Deploying to the real environment (Phase 5/6)
+
+Copy the staging shape, not its files: run a 3-node cluster and Sentinel/managed Redis with
+certificates from the real CA, users and passwords from the secret manager, the ACLs above,
+`RABBITMQ_TOPOLOGY_MODE=verify` for services, `rabbitmq:topology declare` then `audit` from the
+pipeline, `TRUST_PROXY` matching the load balancer, and the alert file loaded into the real
+Prometheus with Alertmanager routing. Restrict the `rabbitmq_prometheus` port (15692) to the
+monitoring network.

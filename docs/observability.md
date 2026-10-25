@@ -72,7 +72,8 @@ Already exposed:
   age (read from PostgreSQL on each scrape, so every replica reports the same durable backlog),
   and RabbitMQ/Redis/Kafka readiness per replica. API Gateway also exports
   `nexacommerce_rate_limit_store_errors_total`. Metric names and meanings are listed in
-  `docs/phase-3-reliability.md`.
+  `docs/phase-3-reliability.md`. Alert rules for them:
+  `infra/observability/phase3-reliability-alerts.yml` (11 rules, `promtool`-tested).
 
 What a production deployment still needs, per service:
 
@@ -82,7 +83,7 @@ What a production deployment still needs, per service:
 | Outbox pending count and oldest pending age | Exported (Phase 3). Still needs an alert rule: a growing backlog means events are not reaching the broker |
 | Inbox failure count by consumer | Exported (Phase 3). Repeated failures mean poison messages heading for the DLQ |
 | Email queue depth, oldest PENDING age, FAILED count | Exported (Phase 3). A FAILED row is a message the system promised and never sent |
-| DLQ depth per queue | Read from RabbitMQ (`<queue>.dead`) by a broker exporter; not yet scraped |
+| DLQ depth per queue | Alert rule on `rabbitmq_detailed_queue_messages{queue=~".+\\.dead"}` from `rabbitmq_prometheus` (`infra/observability/phase3-reliability-alerts.yml`) |
 | Consumer lag per partition and per group | The single best indicator that a projection is falling behind |
 | Rejected-message count (unsupported schema, malformed) | A deployment problem, not an outage |
 | Shipping quote refusals by reason | `SELLER_ORIGIN_UNVERIFIED` spiking means checkout is closed for real customers |

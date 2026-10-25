@@ -6,6 +6,13 @@
  *       (type, durability, arguments, bindings) through the management API and
  *       exits 1 on any issue. Needs RABBITMQ_MANAGEMENT_URL.
  *
+ *   npm run rabbitmq:topology -- declare
+ *       Declares the production exchanges, queues, and bindings with an
+ *       operator account (RABBITMQ_URL). Required once per vhost when services
+ *       run with RABBITMQ_TOPOLOGY_MODE=verify and no `configure` permission.
+ *       Idempotent; refuses (PRECONDITION_FAILED) instead of altering a classic
+ *       queue.
+ *
  *   npm run rabbitmq:topology -- move --from <queue> --to <queue> [--limit N]
  *       Moves messages with publisher confirms, acknowledging each source
  *       message only after its copy is confirmed. Needs RABBITMQ_URL.
@@ -15,8 +22,7 @@
  * procedure (docs/phase-3-reliability.md), never something this tool does.
  * Credentials are read from the environment and never printed.
  */
-import { connect } from 'amqplib';
-import { auditQueue, expectedQueueSpecs, moveQueueMessages } from '@nexacommerce/common';
+import { auditQueue, connectRabbitMQ, expectedQueueSpecs, moveQueueMessages, setupExchangeAndQueues } from '@nexacommerce/common';
 
 function arg(name: string): string | undefined {
   const index = process.argv.indexOf(`--${name}`);
@@ -68,7 +74,7 @@ async function move(): Promise<number> {
   const url = process.env.RABBITMQ_URL;
   if (!url) throw new Error('RABBITMQ_URL is required');
 
-  const connection = await connect(url);
+  const connection = await connectRabbitMQ(url, 1);
   try {
     const channel = await connection.createConfirmChannel();
     const moved = await moveQueueMessages(channel, from, to, limit);
@@ -80,12 +86,26 @@ async function move(): Promise<number> {
   }
 }
 
+async function declare(): Promise<number> {
+  const url = process.env.RABBITMQ_URL;
+  if (!url) throw new Error('RABBITMQ_URL is required (operator account)');
+  const connection = await connectRabbitMQ(url, 1);
+  try {
+    const channel = await connection.createConfirmChannel();
+    await setupExchangeAndQueues(channel, 'declare');
+    console.log(`Declared ${expectedQueueSpecs().length} queues and their bindings.`);
+    return 0;
+  } finally {
+    await connection.close().catch(() => undefined);
+  }
+}
+
 async function main(): Promise<void> {
   const command = process.argv[2];
-  const handlers: Record<string, () => Promise<number>> = { audit, move };
+  const handlers: Record<string, () => Promise<number>> = { audit, declare, move };
   const handler = handlers[command ?? ''];
   if (!handler) {
-    console.error('Usage: rabbitmq-topology <audit|move> [options]');
+    console.error('Usage: rabbitmq-topology <audit|declare|move> [options]');
     process.exitCode = 2;
     return;
   }

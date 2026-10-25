@@ -1,0 +1,48 @@
+rule_files:
+  - phase3-reliability-alerts.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'nexacommerce_dependency_ready{job="order-service",instance="o1",dependency="rabbitmq"}'
+        values: '1 0 0 0 0'
+      - series: 'nexacommerce_backlog_oldest_pending_age_seconds{kind="outbox",service="order-service"}'
+        values: '0 400 460 520 580 640 700 760'
+      - series: 'nexacommerce_consumer_messages_total{queue="order-service.payment-events",outcome="DEAD_LETTERED"}'
+        values: '0 0 1 1'
+      - series: 'nexacommerce_rate_limit_store_errors_total{instance="gw1"}'
+        values: '0 3 6 9 12'
+      - series: 'nexacommerce_backlog_rows{kind="email",service="notification-service",state="failed"}'
+        values: '0x20'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: MessagingDependencyDown
+        exp_alerts:
+          - exp_labels: { severity: critical, job: order-service, instance: o1, dependency: rabbitmq }
+            exp_annotations:
+              summary: "order-service has no usable rabbitmq connection"
+              description: The replica has been disconnected for two minutes. Committed events stay in the outbox, but nothing is published or consumed from this replica.
+      - eval_time: 7m
+        alertname: OutboxBacklogStale
+        exp_alerts:
+          - exp_labels: { severity: critical, service: order-service }
+            exp_annotations:
+              summary: "order-service outbox has an event older than 5 minutes"
+              description: Domain events are committed but not reaching RabbitMQ. Check broker connectivity and the dispatcher logs (eventId, outcome=RESCHEDULED).
+      - eval_time: 3m
+        alertname: MessagesDeadLettered
+        exp_alerts:
+          - exp_labels: { severity: critical, queue: order-service.payment-events }
+            exp_annotations:
+              summary: "A message was dead-lettered from order-service.payment-events"
+              description: A business event exhausted its retries or was malformed. It needs a decision; it will not be retried automatically.
+      - eval_time: 4m
+        alertname: RateLimitStoreErrors
+        exp_alerts:
+          - exp_labels: { severity: critical, instance: gw1 }
+            exp_annotations:
+              summary: API Gateway is rejecting requests because Redis is unavailable
+              description: The distributed rate limiter fails closed with 503 while Redis is unreachable or out of memory.
+      - eval_time: 15m
+        alertname: EmailQueueFailures
+        exp_alerts: []
